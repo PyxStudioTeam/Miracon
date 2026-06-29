@@ -1,0 +1,986 @@
+.golden-visa-page {
+  min-width: 0;
+}
+
+.golden-visa-page .nav-link-current {
+  opacity: 1;
+  text-shadow: 0 0 14px rgba(247, 244, 238, 0.55);
+}
+
+.golden-visa-page main>section+section {
+  margin-top: 120px;
+}
+
+.gv-hero+.gv-threshold {
+  margin-top: 100px;
+}
+
+.gv-hero {
+  position: relative;
+  height: 953px;
+  overflow: hidden;
+  color: var(--white);
+  background: #0c1420;
+}
+
+.gv-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.gv-hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gv-hero-bg-base {
+  z-index: 0;
+}
+
+.gv-hero-bg-front {
+  z-index: 1;
+}
+
+.gv-hero-softener {
+  position: absolute;
+  z-index: 2;
+  top: 184px;
+  left: calc((100vw - min(var(--frame-width), calc(100vw - 200px))) / 2 - 281px);
+  width: 1434px;
+  height: 366px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.22);
+  filter: blur(126.6px);
+  pointer-events: none;
+}
+
+.gv-hero-content {
+  position: relative;
+  z-index: 3;
+  padding-top: 331px;
+}
+
+.gv-hero h1 {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 1156px;
+  height: 222px;
+  margin: 0;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 116px;
+  font-weight: 400;
+  line-height: 95.98%;
+  letter-spacing: 0;
+  text-shadow: 0px 4.61938px 9.23876px rgba(0, 0, 0, 0.25);
+}
+
+.gv-hero-lead {
+  display: flex;
+  align-items: center;
+  width: 1004px;
+  height: 46px;
+  margin: 36px 0 0;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 95.98%;
+  letter-spacing: 0.14em;
+  text-shadow: 0 4.61938px 9.23876px rgba(0, 0, 0, 0.25);
+}
+
+.gv-hero-actions {
+  margin-top: 98px;
+}
+
+.gv-threshold {
+  height: 293px;
+}
+
+.gv-threshold-card {
+  position: relative;
+  height: 293px;
+  overflow: hidden;
+  border-radius: 40px;
+  background: linear-gradient(180deg, #fefbf5 0%, #ffffff 100%);
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.05);
+}
+
+.gv-threshold-main {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 940px;
+  height: 293px;
+  padding: 54px 0 0 85px;
+}
+
+.gv-threshold-main h2 {
+  width: 460px;
+  height: 94px;
+  margin: 0;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 96px;
+  font-weight: 600;
+  line-height: 97.98%;
+}
+
+.gv-threshold-main p {
+  width: 727px;
+  margin: 20px 0 0 7px;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 113.52%;
+  opacity: 0.8;
+}
+
+.gv-threshold-main span {
+  position: absolute;
+  top: 104px;
+  left: 531px;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 113.52%;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.gv-threshold-divider {
+  position: absolute;
+  top: 34px;
+  left: 940px;
+  width: 1px;
+  height: 225px;
+  background: rgba(0, 48, 117, 0.18);
+}
+
+.gv-threshold-note {
+  position: absolute;
+  top: 0;
+  left: 1014px;
+  display: flex;
+  align-items: center;
+  gap: 38px;
+  height: 293px;
+}
+
+.gv-threshold-note p {
+  width: 488px;
+  margin: 0;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 113.52%;
+  opacity: 0.8;
+}
+
+.gv-threshold-note strong {
+  font-size: 40px;
+  font-weight: 600;
+}
+
+.gv-warning-icon {
+  position: relative;
+  display: block;
+  flex: 0 0 94px;
+  width: 94px;
+  height: 94px;
+}
+
+.gv-warning-shape {
+  position: absolute;
+  top: 14px;
+  left: 9px;
+  width: 75px;
+  height: 66px;
+}
+
+.gv-warning-mark {
+  position: absolute;
+  top: 29px;
+  left: 44px;
+  width: 7px;
+  height: 33px;
+}
+
+.gv-family {
+  height: 1077px;
+}
+
+.gv-family .section-title {
+  display: flex;
+  align-items: center;
+  width: 462px;
+  height: 62px;
+  margin: 0 0 30px;
+  font-size: 64px;
+  line-height: 97.02%;
+}
+
+.gv-family .section-subtitle {
+  display: flex;
+  align-items: center;
+  width: 1178px;
+  height: 31px;
+  margin: 0;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 95.98%;
+  opacity: 0.8;
+}
+
+.gv-family-panel {
+  position: relative;
+  height: 901px;
+  margin-top: 53px;
+  overflow: hidden;
+  border-radius: 40px;
+  background: #FFFFFD;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.05);
+}
+
+.gv-family-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 798px;
+  background: #FFFFFD;
+}
+
+.gv-primary-cta {
+  position: absolute;
+  right: auto;
+  top: 759px;
+  left: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 22px;
+  width: 505px;
+  height: 78px;
+  padding: 0 0 0 42px;
+  border-radius: 40px;
+  background: linear-gradient(90deg, #C49A53 0%, #A67843 100%);
+  color: #f7f4ee;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 30.9091px;
+  font-weight: 400;
+  line-height: 37px;
+  transform: translateX(-50%);
+  transition: var(--transition);
+}
+
+.gv-primary-cta:hover,
+.gv-primary-cta:focus-visible {
+  filter: brightness(0.96);
+}
+
+.gv-primary-cta>span:first-child {
+  width: 371px;
+}
+
+.gv-primary-cta:hover .btn-submit-arrow,
+.gv-primary-cta:focus-visible .btn-submit-arrow {
+  transform: translateX(10px);
+}
+
+.gv-family-cards {
+  position: absolute;
+  z-index: 1;
+  top: 50px;
+  left: 50px;
+  display: grid;
+  grid-template-columns: repeat(4, 366px);
+  gap: 52px;
+}
+
+.gv-family-card {
+  position: relative;
+  height: 366px;
+  border-radius: 24px;
+  background: #FFFFFD;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+}
+
+.gv-family-card img {
+  position: absolute;
+  top: 69px;
+  left: 50%;
+  width: 79px;
+  height: 92px;
+  object-fit: contain;
+  transform: translateX(-50%);
+}
+
+.gv-family-card:nth-child(2) img {
+  width: 128px;
+  height: 92px;
+}
+
+.gv-family-card:nth-child(3) img {
+  width: 100px;
+  height: 92px;
+}
+
+.gv-family-card:nth-child(4) img {
+  width: 75px;
+  height: 91px;
+  top: 70px;
+}
+
+.gv-family-card h3 {
+  position: absolute;
+  top: 198px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 49px;
+  margin: 0 auto;
+  padding: 0 22px;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 49px;
+  text-align: center;
+}
+
+.gv-family-card:not(:first-child) h3 {
+  min-height: 98px;
+}
+
+.gv-family-card:nth-child(4) h3 {
+  letter-spacing: -0.03em;
+}
+
+.gv-family-summary {
+  position: absolute;
+  z-index: 1;
+  top: 519px;
+  left: 85px;
+  display: grid;
+  grid-template-columns: 83px 1fr;
+  column-gap: 65px;
+  width: 1502px;
+}
+
+.gv-family-summary-icon {
+  width: 83.24px;
+  height: 101px;
+  object-fit: contain;
+  margin-top: 7px;
+}
+
+.gv-family-summary h3 {
+  width: 498px;
+  height: 47px;
+  margin: 0 0 30px;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 97.02%;
+}
+
+.gv-family-summary p {
+  width: 1367px;
+  margin: 0;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 113.52%;
+  opacity: 0.8;
+}
+
+.gv-metrics {
+  height: 220px;
+  padding: 10px 0;
+  overflow: hidden;
+  --gv-metrics-card-width: 444px;
+  --gv-metrics-card-gap: 49px;
+  --gv-metrics-set-width: 2416px;
+  --gv-metrics-scroll-distance: -2465px;
+}
+
+.gv-metrics-track {
+  display: flex;
+  gap: var(--gv-metrics-card-gap);
+  width: max-content;
+  margin-left: calc((100vw - min(var(--frame-width), calc(100vw - 200px))) / 2 - 358px);
+  animation: gv-metrics-carousel-scroll 28s linear infinite;
+  will-change: transform;
+}
+
+.gv-metrics-set {
+  display: flex;
+  flex: 0 0 var(--gv-metrics-set-width);
+  gap: var(--gv-metrics-card-gap);
+  height: 200px;
+}
+
+.gv-metric-card {
+  flex: 0 0 var(--gv-metrics-card-width);
+  width: var(--gv-metrics-card-width);
+  height: 200px;
+  padding: 45px 0 0 73px;
+  border-radius: 40px;
+  background: linear-gradient(180deg, #fefbf5 0%, #ffffff 100%);
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.05);
+}
+
+.golden-visa-page .stage-card,
+.gv-metric-card {
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.05);
+}
+
+@keyframes gv-metrics-carousel-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(var(--gv-metrics-scroll-distance));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gv-metrics-track {
+    animation: none;
+  }
+}
+
+.gv-metric-card h3 {
+  width: 309px;
+  min-height: 54px;
+  margin: 0 0 14px;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 56px;
+  font-weight: 500;
+  line-height: 97.02%;
+  white-space: nowrap;
+}
+
+.gv-metric-card p {
+  width: 298px;
+  margin: 0;
+  color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 113.52%;
+  opacity: 0.8;
+}
+
+.gv-projects {
+  height: 1595px;
+}
+
+.gv-projects .section-title {
+  margin-bottom: 25px;
+}
+
+.gv-projects .section-subtitle {
+  margin-bottom: 83px;
+  line-height: 95.98%;
+}
+
+.golden-visa-page .stages-section {
+  height: 220px;
+  padding: 10px 0;
+}
+
+.golden-visa-page .stages-container {
+  height: 220px;
+}
+
+.golden-visa-page .stages-intro {
+  margin-top: 0;
+}
+
+.golden-visa-page .stages-carousel {
+  top: -10px;
+  height: 220px;
+  padding: 10px 0;
+}
+
+@media (max-width: 1180px) {
+
+  .golden-visa-page .container,
+  .golden-visa-page .header-container {
+    width: calc(100vw - 32px);
+  }
+
+  .golden-visa-page main>section+section,
+  .gv-hero+.gv-threshold {
+    margin-top: 64px;
+  }
+
+  .golden-visa-page .header {
+    top: 16px;
+  }
+
+  .golden-visa-page .header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 51px;
+  }
+
+  .golden-visa-page .header .logo,
+  .golden-visa-page .header-actions,
+  .golden-visa-page .contact-btn {
+    position: static;
+  }
+
+  .golden-visa-page .contact-menu {
+    position: relative;
+  }
+
+  .golden-visa-page .nav-menu,
+  .golden-visa-page .lang-selector {
+    display: none;
+  }
+
+  .golden-visa-page .header-actions {
+    width: auto;
+    height: 51px;
+  }
+
+  .golden-visa-page .contact-menu {
+    width: 164px;
+    height: 51px;
+  }
+
+  .golden-visa-page .contact-btn {
+    width: 164px;
+    font-size: 20px;
+  }
+
+  .golden-visa-page .contact-dropdown {
+    right: 0;
+  }
+
+  .gv-hero {
+    height: auto;
+    min-height: 760px;
+  }
+
+  .gv-hero-softener {
+    top: 160px;
+    left: -160px;
+    width: 640px;
+    height: 360px;
+  }
+
+  .gv-hero-content {
+    padding-top: 178px;
+    padding-bottom: 72px;
+  }
+
+  .gv-hero h1 {
+    width: auto;
+    height: auto;
+    font-size: clamp(56px, 12vw, 92px);
+  }
+
+  .gv-hero-lead {
+    width: auto;
+    height: auto;
+    margin-top: 28px;
+    font-size: 16px;
+    line-height: 1.35;
+    letter-spacing: 0.08em;
+  }
+
+  .gv-hero-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+    margin-top: 48px;
+  }
+
+  .gv-hero-actions .btn-hero,
+  .gv-hero-actions .badge-visa {
+    width: min(100%, 360px);
+  }
+
+  .gv-threshold,
+  .gv-family,
+  .gv-projects,
+  .golden-visa-page .stages-section,
+  .golden-visa-page .contacts-section,
+  .golden-visa-page .form-container {
+    height: auto;
+  }
+
+  .gv-threshold-card {
+    height: auto;
+    padding: 32px;
+    border-radius: 28px;
+  }
+
+  .gv-threshold-main,
+  .gv-threshold-note,
+  .gv-threshold-main span,
+  .gv-family-summary,
+  .gv-primary-cta,
+  .golden-visa-page .consultation-form,
+  .golden-visa-page .form-textarea,
+  .golden-visa-page .btn-submit {
+    position: static;
+  }
+
+  .gv-threshold-main {
+    width: auto;
+    height: auto;
+    padding: 0;
+  }
+
+  .gv-threshold-main h2 {
+    width: auto;
+    height: auto;
+    font-size: clamp(58px, 16vw, 96px);
+  }
+
+  .gv-threshold-main p,
+  .gv-threshold-main span,
+  .gv-threshold-note p,
+  .gv-family-summary p {
+    width: auto;
+    font-size: 24px;
+  }
+
+  .gv-threshold-main p {
+    margin: 18px 0 0;
+  }
+
+  .gv-threshold-main span {
+    display: block;
+    margin-top: 12px;
+  }
+
+  .gv-threshold-divider {
+    display: none;
+  }
+
+  .gv-threshold-note {
+    gap: 22px;
+    height: auto;
+    margin-top: 28px;
+  }
+
+  .gv-family .section-subtitle {
+    width: auto;
+    font-size: 24px;
+    line-height: 1.22;
+  }
+
+  .gv-family-panel {
+    height: auto;
+    margin-top: 36px;
+    padding: 28px;
+    border-radius: 28px;
+  }
+
+  .gv-primary-cta {
+    width: min(100%, 505px);
+    margin-bottom: 32px;
+    transform: none;
+  }
+
+  .gv-family-cards {
+    position: relative;
+    top: auto;
+    left: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .gv-family-card {
+    height: 300px;
+    border-radius: 28px;
+  }
+
+  .gv-family-card h3 {
+    font-size: 28px;
+  }
+
+  .gv-family-summary {
+    width: auto;
+    margin-top: 40px;
+  }
+
+  .gv-family-summary-icon {
+    width: 72px;
+    height: 88px;
+  }
+
+  .gv-family-summary h3 {
+    width: auto;
+    height: auto;
+    font-size: 40px;
+  }
+
+  .gv-metrics {
+    height: auto;
+    overflow: visible;
+  }
+
+  .gv-metrics-track {
+    flex-direction: column;
+    width: calc(100vw - 32px);
+    margin: 0 auto;
+    gap: 18px;
+    animation: none;
+  }
+
+  .gv-metrics-set {
+    flex: 0 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+    gap: 18px;
+  }
+
+  .gv-metrics-set[aria-hidden="true"] {
+    display: none;
+  }
+
+  .gv-metric-card {
+    flex: 0 1 auto;
+    width: 100%;
+    height: auto;
+    padding: 32px;
+    border-radius: 28px;
+  }
+
+  .gv-metric-card h3,
+  .gv-metric-card p {
+    width: auto;
+  }
+
+  .gv-metric-card h3 {
+    font-size: 44px;
+  }
+
+  .golden-visa-page .section-title,
+  .golden-visa-page .project-section-title {
+    font-size: clamp(46px, 10vw, 64px);
+  }
+
+  .gv-projects .section-subtitle {
+    margin-bottom: 36px;
+    font-size: 24px;
+    line-height: 1.22;
+  }
+
+  .golden-visa-page .project-card {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    height: auto;
+    padding: 24px;
+    border-radius: 28px;
+  }
+
+  .golden-visa-page .project-info {
+    gap: 28px;
+    padding: 0;
+  }
+
+  .golden-visa-page .project-name,
+  .golden-visa-page .project-price {
+    font-size: 38px;
+  }
+
+  .golden-visa-page .project-location,
+  .golden-visa-page .project-description,
+  .golden-visa-page .learn-more {
+    width: auto;
+    font-size: 24px;
+  }
+
+  .golden-visa-page .project-price {
+    margin-bottom: 22px;
+  }
+
+  .golden-visa-page .project-gallery {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .golden-visa-page .gallery-main {
+    height: auto;
+  }
+
+  .golden-visa-page .gallery-sides {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    gap: 16px;
+  }
+
+  .golden-visa-page .gallery-sides img {
+    aspect-ratio: 1.25;
+  }
+
+  .golden-visa-page .gallery-main img,
+  .golden-visa-page .gallery-sides img {
+    height: auto;
+  }
+
+  .golden-visa-page .stages-container,
+  .golden-visa-page .stages-carousel {
+    height: auto;
+  }
+
+  .golden-visa-page .stages-section {
+    padding-bottom: 6px;
+  }
+
+  .golden-visa-page .stages-intro {
+    width: auto;
+    height: auto;
+    margin-bottom: 28px;
+  }
+
+  .golden-visa-page .stages-intro .section-title,
+  .golden-visa-page .stages-intro .section-subtitle {
+    position: static;
+    width: auto;
+    height: auto;
+  }
+
+  .golden-visa-page .stages-intro .section-subtitle {
+    margin-top: 16px;
+  }
+
+  .golden-visa-page .stages-carousel {
+    position: relative;
+    left: 16px;
+    right: auto;
+    overflow-x: auto;
+  }
+
+  .golden-visa-page .stages-carousel-track {
+    animation: none;
+  }
+
+  .golden-visa-page .contacts-section {
+    padding: 64px 0;
+  }
+
+  .golden-visa-page .form-container .section-title,
+  .golden-visa-page .form-container .section-subtitle {
+    position: static;
+    width: auto;
+    height: auto;
+  }
+
+  .golden-visa-page .form-container .section-subtitle {
+    margin-top: 16px;
+  }
+
+  .golden-visa-page .consultation-form {
+    width: auto;
+    height: auto;
+    margin-top: 36px;
+  }
+
+  .golden-visa-page .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .golden-visa-page .form-message {
+    display: block;
+    margin-top: 16px;
+  }
+
+  .golden-visa-page .form-textarea {
+    width: 100%;
+    height: 160px;
+  }
+
+  .golden-visa-page .btn-submit {
+    width: min(100%, 465px);
+    margin-top: 24px;
+  }
+
+  .golden-visa-page .footer {
+    height: auto;
+    padding: 46px 0;
+  }
+
+  .golden-visa-page .footer-container,
+  .golden-visa-page .footer-top,
+  .golden-visa-page .footer-bottom {
+    height: auto;
+  }
+
+  .golden-visa-page .footer .logo,
+  .golden-visa-page .footer-socials,
+  .golden-visa-page .footer-links,
+  .golden-visa-page .lang-dropdown-btn {
+    position: static;
+  }
+
+  .golden-visa-page .footer-top,
+  .golden-visa-page .footer-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .golden-visa-page .footer-bottom {
+    margin-top: 42px;
+  }
+}
+
+@media (max-width: 640px) {
+  .golden-visa-page .logo-letters {
+    display: none;
+  }
+
+  .gv-family-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .gv-family-summary {
+    grid-template-columns: 1fr;
+    row-gap: 18px;
+  }
+
+  .gv-threshold-note {
+    align-items: flex-start;
+  }
+
+  .gv-primary-cta,
+  .golden-visa-page .btn-submit {
+    height: auto;
+    min-height: 68px;
+    padding: 16px 24px;
+    font-size: 24px;
+  }
+
+  .gv-primary-cta>span:first-child,
+  .golden-visa-page .btn-submit>span:first-child {
+    width: auto;
+  }
+}

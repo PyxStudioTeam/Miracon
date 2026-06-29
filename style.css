@@ -1,6 +1,6 @@
 :root {
   --frame-width: 1720px;
-  --page-bg: #f5f0e8;
+  --page-bg: #F7F4EE;
   --white: #ffffff;
   --blue: #003c7b;
   --blue-dark: #00306a;
@@ -703,8 +703,8 @@ main>section+section {
   overflow: hidden;
   border: 1px solid rgba(0, 48, 106, 0.22);
   border-radius: 39px;
-  background: var(--white);
-  color: var(--blue);
+  background: var(--page-bg);
+  color: #003075;
   font-size: 32px;
   line-height: 1;
   isolation: isolate;
@@ -720,7 +720,7 @@ main>section+section {
   width: 140%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: var(--blue);
+  background: #003075;
   transform: translate(-50%, -50%) scale(0);
   transition: transform 0.42s cubic-bezier(0.65, 0, 0.35, 1);
 }
@@ -778,20 +778,7 @@ main>section+section {
   border-color: var(--blue);
 }
 
-.filter-tabs:has(.filter-tab:not(.active):hover) .filter-tab.active,
-.filter-tabs:has(.filter-tab:not(.active):focus-visible) .filter-tab.active {
-  border-color: rgba(0, 48, 106, 0.22);
-}
 
-.filter-tabs:has(.filter-tab:not(.active):hover) .filter-tab.active::before,
-.filter-tabs:has(.filter-tab:not(.active):focus-visible) .filter-tab.active::before {
-  transform: translate(-50%, -50%) scale(0);
-}
-
-.filter-tabs:has(.filter-tab:not(.active):hover) .filter-tab.active span::after,
-.filter-tabs:has(.filter-tab:not(.active):focus-visible) .filter-tab.active span::after {
-  clip-path: circle(0% at 50% 50%);
-}
 
 .projects-list {
   display: flex;
@@ -811,15 +798,16 @@ main>section+section {
 }
 
 body.js-enabled .project-card {
-  opacity: 0;
-  transform: translateY(50px);
-  transition: opacity 0.85s cubic-bezier(0.25, 1, 0.5, 1),
-    transform 0.85s cubic-bezier(0.25, 1, 0.5, 1);
+  opacity: 1;
+  transform: translateY(120px);
+  clip-path: inset(-20px -20px 120px -20px);
+  transition: transform 0.85s cubic-bezier(0.25, 1, 0.5, 1),
+    clip-path 0.85s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 body.js-enabled .project-card.visible {
-  opacity: 1;
   transform: translateY(0);
+  clip-path: inset(-20px -20px -20px -20px);
 }
 
 .project-info {
@@ -1008,7 +996,7 @@ body.js-enabled .project-card.visible {
 .about-heading {
   position: absolute;
   top: 123px;
-  left: 0.5px;
+  left: 8px;
   display: flex;
   align-items: flex-start;
   gap: 30.16px;
@@ -1170,7 +1158,7 @@ body.js-enabled .project-card.visible {
   position: absolute;
   z-index: 4;
   top: 0;
-  left: calc((100vw - 1921px) / 2 + 1053px);
+  right: -100px;
   width: 916px;
   height: 930px;
   border-radius: 40px;
@@ -1217,9 +1205,7 @@ body.js-enabled .about-reveal.visible {
   will-change: transform;
 }
 
-.about-carousel:hover .about-carousel-track {
-  animation-play-state: paused;
-}
+
 
 .about-carousel-set {
   display: flex;
@@ -1340,14 +1326,14 @@ body.js-enabled .about-reveal.visible {
 /* Golden Visa */
 .golden-visa-section {
   position: relative;
-  height: 679px;
+  height: 689px;
   overflow: hidden;
   background: var(--page-bg);
 }
 
 .golden-container {
   display: grid;
-  grid-template-columns: 694px 836px;
+  grid-template-columns: 694px 838px;
   gap: 49px;
   padding-left: 139px;
 }
@@ -1375,14 +1361,14 @@ body.js-enabled .about-reveal.visible {
 
 .golden-carousel-face {
   position: absolute;
-  inset: 0;
   border-radius: 40px;
   overflow: hidden;
-  transform-origin: center center;
-  transition: transform 0.9s cubic-bezier(0.65, 0, 0.35, 1),
-              opacity 0.9s cubic-bezier(0.65, 0, 0.35, 1),
-              filter 0.9s cubic-bezier(0.65, 0, 0.35, 1);
-  will-change: transform, opacity;
+  transition: width 0.9s cubic-bezier(0.65, 0, 0.35, 1),
+    height 0.9s cubic-bezier(0.65, 0, 0.35, 1),
+    left 0.9s cubic-bezier(0.65, 0, 0.35, 1),
+    top 0.9s cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: width, height, left, top, opacity;
 }
 
 .golden-carousel-face img {
@@ -1393,24 +1379,31 @@ body.js-enabled .about-reveal.visible {
 
 /* Active slide — front and center, full size */
 .golden-carousel-face[data-pos="0"] {
-  transform: translateX(0) scale(1);
+  left: 0;
+  top: 0;
+  width: 694px;
+  height: 679px;
   opacity: 1;
   z-index: 4;
-  filter: brightness(1);
 }
 
 /* Previous slide — at the mockup side-image position (partially off-screen left) */
 .golden-carousel-face[data-pos="3"] {
-  transform: translateX(-580px) scale(0.82);
-  opacity: 0.7;
+  left: -639px;
+  top: 0;
+  width: 590px;
+  height: 577px;
+  opacity: 1;
   z-index: 3;
-  filter: brightness(0.75);
 }
 
 /* Hidden positions — invisible, staged for entry */
 .golden-carousel-face[data-pos="1"],
 .golden-carousel-face[data-pos="2"] {
-  transform: translateX(50px) scale(0.95);
+  left: 0;
+  top: 0;
+  width: 694px;
+  height: 679px;
   opacity: 0;
   z-index: 1;
   pointer-events: none;
@@ -1423,7 +1416,7 @@ body.js-enabled .about-reveal.visible {
   display: block;
   align-items: center;
   justify-content: center;
-  width: 368px;
+  width: 249px;
   height: 53px;
   transform: translateX(-50%);
   border-radius: 39px;
@@ -1433,6 +1426,19 @@ body.js-enabled .about-reveal.visible {
   font-size: 24px;
   font-weight: 400;
   line-height: 29px;
+  transition: transform 0.3s ease;
+}
+
+.visa-consult-badge:hover {
+  transform: translateX(-50%) scale(1.03);
+}
+
+.visa-consult-badge:hover .visa-consult-arrow::before {
+  transform: translateY(-50%) translateX(3px);
+}
+
+.visa-consult-badge:hover .visa-consult-arrow::after {
+  transform: translateY(-50%) rotate(45deg) translate(2px, -2px);
 }
 
 .visa-consult-badge.glass-gradient::after {
@@ -1446,7 +1452,7 @@ body.js-enabled .about-reveal.visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 253px;
+  width: 134px;
   height: 29px;
   text-align: center;
 }
@@ -1468,6 +1474,7 @@ body.js-enabled .about-reveal.visible {
   position: absolute;
   top: 50%;
   display: block;
+  transition: transform 0.3s ease;
 }
 
 .visa-consult-arrow::before {
@@ -1488,7 +1495,7 @@ body.js-enabled .about-reveal.visible {
 
 .golden-content {
   position: relative;
-  height: 679px;
+  height: 689px;
   padding-top: 8px;
 }
 
@@ -1501,23 +1508,26 @@ body.js-enabled .about-reveal.visible {
   margin-bottom: 82px;
   font-size: 32px;
   line-height: 1.12;
+  color: #003075;
+  opacity: 0.8;
 }
 
 .slider-wrapper {
   position: absolute;
   top: 224px;
   left: 0;
-  width: 836px;
+  width: 838px;
   height: 455px;
   border-radius: 40px;
   background: linear-gradient(180deg, #fefbf5 0%, #ffffff 100%);
   box-shadow: 0 4px 4px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
 }
 
 .slider-slides {
   position: relative;
   height: 100%;
+  border-radius: 40px;
+  overflow: hidden;
 }
 
 .slide {
@@ -1617,8 +1627,8 @@ body.js-enabled .about-reveal.visible {
 .stages-section {
   position: relative;
   overflow: hidden;
-  height: 200px;
-  padding: 0;
+  height: 220px;
+  padding: 10px 0;
   background: var(--page-bg);
   --stages-card-width: 444px;
   --stages-card-gap: 49px;
@@ -1629,7 +1639,7 @@ body.js-enabled .about-reveal.visible {
 .stages-container {
   position: relative;
   z-index: 2;
-  height: 200px;
+  height: 220px;
   pointer-events: none;
 }
 
@@ -1637,6 +1647,7 @@ body.js-enabled .about-reveal.visible {
   position: relative;
   width: 424px;
   height: 200px;
+  margin-top: 10px;
 }
 
 .stages-intro .section-title {
@@ -1674,10 +1685,11 @@ body.js-enabled .about-reveal.visible {
 .stages-carousel {
   position: absolute;
   z-index: 1;
-  top: 0;
+  top: -10px;
   right: 0;
   left: calc((100vw - min(var(--frame-width), calc(100vw - 200px))) / 2 + 530px);
-  height: 200px;
+  height: 220px;
+  padding: 10px 0;
   overflow: hidden;
 }
 
@@ -1687,10 +1699,6 @@ body.js-enabled .about-reveal.visible {
   width: max-content;
   animation: stages-carousel-scroll 28s linear infinite;
   will-change: transform;
-}
-
-.stages-carousel:hover .stages-carousel-track {
-  animation-play-state: paused;
 }
 
 .stages-carousel-set {

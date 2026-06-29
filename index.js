@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('js-enabled');
-  
+
   /* ==========================================================================
      MOBILE NAVIGATION MENU
      ========================================================================== */
@@ -48,18 +48,23 @@ document.addEventListener('DOMContentLoaded', () => {
       // Filter cards
       projectCards.forEach(card => {
         const categories = card.getAttribute('data-category').split(' ');
-        
+
         if (filterValue === 'all' || categories.includes(filterValue)) {
           card.style.display = 'grid';
-          card.classList.add('visible'); // Safeguard to ensure filtered cards are fully visible
-          // Fade-in animation
-          card.style.opacity = '0';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(100px)';
+          card.style.clipPath = 'inset(-20px -20px 100px -20px)';
           setTimeout(() => {
-            card.style.transition = 'opacity 0.4s ease';
-            card.style.opacity = '1';
+            card.style.transition = 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), clip-path 0.5s cubic-bezier(0.25, 1, 0.5, 1)';
+            card.style.transform = 'translateY(0)';
+            card.style.clipPath = 'inset(-20px -20px -20px -20px)';
           }, 50);
         } else {
           card.style.display = 'none';
+          card.style.opacity = '';
+          card.style.transform = '';
+          card.style.clipPath = '';
+          card.style.transition = '';
         }
       });
     });
@@ -96,6 +101,19 @@ document.addEventListener('DOMContentLoaded', () => {
     revealObserver.observe(el);
   });
 
+  const projectRevealElements = document.querySelectorAll(`
+    .project-page .project-intro-media .project-section-title,
+    .project-page .project-intro-image,
+    .project-page .project-intro-copy,
+    .project-page .project-amenities-heading,
+    .project-page .project-amenity-card,
+    .project-page .project-plan-card
+  `);
+
+  projectRevealElements.forEach(el => {
+    revealObserver.observe(el);
+  });
+
   /* ==========================================================================
      GOLDEN VISA CAROUSEL / SLIDER
      ========================================================================== */
@@ -107,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentSlideIndex = 0;
 
   if (slides.length > 0 && counterElement && btnPrev && btnNext) {
-    
+
     function updateSlider() {
       // Update slide visibility
       slides.forEach((slide, index) => {
@@ -117,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
           slide.classList.remove('active');
         }
       });
-      
+
       // Update counter text (e.g. "1/4")
       counterElement.textContent = `${currentSlideIndex + 1}/${slides.length}`;
 
@@ -160,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (consultationForm) {
     consultationForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      
+
       const name = document.getElementById('formName').value.trim();
       const phone = document.getElementById('formPhone').value.trim();
       const email = document.getElementById('formEmail').value.trim();
@@ -174,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Simulated success message
       const submitBtn = consultationForm.querySelector('.btn-submit');
       const originalContent = submitBtn.innerHTML;
-      
+
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<span>Sending...</span>';
 
@@ -187,4 +205,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Parse URL search parameters to activate filter automatically
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialFilter = urlParams.get('filter');
+  if (initialFilter) {
+    const targetTab = Array.from(filterTabs).find(tab => tab.getAttribute('data-filter') === initialFilter);
+    if (targetTab) {
+      targetTab.click();
+    }
+  }
+  // Project floor plans tab switching
+  const planTabs = document.querySelectorAll('.project-plan-tab');
+  planTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      planTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
 });
