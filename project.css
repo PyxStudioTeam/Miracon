@@ -317,22 +317,22 @@ body.js-enabled .project-page .project-brochure-link {
 }
 
 .project-brochure-icon-part--tray {
-  left: 14.75px;
-  top: 33.25px;
+  left: 14.18px;
+  top: 34.13px;
   width: 32.6px;
   height: 12.1px;
 }
 
 .project-brochure-icon-part--chevron {
-  left: 22.25px;
-  top: 26.45px;
+  left: 21.68px;
+  top: 27.33px;
   width: 17.65px;
   height: 10.2px;
 }
 
 .project-brochure-icon-part--stem {
-  left: 29.65px;
-  top: 13.85px;
+  left: 29.08px;
+  top: 14.73px;
   width: 2.8px;
   height: 23.25px;
 }
@@ -412,14 +412,16 @@ body.js-enabled .project-page .project-brochure-link {
 .project-intro-copy p {
   position: absolute;
   left: 0;
-  top: 237px;
+  top: 316px;
   width: 795px;
-  height: 493px;
+  height: 414px;
   margin: 0;
   color: #003075;
+  font-family: 'Gilroy', sans-serif;
+  font-style: normal;
   font-size: 32px;
   font-weight: 400;
-  line-height: 36.33px;
+  line-height: 113.52%;
   display: flex;
   align-items: center;
   opacity: 0.8;
@@ -658,13 +660,94 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
 
 .project-gallery-strip {
   position: relative;
+  --gallery-drag-x: 0px;
+  --gallery-cursor-x: 50%;
+  --gallery-cursor-y: 50%;
+  --gallery-cursor-scale: 0.88;
   height: 918px;
   overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.project-gallery-strip.is-gallery-hovered,
+.project-gallery-strip.is-dragging {
+  cursor: none;
+}
+
+.project-gallery-strip.is-gallery-hovered {
+  --gallery-cursor-scale: 1;
 }
 
 .project-gallery-image {
   position: absolute;
   object-fit: cover;
+  border-radius: 40px;
+  image-rendering: auto;
+  transform: translate3d(var(--gallery-drag-x), 0, 0) scale(var(--gallery-scale, 1));
+  backface-visibility: hidden;
+  transition: opacity 0.72s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.72s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: opacity, transform;
+  -webkit-user-drag: none;
+}
+
+.project-gallery-strip.is-dragging .project-gallery-image {
+  transition: none;
+}
+
+.project-gallery-image--is-changing {
+  --gallery-scale: 0.996;
+  opacity: 0.86;
+}
+
+.project-gallery-drag-hint {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: #b68a3d;
+  color: #f7f4ee;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(var(--gallery-cursor-x), var(--gallery-cursor-y), 0)
+    translate(-50%, -50%) scale(var(--gallery-cursor-scale));
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  box-shadow: 0 18px 36px rgba(0, 48, 117, 0.16);
+}
+
+.project-gallery-strip.is-gallery-hovered .project-gallery-drag-hint,
+.project-gallery-strip.is-dragging .project-gallery-drag-hint {
+  opacity: 1;
+  visibility: visible;
+}
+
+.project-gallery-drag-hint span {
+  display: flex;
+  align-items: center;
+  height: 1em;
+  font-size: 27px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.project-gallery-drag-hint strong {
+  font: inherit;
 }
 
 .project-gallery-image--far-left {
@@ -706,7 +789,7 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   position: absolute;
   left: 50%;
   bottom: 54px;
-  z-index: 2;
+  z-index: 4;
   min-width: 203px;
   height: 61px;
   gap: 12px;
@@ -858,6 +941,10 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   margin-top: 72px;
 }
 
+.project-plan-card[hidden] {
+  display: none;
+}
+
 .project-plan-card h3 {
   margin: 0 0 53px;
   color: #003075;
@@ -867,21 +954,36 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
 }
 
 .project-plan-card img {
+  display: block;
   width: calc(100% + 6px);
   height: auto;
   margin-left: -1px;
+  background: transparent;
   border-radius: 0;
   object-fit: contain;
 }
 
-.project-plan-card:first-child img {
+.project-plan-card--floor-1 img {
   width: 1726px;
   max-height: 940px;
 }
 
-.project-plan-card:last-child img {
+.project-plan-card--floor-2 img {
   width: 1728px;
   max-height: 782px;
+}
+
+.project-plan-card--studio img {
+  width: 1726px;
+  max-height: 827px;
+}
+
+.project-plan-card--apartment img {
+  width: 840px;
+  max-width: 100%;
+  max-height: none;
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .project-location-section {

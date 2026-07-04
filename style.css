@@ -996,7 +996,7 @@ body.js-enabled .project-card.visible {
 .about-heading {
   position: absolute;
   top: 123px;
-  left: 8px;
+  left: 0.5px;
   display: flex;
   align-items: flex-start;
   gap: 30.16px;
@@ -1426,7 +1426,26 @@ body.js-enabled .about-reveal.visible {
   font-size: 24px;
   font-weight: 400;
   line-height: 29px;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.visa-consult-badge.animate {
+  animation: badge-slide-change 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@keyframes badge-slide-change {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  35% {
+    transform: translateX(-50%) scale(0.91);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
 }
 
 .visa-consult-badge:hover {
@@ -1434,11 +1453,11 @@ body.js-enabled .about-reveal.visible {
 }
 
 .visa-consult-badge:hover .visa-consult-arrow::before {
-  transform: translateY(-50%) translateX(3px);
+  transform: translateY(-50%) translateX(1px);
 }
 
 .visa-consult-badge:hover .visa-consult-arrow::after {
-  transform: translateY(-50%) rotate(45deg) translate(2px, -2px);
+  transform: translateY(-50%) rotate(45deg) translate(1px, -1px);
 }
 
 .visa-consult-badge.glass-gradient::after {

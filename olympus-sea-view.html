@@ -86,7 +86,8 @@
           <img src="img/olympus-detail/icons/hero-location.svg" alt="" class="project-location-icon" aria-hidden="true">
           <span class="project-location-text">Nea Epivates &middot; Halkidiki &middot; Greece</span>
         </a>
-        <a href="#contacts" class="project-brochure-link">
+        <a href="brochures/olympus-sea-view-brochure.pdf" class="project-brochure-link"
+          download="Olympus Sea View Brochure.pdf" aria-label="Download Olympus Sea View brochure">
           <span class="project-brochure-icon" aria-hidden="true">
             <img src="img/olympus-detail/icons/hero-brochure-1.svg" alt=""
               class="project-brochure-icon-part project-brochure-icon-part--tray">
@@ -120,6 +121,10 @@
             <div class="project-spec">
               <img src="img/olympus-detail/icons/spec-area.svg" alt="" class="project-spec-icon" aria-hidden="true">
               <span>Area: <strong>44-123 m&sup2;</strong></span>
+            </div>
+            <div class="project-spec">
+              <img src="img/olympus-detail/icons/spec-lvl.svg" alt="" class="project-spec-icon" aria-hidden="true">
+              <span>Levels: <strong>2-3</strong></span>
             </div>
           </div>
           <p>Welcome to Olympus Sea View - a premier beachfront residential complex on the first shoreline of Nea
@@ -183,18 +188,24 @@
 
     <section class="project-gallery-strip" aria-label="Olympus Sea View gallery">
       <div class="project-gallery-track">
-        <img src="img/olympus-detail/gallery-far-left.png" alt="Olympus Sea View terrace"
+        <img src="img/olympus-detail/gallery-slider-far.jpg" alt="Olympus Sea View terrace" decoding="async"
           class="project-gallery-image project-gallery-image--far-left">
-        <img src="img/olympus-detail/gallery-left.png" alt="Olympus Sea View coastline"
+        <img src="img/olympus-detail/gallery-slider-left.jpg" alt="Olympus Sea View coastline" decoding="async"
           class="project-gallery-image project-gallery-image--left">
-        <img src="img/olympus-detail/gallery-main.png" alt="Olympus Sea View main exterior"
+        <img src="img/olympus-detail/gallery-slider-main.jpg" alt="Olympus Sea View main exterior" decoding="async"
           class="project-gallery-image project-gallery-image--main">
-        <img src="img/olympus-detail/gallery-right-small.png" alt="Olympus Sea View side exterior"
+        <img src="img/olympus-detail/gallery-slider-right-small.jpg" alt="Olympus Sea View side exterior" decoding="async"
           class="project-gallery-image project-gallery-image--right-small">
-        <img src="img/olympus-detail/gallery-far-right.png" alt="Olympus Sea View balcony"
+        <img src="img/olympus-detail/gallery-slider-far.jpg" alt="Olympus Sea View balcony" decoding="async"
           class="project-gallery-image project-gallery-image--far-right">
       </div>
-      <a href="#contacts" class="project-floating-brochure">
+      <div class="project-gallery-drag-hint" aria-hidden="true">
+        <span>&lsaquo;</span>
+        <strong>Drag</strong>
+        <span>&rsaquo;</span>
+      </div>
+      <a href="brochures/olympus-sea-view-brochure.pdf" class="project-floating-brochure"
+        download="Olympus Sea View Brochure.pdf" aria-label="Download Olympus Sea View brochure">
         <img src="img/olympus-detail/icons/brochure-circle.svg" alt="" class="project-floating-icon" aria-hidden="true">
         <span>Brochure</span>
       </a>
@@ -206,25 +217,35 @@
         <p class="project-section-subtitle">Modern living, perfectly designed</p>
 
         <div class="project-plan-tabs" aria-label="Floor plan types">
-          <button class="project-plan-tab active" type="button">
+          <button class="project-plan-tab active" type="button" data-plan-filter="duplex">
             <span data-label="Typical duplex apartment 123m²">Typical duplex apartment 123m²</span>
           </button>
-          <button class="project-plan-tab" type="button">
+          <button class="project-plan-tab" type="button" data-plan-filter="studio">
             <span data-label="Typical studio 44m²">Typical studio 44m²</span>
           </button>
-          <button class="project-plan-tab" type="button">
+          <button class="project-plan-tab" type="button" data-plan-filter="apartment">
             <span data-label="Typical apartment 44m²">Typical apartment 44m²</span>
           </button>
         </div>
 
         <div class="project-plan-list">
-          <article class="project-plan-card">
+          <article class="project-plan-card project-plan-card--floor-1" data-plan="duplex">
             <h3>Floor 1</h3>
             <img src="img/olympus-detail/floor-1.png" alt="Olympus Sea View floor 1 plan">
           </article>
-          <article class="project-plan-card">
+          <article class="project-plan-card project-plan-card--floor-2" data-plan="duplex">
             <h3>Floor 2</h3>
             <img src="img/olympus-detail/floor-2.png" alt="Olympus Sea View floor 2 plan">
+          </article>
+          <article class="project-plan-card project-plan-card--studio" data-plan="studio" hidden>
+            <h3>Typical studio 44m&sup2;</h3>
+            <img src="img/olympus-detail/Olympus Sea View_print-7 2.png"
+              alt="Olympus Sea View typical studio 44 square metre plan">
+          </article>
+          <article class="project-plan-card project-plan-card--apartment" data-plan="apartment" hidden>
+            <h3>Typical apartment 44m&sup2;</h3>
+            <img src="img/olympus-detail/Olympus Sea View_print-7 1.png"
+              alt="Olympus Sea View typical apartment 44 square metre plan">
           </article>
         </div>
       </div>
