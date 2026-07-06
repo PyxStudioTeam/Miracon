@@ -210,7 +210,7 @@ body.js-enabled .project-page .project-brochure-link {
   top: 425px;
   display: block;
   width: 231.15px;
-  min-width: 231.15px;
+  min-width: 0;
   height: 69px;
   padding: 0;
   border-radius: 33.8235px;
@@ -218,8 +218,8 @@ body.js-enabled .project-page .project-brochure-link {
   color: #ffffff;
   font-family: 'Gilroy', sans-serif;
   font-size: 27.6px;
-  font-weight: 300;
-  line-height: 33.12px;
+  font-weight: 400;
+  line-height: 33px;
 }
 
 .project-brochure-link>span:last-child {
@@ -232,7 +232,12 @@ body.js-enabled .project-page .project-brochure-link {
   justify-content: center;
   width: 181.7px;
   height: 33px;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 27.6px;
+  font-weight: 400;
+  line-height: 33px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .project-brochure-link:hover,
@@ -257,10 +262,11 @@ body.js-enabled .project-page .project-brochure-link {
   z-index: 1;
   left: 3.45px;
   top: 3.45px;
+  display: block;
   flex-basis: 60.95px;
   width: 60.95px;
   height: 60.95px;
-  background: transparent;
+  background: #003075;
   color: #ffffff;
 }
 
@@ -778,13 +784,6 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   height: 613.73px;
 }
 
-.project-gallery-image--far-right {
-  left: calc(50% + 1425px);
-  top: 0;
-  width: 1090.84px;
-  height: 613.6px;
-}
-
 .project-floating-brochure {
   position: absolute;
   left: 50%;
@@ -992,23 +991,14 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   overflow: hidden;
 }
 
-.project-location-image {
+.project-location-map {
   position: absolute;
   left: 50%;
   top: 0;
   transform: translateX(-50%);
   width: 1920px;
   height: 620px;
-  object-fit: cover;
-}
-
-.project-location-pin {
-  position: absolute;
-  left: calc(50% - 227px);
-  top: 168px;
-  width: 62px;
-  height: 86px;
-  object-fit: contain;
+  border: 0;
 }
 
 .project-location-marquee {
@@ -1293,8 +1283,7 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
 
   .project-gallery-image--left,
   .project-gallery-image--far-left,
-  .project-gallery-image--right-small,
-  .project-gallery-image--far-right {
+  .project-gallery-image--right-small {
     display: none;
   }
 
@@ -1331,18 +1320,12 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
     height: 560px;
   }
 
-  .project-location-image {
+  .project-location-map {
     position: relative;
     left: 0;
     transform: none;
     width: 100%;
     height: 420px;
-  }
-
-  .project-location-pin {
-    left: 50%;
-    top: 120px;
-    transform: translateX(-50%) scale(0.78);
   }
 
   .project-location-track span {

@@ -2,6 +2,59 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('js-enabled');
 
   /* ==========================================================================
+     HERO SCROLL
+     ========================================================================== */
+  const pageHeader = document.querySelector('.header');
+  const heroPin = document.querySelector('.hero-pin');
+  const sectionAfterHero = heroPin?.nextElementSibling;
+
+  if (heroPin) {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let heroScrollTicking = false;
+
+    function updateHeroScroll() {
+      const rect = heroPin.getBoundingClientRect();
+      const heroDistance = Math.max(heroPin.offsetHeight, 1);
+      const scrollOffset = Math.max(-rect.top, 0);
+      const heroOverlapGap = sectionAfterHero
+        ? parseFloat(window.getComputedStyle(sectionAfterHero).paddingTop) || 0
+        : 0;
+      const progress = Math.min(Math.max(-rect.top / heroDistance, 0), 1);
+
+      if (!prefersReducedMotion) {
+        heroPin.style.setProperty('--hero-video-scale', (1.035 - progress * 0.025).toFixed(4));
+        heroPin.style.setProperty('--hero-content-y', `${Math.round(progress * -92)}px`);
+        heroPin.style.setProperty('--hero-content-opacity', Math.max(1 - progress * 0.72, 0.28).toFixed(3));
+      }
+
+      heroPin.style.setProperty('--hero-scroll-opacity', Math.max(1 - progress * 3.2, 0).toFixed(3));
+      heroPin.style.setProperty(
+        '--hero-layer-opacity',
+        scrollOffset <= heroDistance + heroOverlapGap + 1 ? '1' : '0'
+      );
+
+      if (pageHeader) {
+        pageHeader.classList.toggle('header--hidden', progress > 0.035 || window.scrollY > 48);
+      }
+
+      heroScrollTicking = false;
+    }
+
+    function requestHeroScrollUpdate() {
+      if (heroScrollTicking) {
+        return;
+      }
+
+      heroScrollTicking = true;
+      window.requestAnimationFrame(updateHeroScroll);
+    }
+
+    updateHeroScroll();
+    window.addEventListener('scroll', requestHeroScrollUpdate, { passive: true });
+    window.addEventListener('resize', requestHeroScrollUpdate);
+  }
+
+  /* ==========================================================================
      MOBILE NAVIGATION MENU
      ========================================================================== */
   /* const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -201,10 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
     {
       element: document.querySelector('.project-gallery-image--right-small'),
       offset: 1
-    },
-    {
-      element: document.querySelector('.project-gallery-image--far-right'),
-      offset: 2
     }
   ];
   const galleryImages = gallerySlots.map(slot => slot.element).filter(Boolean);
