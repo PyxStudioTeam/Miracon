@@ -326,25 +326,31 @@
             <div class="form-row">
               <label class="form-group">
                 <span>Name</span>
-                <input type="text" id="formName" class="form-input" placeholder="Name" required>
+                <input type="text" id="formName" class="form-input" placeholder="Name">
               </label>
               <label class="form-group">
                 <span>Phone</span>
-                <input type="tel" id="formPhone" class="form-input" placeholder="Phone" required>
+                <input type="tel" id="formPhone" class="form-input" placeholder="Phone">
               </label>
               <label class="form-group">
                 <span>Email</span>
-                <input type="email" id="formEmail" class="form-input" placeholder="Email" required>
+                <input type="email" id="formEmail" class="form-input" placeholder="Email">
               </label>
             </div>
 
             <label class="form-group form-message">
               <span>What info are you interested in?</span>
-              <textarea id="formMessage" class="form-input form-textarea" placeholder="What info are you interested in?"
-                required></textarea>
+              <textarea id="formMessage" class="form-input form-textarea" placeholder="What info are you interested in?"></textarea>
             </label>
 
-            <button type="submit" class="btn-submit">
+            <label class="form-consent">
+              <input type="checkbox" id="formConsent" class="form-consent-input">
+              <span class="form-consent-box" aria-hidden="true"></span>
+              <span class="form-consent-text">I agree to the processing of my personal data in accordance with the <a
+                  href="#">Privacy Policy</a> and consent to being contacted using the details provided</span>
+            </label>
+
+            <button type="submit" class="btn-submit" disabled>
               <span>Request a consultation</span>
               <span class="btn-submit-arrow"></span>
             </button>

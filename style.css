@@ -1939,7 +1939,7 @@ body.js-enabled .about-reveal.visible {
   top: 268px;
   left: 0.5px;
   width: 1720px;
-  height: 440px;
+  height: 488px;
 }
 
 .form-row {
@@ -1995,9 +1995,77 @@ body.js-enabled .about-reveal.visible {
   resize: none;
 }
 
+.form-consent {
+  position: absolute;
+  top: 335px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 21.5px;
+  width: 1720px;
+  min-height: 36px;
+  color: #99abc6;
+  font-family: 'Gilroy', sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 95.98%;
+  cursor: pointer;
+}
+
+.form-consent-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.form-consent-box {
+  position: relative;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(0, 48, 117, 0.4);
+  border-radius: 12px;
+  background: rgba(247, 244, 238, 0.4);
+}
+
+.form-consent-box::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  width: 10px;
+  height: 18px;
+  border-right: 3px solid #003075;
+  border-bottom: 3px solid #003075;
+  opacity: 0;
+  transform: rotate(45deg);
+  transition: opacity 0.2s ease;
+}
+
+.form-consent-input:checked+.form-consent-box::after {
+  opacity: 1;
+}
+
+.form-consent-input:focus-visible+.form-consent-box {
+  outline: 2px solid rgba(0, 48, 117, 0.5);
+  outline-offset: 4px;
+}
+
+.form-consent-text {
+  width: 1571px;
+  min-height: 23px;
+  white-space: nowrap;
+}
+
+.form-consent-text a {
+  color: #003075;
+}
+
 .btn-submit {
   position: absolute;
-  top: 362px;
+  top: 410px;
   left: 601.5px;
   display: inline-flex;
   align-items: center;
@@ -2061,9 +2129,22 @@ body.js-enabled .about-reveal.visible {
   background: var(--blue-dark);
 }
 
+.btn-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-submit:disabled:hover {
+  background: #003075;
+}
+
 .btn-submit:hover .btn-submit-arrow,
 .btn-submit:focus-visible .btn-submit-arrow {
   transform: translateX(10px);
+}
+
+.btn-submit:disabled:hover .btn-submit-arrow {
+  transform: none;
 }
 
 /* Footer */

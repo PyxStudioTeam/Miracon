@@ -55,6 +55,92 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* ==========================================================================
+     PROJECT HERO VIDEO
+     ========================================================================== */
+  const projectHero = document.querySelector('.kriopigi-page .project-hero');
+  const projectHeroVideo = projectHero?.querySelector('.project-hero-video');
+  const projectHeroSoundButton = projectHero?.querySelector('.project-hero-sound-button');
+
+  if (projectHero && projectHeroVideo) {
+    const heroIdleDelay = 1800;
+    let heroIdleTimeout;
+
+    function setHeroIdle() {
+      projectHero.classList.add('is-hero-idle');
+    }
+
+    function wakeHero() {
+      projectHero.classList.remove('is-hero-idle');
+      window.clearTimeout(heroIdleTimeout);
+      heroIdleTimeout = window.setTimeout(setHeroIdle, heroIdleDelay);
+    }
+
+    function syncHeroSoundButton() {
+      if (!projectHeroSoundButton) {
+        return;
+      }
+
+      const isSoundOn = !projectHeroVideo.muted && projectHeroVideo.volume > 0;
+      const soundText = projectHeroSoundButton.querySelector('.project-hero-sound-text');
+
+      projectHeroSoundButton.classList.toggle('is-sound-on', isSoundOn);
+      projectHeroSoundButton.setAttribute('aria-pressed', String(isSoundOn));
+      projectHeroSoundButton.setAttribute('aria-label', isSoundOn ? 'Mute video sound' : 'Enable video sound');
+
+      if (soundText) {
+        soundText.textContent = isSoundOn ? 'Mute' : 'Sound';
+      }
+    }
+
+    function toggleHeroSound(event) {
+      if (event) {
+        event.stopPropagation();
+      }
+
+      if (!projectHeroVideo.muted && projectHeroVideo.volume > 0) {
+        projectHeroVideo.muted = true;
+        syncHeroSoundButton();
+        return;
+      }
+
+      projectHeroVideo.muted = false;
+      projectHeroVideo.volume = 1;
+      projectHeroVideo.play().catch(() => {
+        projectHeroVideo.muted = true;
+      }).finally(syncHeroSoundButton);
+
+      syncHeroSoundButton();
+    }
+
+    function enableHeroVideoPlayback() {
+      projectHeroVideo.muted = true;
+      const playPromise = projectHeroVideo.play();
+
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
+      }
+    }
+
+    projectHero.addEventListener('pointerenter', wakeHero);
+    projectHero.addEventListener('pointermove', wakeHero);
+    projectHero.addEventListener('focusin', wakeHero);
+    projectHero.addEventListener('touchstart', wakeHero, { passive: true });
+    projectHero.addEventListener('pointerleave', () => {
+      window.clearTimeout(heroIdleTimeout);
+      heroIdleTimeout = window.setTimeout(setHeroIdle, heroIdleDelay);
+    });
+
+    if (projectHeroSoundButton) {
+      projectHeroSoundButton.addEventListener('click', toggleHeroSound);
+      projectHeroVideo.addEventListener('volumechange', syncHeroSoundButton);
+    }
+
+    wakeHero();
+    syncHeroSoundButton();
+    enableHeroVideoPlayback();
+  }
+
+  /* ==========================================================================
      MOBILE NAVIGATION MENU
      ========================================================================== */
   /* const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -262,15 +348,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const gallerySlides = [];
     const gallerySlideKeys = new Set();
 
-    galleryImages.forEach(image => {
-      const src = image.getAttribute('src');
+    const gallerySourceImages = Array.from(document.querySelectorAll(
+      '.project-gallery-track img, .project-gallery-source[data-src]'
+    ));
+
+    gallerySourceImages.forEach(image => {
+      const src = image.getAttribute('data-src') || image.getAttribute('src');
       const key = new URL(src, window.location.href).href;
 
       if (!gallerySlideKeys.has(key)) {
         gallerySlideKeys.add(key);
         gallerySlides.push({
           src,
-          alt: image.getAttribute('alt') || ''
+          alt: image.getAttribute('data-alt') || image.getAttribute('alt') || ''
         });
       }
     });
@@ -452,31 +542,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const consultationForm = document.getElementById('consultationForm');
 
   if (consultationForm) {
+    const consent = document.getElementById('formConsent');
+    const submitBtn = consultationForm.querySelector('.btn-submit');
+
+    const updateSubmitState = () => {
+      if (submitBtn && consent) {
+        submitBtn.disabled = !consent.checked;
+      }
+    };
+
+    updateSubmitState();
+
+    if (consent) {
+      consent.addEventListener('change', updateSubmitState);
+    }
+
     consultationForm.addEventListener('submit', (e) => {
       e.preventDefault();
 
       const name = document.getElementById('formName').value.trim();
-      const phone = document.getElementById('formPhone').value.trim();
-      const email = document.getElementById('formEmail').value.trim();
-      const message = document.getElementById('formMessage').value.trim();
-
-      if (!name || !phone || !email || !message) {
-        alert('Please fill out all fields.');
-        return;
-      }
+      const userName = name ? `, ${name}` : '';
 
       // Simulated success message
-      const submitBtn = consultationForm.querySelector('.btn-submit');
       const originalContent = submitBtn.innerHTML;
 
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<span>Sending...</span>';
 
       setTimeout(() => {
-        alert(`Thank you, ${name}! Your consultation request has been sent successfully.`);
+        alert(`Thank you${userName}! Your consultation request has been sent successfully.`);
         consultationForm.reset();
-        submitBtn.disabled = false;
         submitBtn.innerHTML = originalContent;
+        updateSubmitState();
       }, 1500);
     });
   }
@@ -500,6 +597,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function setActivePlan(plan, revealShown = false) {
+    const hasMatchingCards = Array.from(planCards).some(card => card.getAttribute('data-plan') === plan);
+
+    if (!hasMatchingCards) {
+      return;
+    }
+
     planTabs.forEach(tab => {
       tab.classList.toggle('active', tab.getAttribute('data-plan-filter') === plan);
     });

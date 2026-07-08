@@ -643,6 +643,7 @@
   .gv-primary-cta,
   .golden-visa-page .consultation-form,
   .golden-visa-page .form-textarea,
+  .golden-visa-page .form-consent,
   .golden-visa-page .btn-submit {
     position: static;
   }
@@ -915,6 +916,21 @@
   .golden-visa-page .form-textarea {
     width: 100%;
     height: 160px;
+  }
+
+  .golden-visa-page .form-consent {
+    align-items: flex-start;
+    width: auto;
+    height: auto;
+    margin-top: 16px;
+  }
+
+  .golden-visa-page .form-consent-text {
+    width: auto;
+    height: auto;
+    font-size: 18px;
+    line-height: 1.25;
+    white-space: normal;
   }
 
   .golden-visa-page .btn-submit {

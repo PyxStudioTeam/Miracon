@@ -38,6 +38,7 @@
   content: "";
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 
 .project-hero-image {
@@ -46,6 +47,87 @@
   object-fit: cover;
   transform: scale(1.02);
   transform-origin: center;
+}
+
+.project-hero-video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  pointer-events: none;
+}
+
+.project-hero-sound-button {
+  position: absolute;
+  right: max(40px, calc((100vw - min(var(--frame-width), calc(100vw - 200px))) / 2));
+  bottom: 44px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 142px;
+  height: 52px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: rgba(247, 244, 238, 0.88);
+  color: #003075;
+  box-shadow: 0 14px 34px rgba(0, 48, 117, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 0.25s ease, background 0.25s ease, opacity 0.25s ease;
+}
+
+.project-hero-sound-button:hover,
+.project-hero-sound-button:focus-visible {
+  transform: translateY(-2px);
+  background: #f7f4ee;
+}
+
+.project-hero-sound-button.is-sound-on {
+  background: #003075;
+  color: #f7f4ee;
+}
+
+.project-hero-sound-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  color: currentColor;
+}
+
+.project-hero-sound-icon::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 7px;
+  width: 8px;
+  height: 10px;
+  border-radius: 2px;
+  background: currentColor;
+  box-shadow: 7px -4px 0 -2px currentColor, 7px 4px 0 -2px currentColor;
+}
+
+.project-hero-sound-icon::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  top: 5px;
+  width: 10px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-left: 0;
+  border-radius: 0 14px 14px 0;
+}
+
+.project-hero-sound-text {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 body.js-enabled .project-page .project-hero-image {
@@ -58,6 +140,10 @@ body.js-enabled .project-page .project-hero-image {
   inset: 0;
   height: 100%;
   padding-top: 0;
+}
+
+.kriopigi-page .project-hero-content {
+  pointer-events: none;
 }
 
 .project-hero h1 {
@@ -244,6 +330,39 @@ body.js-enabled .project-page .project-brochure-link {
 .project-floating-brochure:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(0, 48, 117, 0.16);
+}
+
+.kriopigi-page .project-location-link,
+.kriopigi-page .project-brochure-link {
+  pointer-events: auto;
+  transition: opacity 0.32s ease, visibility 0.32s ease, transform 0.32s ease;
+}
+
+.kriopigi-page .project-hero.is-hero-idle h1,
+.kriopigi-page .project-hero.is-hero-idle .project-location-link,
+.kriopigi-page .project-hero.is-hero-idle .project-brochure-link {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(10px) !important;
+}
+
+@media (min-width: 761px) {
+  .kriopigi-page .project-hero {
+    height: 953px;
+  }
+
+  .kriopigi-page .project-hero h1 {
+    top: 310px;
+  }
+
+  .kriopigi-page .project-location-link {
+    top: 446px;
+  }
+
+  .kriopigi-page .project-brochure-link {
+    top: 535px;
+  }
 }
 
 .project-brochure-icon,
@@ -708,6 +827,10 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   opacity: 0.86;
 }
 
+.project-gallery-source {
+  display: none !important;
+}
+
 .project-gallery-drag-hint {
   position: absolute;
   left: 0;
@@ -930,6 +1053,14 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   width: 428px;
 }
 
+.project-plan-tabs--villa .project-plan-tab:nth-child(1) {
+  width: 368px;
+}
+
+.project-plan-tabs--villa .project-plan-tab:nth-child(2) {
+  width: 391px;
+}
+
 .project-plan-tab.active {
   border-color: #003075;
 }
@@ -983,6 +1114,26 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   max-height: none;
   margin-right: auto;
   margin-left: auto;
+}
+
+.kriopigi-page .project-plan-card--villa-floor img {
+  display: block;
+  width: auto;
+  max-width: min(883px, 100%);
+  max-height: none;
+  margin: 0 auto;
+}
+
+.kriopigi-page .project-plan-card--floor-1 img {
+  width: 806px;
+}
+
+.kriopigi-page .project-plan-card--floor-2 img {
+  width: 883px;
+}
+
+.kriopigi-page .project-plan-card--floor-3 img {
+  width: 844px;
 }
 
 .project-location-section {
@@ -1055,6 +1206,23 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
 
 .project-location-track span:nth-child(6n+6) {
   width: 410px;
+}
+
+.kriopigi-page .project-location-marquee {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 96px, #000 calc(100% - 96px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 96px, #000 calc(100% - 96px), transparent 100%);
+}
+
+.kriopigi-page .project-location-track span {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding-right: 64px;
+  padding-left: 64px;
+}
+
+.kriopigi-page .project-location-track span:nth-child(n) {
+  width: auto;
 }
 
 @keyframes project-location-scroll {
@@ -1131,6 +1299,12 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   .project-brochure-link::before,
   .project-floating-brochure::before {
     transition: none;
+  }
+}
+
+@media (max-width: 1680px) {
+  .project-page .nav-menu {
+    display: none;
   }
 }
 
@@ -1228,8 +1402,20 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   }
 
   .project-location-link {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
     margin-bottom: 36px;
     font-size: 18px;
+  }
+
+  .project-location-text {
+    width: calc(100vw - 88px);
+    height: auto;
+    font-size: 18px;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+    white-space: normal;
   }
 
   .project-brochure-link,
@@ -1311,6 +1497,14 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
     font-size: 22px;
   }
 
+  .project-plan-tab:nth-child(1),
+  .project-plan-tab:nth-child(2),
+  .project-plan-tab:nth-child(3),
+  .project-plan-tabs--villa .project-plan-tab:nth-child(1),
+  .project-plan-tabs--villa .project-plan-tab:nth-child(2) {
+    width: 100%;
+  }
+
   .project-plan-card h3 {
     margin-bottom: 24px;
     font-size: 34px;
@@ -1352,6 +1546,7 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   .project-page .form-container .section-subtitle,
   .project-page .consultation-form,
   .project-page .form-textarea,
+  .project-page .form-consent,
   .project-page .btn-submit {
     position: static;
     width: 100%;
@@ -1375,6 +1570,19 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   .project-page .form-textarea {
     min-height: 170px;
     margin-top: 18px;
+  }
+
+  .project-page .form-consent {
+    align-items: flex-start;
+    margin-top: 16px;
+  }
+
+  .project-page .form-consent-text {
+    width: auto;
+    height: auto;
+    font-size: 18px;
+    line-height: 1.25;
+    white-space: normal;
   }
 
   .project-page .btn-submit {
