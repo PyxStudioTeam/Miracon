@@ -64,20 +64,15 @@
 .project-hero-sound-button {
   position: absolute;
   right: max(40px, calc((100vw - min(var(--frame-width), calc(100vw - 200px))) / 2));
-  bottom: 44px;
+  bottom: 105px;
   z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 142px;
-  height: 52px;
-  padding: 0 18px;
-  border-radius: 999px;
-  background: rgba(247, 244, 238, 0.88);
+  display: block;
+  width: 170.52px;
+  height: 53px;
+  padding: 0;
+  border-radius: 25.9803px;
+  background: #f7f4ee;
   color: #003075;
-  box-shadow: 0 14px 34px rgba(0, 48, 117, 0.18);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   transition: transform 0.25s ease, background 0.25s ease, opacity 0.25s ease;
 }
 
@@ -93,41 +88,34 @@
 }
 
 .project-hero-sound-icon {
-  position: relative;
-  width: 24px;
-  height: 24px;
-  color: currentColor;
+  position: absolute;
+  top: 13.83px;
+  left: 28.42px;
+  width: 32.61px;
+  height: 25.55px;
+  transition: clip-path 0.25s ease, filter 0.25s ease;
 }
 
-.project-hero-sound-icon::before {
-  content: "";
-  position: absolute;
-  left: 2px;
-  top: 7px;
-  width: 8px;
-  height: 10px;
-  border-radius: 2px;
-  background: currentColor;
-  box-shadow: 7px -4px 0 -2px currentColor, 7px 4px 0 -2px currentColor;
-}
-
-.project-hero-sound-icon::after {
-  content: "";
-  position: absolute;
-  right: 2px;
-  top: 5px;
-  width: 10px;
-  height: 14px;
-  border: 2px solid currentColor;
-  border-left: 0;
-  border-radius: 0 14px 14px 0;
+.project-hero-sound-button:not(.is-sound-on) .project-hero-sound-icon {
+  clip-path: inset(0 45% 0 0);
 }
 
 .project-hero-sound-text {
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
+  position: absolute;
+  top: 14.38px;
+  left: 78.69px;
+  display: flex;
+  align-items: center;
+  width: 63px;
+  height: 25px;
+  font-size: 21.1999px;
+  font-weight: 400;
+  line-height: 25px;
+  text-align: center;
+}
+
+.project-hero-sound-button.is-sound-on .project-hero-sound-icon {
+  filter: brightness(0) invert(1);
 }
 
 body.js-enabled .project-page .project-hero-image {
@@ -1513,7 +1501,7 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   }
 
   .project-page .contacts-section {
-    padding: 70px 0;
+    padding: 70px 0 80px;
   }
 
   .project-page .form-container .section-title,

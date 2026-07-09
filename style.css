@@ -1892,13 +1892,13 @@ body.js-enabled .about-reveal.visible {
 
 /* Contacts */
 .contacts-section {
-  height: 787px;
+  height: 850px;
   background: linear-gradient(180deg, #fefbf5 0%, #ffffff 100%);
 }
 
 .form-container {
   position: relative;
-  height: 787px;
+  height: 850px;
 }
 
 .form-container .section-title {
@@ -1998,7 +1998,7 @@ body.js-enabled .about-reveal.visible {
 .form-consent {
   position: absolute;
   top: 335px;
-  left: 0;
+  left: 0.5px;
   display: flex;
   align-items: center;
   gap: 21.5px;
@@ -2065,8 +2065,8 @@ body.js-enabled .about-reveal.visible {
 
 .btn-submit {
   position: absolute;
-  top: 410px;
-  left: 601.5px;
+  top: 424px;
+  left: 601px;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
