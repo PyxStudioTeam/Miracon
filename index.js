@@ -643,4 +643,55 @@ document.addEventListener('DOMContentLoaded', () => {
       setActivePlan(selectedPlan, true);
     });
   });
+
+  /* ==========================================================================
+     PROJECT MAPS
+     Load Google Maps only shortly before the location section enters view.
+     This keeps third-party requests out of the initial page load.
+     ========================================================================== */
+  const projectMapSections = document.querySelectorAll('.project-location-section[data-map-src]');
+
+  projectMapSections.forEach(section => {
+    const mapFrame = section.querySelector('.project-location-map');
+    const mapSource = section.dataset.mapSrc;
+
+    if (!mapFrame || !mapSource) {
+      return;
+    }
+
+    const loadProjectMap = () => {
+      if (mapFrame.dataset.loaded === 'true') {
+        return;
+      }
+
+      mapFrame.dataset.loaded = 'true';
+      mapFrame.removeAttribute('aria-hidden');
+      section.classList.add('is-map-loading');
+
+      mapFrame.addEventListener('load', () => {
+        section.classList.remove('is-map-loading');
+        section.classList.add('is-map-loaded');
+      }, { once: true });
+
+      mapFrame.src = mapSource;
+    };
+
+    if (!('IntersectionObserver' in window)) {
+      loadProjectMap();
+      return;
+    }
+
+    const mapObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        loadProjectMap();
+        mapObserver.unobserve(section);
+      });
+    }, { rootMargin: '360px 0px' });
+
+    mapObserver.observe(section);
+  });
 });

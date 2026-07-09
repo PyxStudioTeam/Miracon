@@ -9,8 +9,6 @@
     content="Kriopigi Villas by MIRACON: four standalone beachfront villas in Kassandra, Halkidiki with private pools, panoramic Aegean views, and designer-grade finishes.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://www.google.com">
-  <link rel="preconnect" href="https://maps.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
     rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@qpokychuk/gilroy@1.0.2/index.min.css" rel="stylesheet">
@@ -83,7 +81,6 @@
     <section class="project-hero" aria-labelledby="project-title">
       <video class="project-hero-image project-hero-video"
         src="img/kriopigi-detail/hero-video-optimized.mp4"
-        poster="img/kriopigi-detail/hero.png"
         autoplay
         muted
         loop
@@ -273,13 +270,17 @@
       </div>
     </section>
 
-    <section class="project-location-section" aria-label="Kriopigi Villas location">
-      <iframe
-        class="project-location-map"
-        title="Map showing Egnatia 84, 54623, Thessaloniki, Greece"
-        src="https://www.google.com/maps?q=Egnatia%2084%2C%2054623%2C%20Thessaloniki%2C%20Greece&output=embed"
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    <section class="project-location-section" aria-label="Kriopigi Villas location"
+      data-map-src="https://www.google.com/maps?q=Egnatia%2084%2C%2054623%2C%20Thessaloniki%2C%20Greece&output=embed">
+      <div class="project-location-map-shell">
+        <iframe
+          id="kriopigi-location-map"
+          class="project-location-map"
+          title="Map showing Egnatia 84, 54623, Thessaloniki, Greece"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          aria-hidden="true"></iframe>
+      </div>
       <div class="project-location-marquee" aria-label="Nearby places">
         <div class="project-location-track">
           <span>Aegean Sea &middot; Panoramic views</span>

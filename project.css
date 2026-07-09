@@ -1075,6 +1075,10 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   display: none;
 }
 
+.project-plan-card {
+  --project-plan-max-height: min(940px, calc(100vw - 200px));
+}
+
 .project-plan-card h3 {
   margin: 0 0 53px;
   color: #003075;
@@ -1085,55 +1089,21 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
 
 .project-plan-card img {
   display: block;
-  width: calc(100% + 6px);
+  width: auto;
+  max-width: 100%;
   height: auto;
-  margin-left: -1px;
+  max-height: var(--project-plan-max-height);
+  margin: 0 auto;
   background: transparent;
   border-radius: 0;
   object-fit: contain;
+  object-position: center top;
 }
 
-.project-plan-card--floor-1 img {
-  width: 1726px;
-  max-height: 940px;
-}
-
-.project-plan-card--floor-2 img {
-  width: 1728px;
-  max-height: 782px;
-}
-
-.project-plan-card--studio img {
-  width: 1726px;
-  max-height: 827px;
-}
-
-.project-plan-card--apartment img {
-  width: 840px;
-  max-width: 100%;
-  max-height: none;
-  margin-right: auto;
-  margin-left: auto;
-}
-
-.kriopigi-page .project-plan-card--villa-floor img {
-  display: block;
-  width: auto;
-  max-width: min(883px, 100%);
-  max-height: none;
-  margin: 0 auto;
-}
-
-.kriopigi-page .project-plan-card--floor-1 img {
-  width: 806px;
-}
-
-.kriopigi-page .project-plan-card--floor-2 img {
-  width: 883px;
-}
-
-.kriopigi-page .project-plan-card--floor-3 img {
-  width: 844px;
+@media (max-width: 1180px) {
+  .project-plan-card {
+    --project-plan-max-height: min(760px, calc(100vw - 48px));
+  }
 }
 
 .project-location-section {
@@ -1510,6 +1480,10 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
     font-size: 34px;
   }
 
+  .project-plan-card {
+    --project-plan-max-height: min(520px, calc(100vw - 32px));
+  }
+
   .project-location-section {
     height: 560px;
   }
@@ -1611,5 +1585,255 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
 
   .project-page .lang-dropdown-btn {
     top: 88px;
+  }
+}
+
+/* ===========================================================================
+   RESPONSIVE PROJECT STRUCTURE
+   The desktop composition above keeps its original coordinates. These rules
+   only take over below the desktop breakpoint, where content must be able to
+   grow and reflow without overlapping.
+   =========================================================================== */
+.project-location-section {
+  display: grid;
+  grid-template-rows: 620px 119px;
+  gap: 80px;
+  height: auto;
+}
+
+.project-location-map-shell {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(0, 48, 117, 0.08) 0 1px, transparent 1px 64px),
+    linear-gradient(45deg, rgba(182, 138, 61, 0.07) 0 1px, transparent 1px 64px),
+    linear-gradient(135deg, #e9eef1, #f7f4ee);
+}
+
+.project-location-map-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 52% 48%, rgba(182, 138, 61, 0.5) 0 7px, transparent 8px),
+    radial-gradient(circle at 52% 48%, transparent 0 20px, rgba(182, 138, 61, 0.18) 21px 22px, transparent 23px);
+  transition: opacity 0.35s ease;
+}
+
+.project-location-map {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  transform: none;
+}
+
+.project-location-marquee {
+  position: static;
+}
+
+.project-location-section.is-map-loaded .project-location-map-shell::before {
+  opacity: 0;
+}
+
+@media (max-width: 1180px) {
+  .project-intro-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    align-items: start;
+    gap: 48px;
+    height: auto;
+    margin-left: 0;
+  }
+
+  .project-intro-media {
+    display: grid;
+    gap: 30px;
+  }
+
+  .project-intro-media .project-section-title,
+  .project-intro-image,
+  .project-intro-copy,
+  .project-intro-copy p {
+    position: static;
+  }
+
+  .project-intro-media .project-section-title {
+    display: block;
+    width: auto;
+    height: auto;
+    font-size: clamp(44px, 5vw, 64px);
+    line-height: 1;
+  }
+
+  .project-intro-image {
+    width: 100%;
+    height: auto;
+    max-height: 620px;
+    margin: 0;
+    aspect-ratio: 1.37;
+  }
+
+  .project-intro-copy {
+    width: auto;
+    padding: 0;
+  }
+
+  .project-specs {
+    width: auto;
+    height: auto;
+    margin: 0;
+    font-size: clamp(30px, 3.75vw, 48px);
+    line-height: 1.2;
+  }
+
+  .project-spec {
+    min-height: 72px;
+    height: auto;
+    gap: 28px;
+  }
+
+  .project-intro-copy p {
+    display: block;
+    width: auto;
+    height: auto;
+    margin-top: 36px;
+    font-size: clamp(23px, 2.65vw, 32px);
+    line-height: 1.25;
+  }
+
+  .project-amenities-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-amenity-card {
+    width: 100%;
+  }
+
+  .project-location-section {
+    grid-template-rows: minmax(480px, 56vw) 119px;
+  }
+}
+
+@media (max-width: 760px) {
+  .project-page main>section+section {
+    margin-top: 76px;
+  }
+
+  .project-page .project-hero+.project-intro {
+    margin-top: 76px;
+  }
+
+  .project-hero-content {
+    position: relative;
+    inset: auto;
+    height: 100%;
+    padding-top: 168px;
+  }
+
+  .project-hero h1,
+  .project-location-link,
+  .project-brochure-link {
+    position: static;
+  }
+
+  .project-hero h1 {
+    display: block;
+    width: auto;
+    height: auto;
+    margin-bottom: 28px;
+    font-size: clamp(48px, 13vw, 72px);
+    line-height: 0.95;
+  }
+
+  .project-location-link {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .project-location-icon,
+  .project-location-text {
+    position: static;
+  }
+
+  .project-location-icon {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 28px;
+  }
+
+  .project-location-text {
+    display: block;
+    width: auto;
+  }
+
+  .project-brochure-link {
+    display: inline-flex;
+    margin: 0;
+  }
+
+  .project-hero-sound-button {
+    right: 16px;
+    bottom: 24px;
+    width: 150px;
+    transform: scale(0.86);
+    transform-origin: right bottom;
+  }
+
+  .project-intro-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .project-intro-media .project-section-title {
+    font-size: clamp(38px, 11vw, 50px);
+  }
+
+  .project-intro-image {
+    max-height: none;
+    aspect-ratio: 1.12;
+  }
+
+  .project-specs {
+    font-size: 28px;
+  }
+
+  .project-spec {
+    min-height: 58px;
+    gap: 20px;
+  }
+
+  .project-spec-icon {
+    flex-basis: 34px;
+    width: 34px;
+  }
+
+  .project-intro-copy p {
+    margin-top: 26px;
+    font-size: 21px;
+  }
+
+  .project-amenity-card {
+    min-height: 128px;
+    padding-left: 92px;
+  }
+
+  .project-location-section {
+    grid-template-rows: minmax(330px, 420px) 92px;
+    gap: 48px;
+  }
+
+  .project-location-map-shell {
+    min-height: 0;
+  }
+
+  .project-location-marquee {
+    position: static;
+    height: 92px;
   }
 }
