@@ -27,6 +27,7 @@ const gallery = [...gallerySource];
 while (gallery.length > 0 && gallery.length < 4) gallery.push(gallery[gallery.length % gallerySource.length]);
 const galleryClasses = ['project-gallery-image--far-left', 'project-gallery-image--left', 'project-gallery-image--main', 'project-gallery-image--right-small'];
 const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(project.mapQuery || project.address)}&output=embed`;
+const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(project.mapQuery || project.address)}`;
 const primaryCategory = project.categories[0] ?? 'coastal';
 ---
 
@@ -73,7 +74,7 @@ const primaryCategory = project.categories[0] ?? 'coastal';
       <div class="container project-hero-content">
         <div class="project-hero-stack">
           <h1 id="project-title">{project.title}</h1>
-          <a href={`/?filter=${primaryCategory}#projects`} class="project-location-link">
+          <a href={mapHref} class="project-location-link" target="_blank" rel="noreferrer">
             <img src="/img/olympus-detail/icons/hero-location.svg" alt="" class="project-location-icon" aria-hidden="true">
             <span class="project-location-text">{project.address}</span>
           </a>
