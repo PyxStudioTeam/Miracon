@@ -86,7 +86,6 @@
     left: 0;
     width: 100%;
     height: 72px;
-    border-bottom: 1px solid var(--mobile-cream);
     opacity: 1;
     pointer-events: auto;
     transform: none;
