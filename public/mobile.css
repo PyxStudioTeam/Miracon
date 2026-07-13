@@ -1,0 +1,1563 @@
+/* Mobile layout reconstructed from Figma node 39:944 (375 × 6661). */
+
+.hero-mobile-image,
+.mobile-menu-btn,
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --mobile-blue: #003075;
+    --mobile-gold: #b68a3d;
+    --mobile-cream: #f7f4ee;
+    --mobile-card: linear-gradient(180deg, #fefbf5 0%, #fff 100%);
+  }
+
+  html,
+  body {
+    width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  html {
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar {
+    display: none;
+  }
+
+  body {
+    background: var(--mobile-cream);
+    font-family: 'Gilroy', sans-serif;
+  }
+
+  .container,
+  .header-container {
+    width: calc(100% - 40px);
+    max-width: none;
+    margin-inline: auto;
+  }
+
+  main > section + section {
+    margin-top: 0;
+  }
+
+  main > .about-section,
+  main > .golden-visa-section,
+  main > .stages-section,
+  main > .contacts-section {
+    margin-top: 0;
+  }
+
+  .section-title,
+  .about-title-word,
+  .stages-intro .section-title,
+  .form-container .section-title {
+    color: var(--mobile-gold);
+    font-family: 'Gilroy', sans-serif;
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 31.045px;
+    letter-spacing: 0;
+  }
+
+  .section-subtitle,
+  .about-copy .section-subtitle,
+  .stages-intro .section-subtitle,
+  .form-container .section-subtitle {
+    color: var(--mobile-blue);
+    font-family: 'Gilroy', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 16.8px;
+    letter-spacing: 0;
+    opacity: .8;
+  }
+
+  /* Header — Figma: x0 y0 w375 h72. */
+  .header,
+  .header.header--hidden {
+    position: absolute;
+    z-index: 20;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 72px;
+    border-bottom: 1px solid var(--mobile-cream);
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+  }
+
+  .header .logo {
+    position: relative;
+    z-index: 2;
+    top: auto;
+    left: auto;
+    flex: 0 0 auto;
+    margin: 0;
+    transform: scale(.487);
+    transform-origin: left center;
+  }
+
+  .header .logo .logo-img {
+    transform: translateY(5px);
+  }
+
+  .nav-menu,
+  .header-actions {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    position: absolute;
+    z-index: 30;
+    top: 29px;
+    right: 0;
+    display: block;
+    width: 19px;
+    height: 13px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .mobile-menu-btn::before,
+  .mobile-menu-btn::after,
+  .mobile-menu-btn span {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 19px;
+    height: 1px;
+    border-radius: 999px;
+    background: #fff;
+    transition: transform .2s ease, opacity .15s ease;
+  }
+
+  .mobile-menu-btn::before { top: 0; }
+  .mobile-menu-btn span { top: 6px; }
+  .mobile-menu-btn::after { top: 12px; }
+
+  .mobile-menu-btn.active::before {
+    transform: translateY(6px) rotate(45deg);
+  }
+
+  .mobile-menu-btn.active span { opacity: 0; }
+
+  .mobile-menu-btn.active::after {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+
+  .mobile-nav {
+    position: absolute;
+    z-index: 25;
+    top: 58px;
+    right: 0;
+    display: grid;
+    width: 190px;
+    padding: 14px 18px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 18px;
+    background: rgba(3, 39, 91, .96);
+    color: #fff;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity .2s ease, visibility .2s ease, transform .2s ease;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .mobile-nav.active {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .mobile-nav-link {
+    padding: 10px 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, .14);
+    font-size: 15px;
+  }
+
+  .mobile-nav-link:last-child { border-bottom: 0; }
+
+  /* Hero — Figma: y0..721. */
+  .hero-pin,
+  .hero {
+    width: 100%;
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  .hero-pin {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero {
+    position: relative;
+    inset: auto;
+    z-index: 0;
+    overflow: hidden;
+    opacity: 1 !important;
+    pointer-events: auto;
+  }
+
+  .hero-video { display: none; }
+
+  .hero-mobile-image {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+    object-position: 49% 50%;
+    transform: scale(1.132);
+    transform-origin: center;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(0, 0, 0, .2);
+    pointer-events: none;
+  }
+
+  .hero-content,
+  body.js-enabled .hero-content {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hero-subtitle {
+    position: absolute;
+    top: 280px;
+    left: 20px;
+    display: block;
+    width: 329px;
+    height: 15px;
+    margin: 0;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 15.356px;
+    letter-spacing: 2.24px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    text-shadow: 0 4.7px 9.4px rgba(0, 0, 0, .25);
+  }
+
+  .hero-title {
+    position: absolute;
+    top: 327px;
+    left: 20px;
+    display: block;
+    width: 301px;
+    height: 184px;
+    margin: 0;
+    color: #fff;
+    font-size: 48px;
+    font-weight: 400;
+    line-height: 46.068px;
+    letter-spacing: 0;
+    text-shadow: 0 4.62px 9.24px rgba(0, 0, 0, .25);
+  }
+
+  .hero-title br {
+    display: block;
+  }
+
+  .hero-actions { display: contents; }
+
+  .btn-hero,
+  .badge-visa {
+    position: absolute;
+    display: block;
+    height: 46px;
+    margin: 0;
+    border-radius: 22px;
+    transform: none;
+  }
+
+  .btn-hero {
+    top: 543px;
+    left: 20px;
+    width: 217px;
+    padding: 0;
+    background: var(--mobile-blue);
+    overflow: hidden;
+  }
+
+  .btn-hero .btn-arrow {
+    position: absolute;
+    top: 15px;
+    left: 25px;
+    width: 15px;
+    height: 14px;
+  }
+
+  .btn-arrow::before {
+    width: 15px;
+    height: 1.5px;
+  }
+
+  .btn-arrow::after {
+    width: 7px;
+    height: 7px;
+    border-width: 1.5px;
+  }
+
+  .btn-hero span:not(.btn-arrow) {
+    position: absolute;
+    z-index: 2;
+    top: 11px;
+    left: 58px;
+    display: block;
+    width: 135px;
+    height: 22px;
+    color: var(--mobile-cream);
+    font-size: 18.46px;
+    font-weight: 400;
+    line-height: 22.15px;
+    text-align: center;
+  }
+
+  .btn-hero:hover .btn-arrow,
+  .btn-hero:focus-visible .btn-arrow {
+    rotate: 0deg;
+    translate: 0 0;
+  }
+
+  .btn-hero:hover span:not(.btn-arrow),
+  .btn-hero:focus-visible span:not(.btn-arrow) {
+    clip-path: none;
+  }
+
+  .badge-visa {
+    top: 610px;
+    left: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 258px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    color: #fff;
+    background: linear-gradient(90deg, #c49a53 0%, #a67843 100%);
+    font-size: 18.588px;
+    line-height: 22.306px;
+  }
+
+  .hero-scroll-indicator {
+    display: none;
+  }
+
+  .hero-scroll-indicator img {
+    width: 23px;
+    filter: none;
+    transform: rotate(90deg);
+  }
+
+  /* Projects — Figma: y721..3645. */
+  .hero-pin + .projects-section,
+  .projects-section {
+    position: relative;
+    z-index: 2;
+    height: 2924px;
+    padding: 80px 0 0;
+    overflow: hidden;
+    background: var(--mobile-cream);
+  }
+
+  .projects-section .section-title {
+    height: 31px;
+    margin: 0 0 14px;
+  }
+
+  .projects-section .section-subtitle {
+    width: 335px;
+    height: 34px;
+    margin: 0 0 14px;
+  }
+
+  .filter-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 16px;
+    width: 300px;
+    height: 29px;
+    margin: 0 0 21px;
+    overflow: visible;
+  }
+
+  .filter-tab {
+    position: relative;
+    flex: 0 0 auto;
+    height: 29px;
+    min-width: 0;
+    padding: 0;
+    border: .372px solid #d7d1c8;
+    border-radius: 22px;
+    color: var(--mobile-blue);
+    background: var(--mobile-cream);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 14.4px;
+  }
+
+  .filter-tab:nth-child(1) { width: 41px; }
+  .filter-tab:nth-child(2) { width: 70px; }
+  .filter-tab:nth-child(3) { width: 50px; }
+  .filter-tab:nth-child(4) { width: 91px; }
+
+  .filter-tab::before,
+  .filter-tab span::before,
+  .filter-tab span::after {
+    content: none;
+    display: none;
+  }
+
+  .filter-tab span {
+    position: static;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    color: inherit !important;
+    line-height: 14.4px;
+    white-space: nowrap;
+    transform: none;
+  }
+
+  .filter-tab.active {
+    border-color: var(--mobile-blue);
+    color: var(--mobile-cream);
+    background: var(--mobile-blue);
+  }
+
+  .projects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 21px;
+  }
+
+  .project-card {
+    position: relative;
+    grid-template-columns: none;
+    flex: 0 0 520px;
+    width: 100%;
+    height: 520px;
+    min-height: 520px;
+    padding: 0;
+    border-radius: 22px;
+    background: var(--mobile-card);
+    box-shadow: 0 1.787px 1.787px rgba(0, 0, 0, .05);
+    overflow: hidden;
+  }
+
+  body.js-enabled .project-card,
+  body.js-enabled .project-card.visible {
+    opacity: 1 !important;
+    clip-path: none !important;
+    transform: none !important;
+    transition-delay: 0s !important;
+  }
+
+  .project-gallery {
+    position: absolute;
+    top: 17px;
+    left: 17px;
+    display: block;
+    width: calc(100% - 34px);
+    height: 231px;
+    padding: 0;
+  }
+
+  .gallery-main,
+  .gallery-main picture,
+  .gallery-main img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .gallery-main img {
+    border-radius: 12px;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .project-card[data-project-slug='kriopigi-villas'] .gallery-main img { object-position: 50% 32% !important; }
+  .project-card[data-project-slug='giannitson-thessaloniki'] .gallery-main img { object-position: 50% 77.5% !important; }
+
+  .gallery-sides { display: none; }
+
+  .project-tags {
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    display: flex;
+    gap: 7px;
+  }
+
+  .project-tags .tag {
+    flex: 0 0 auto;
+    min-width: 0 !important;
+    height: 24px;
+    padding: 0;
+    border-radius: 8px;
+    color: var(--mobile-cream);
+    background: rgba(0, 80, 250, .53);
+    font-size: 12.145px;
+    line-height: 14.574px;
+    backdrop-filter: blur(2.43px);
+    -webkit-backdrop-filter: blur(2.43px);
+  }
+
+  .tag--coastal { width: 84px; }
+  .tag--city { width: 63px; }
+  .tag--golden-visa { width: 110px; }
+
+  .project-info {
+    position: absolute;
+    inset: 0;
+    display: block;
+    padding: 0;
+  }
+
+  .project-name {
+    position: absolute;
+    top: 273px;
+    left: 17px;
+    width: calc(100% - 34px);
+    height: 21px;
+    margin: 0;
+    color: var(--mobile-blue);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 21.343px;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .project-card[data-project-slug='monastiriou-4-residences'] .project-name,
+  .project-card[data-project-slug='giannitson-thessaloniki'] .project-name {
+    top: 262px;
+  }
+
+  .project-card[data-project-slug='monastiriou-4-residences'] .project-name {
+    text-transform: none;
+  }
+
+  .project-location {
+    position: absolute;
+    top: 301px;
+    left: 17px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 17px;
+    margin: 0;
+    color: var(--mobile-blue);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 16.8px;
+  }
+
+  .location-dot {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mobile-blue);
+  }
+
+  .project-description {
+    position: absolute;
+    top: 313px;
+    left: 17px;
+    display: flex;
+    align-items: center;
+    width: calc(100% - 34px);
+    height: 127px;
+    max-height: 127px;
+    margin: 0;
+    overflow: hidden;
+    color: var(--mobile-blue);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 15.893px;
+    opacity: .8;
+  }
+
+  .project-bottom {
+    position: static;
+    display: contents;
+  }
+
+  .project-price {
+    position: absolute;
+    top: 420px;
+    left: 17px;
+    display: flex;
+    align-items: center;
+    width: 162px;
+    height: 61px;
+    margin: 0;
+    color: var(--mobile-blue);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 21.343px;
+  }
+
+  .learn-more {
+    position: absolute;
+    top: 477px;
+    left: 17px;
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    height: 17px;
+    color: var(--mobile-gold);
+    font-size: 14px;
+    line-height: 16.8px;
+  }
+
+  .learn-more span {
+    width: 18px;
+    height: 8px;
+    transform: none;
+  }
+
+  .learn-more span::before {
+    width: 18px;
+    border-width: 1px;
+  }
+
+  .learn-more span::after {
+    width: 6px;
+    height: 6px;
+    border-width: 1px;
+  }
+
+  /* About — Figma: y3645..4735. */
+  .about-section {
+    position: relative;
+    height: 1090px;
+    padding: 0;
+    overflow: hidden;
+    background: var(--mobile-cream);
+  }
+
+  .about-container,
+  .about-copy {
+    position: static;
+    width: 100%;
+    height: 100%;
+  }
+
+  .about-heading {
+    position: absolute;
+    z-index: 2;
+    top: 63px;
+    left: 20px;
+    display: block;
+    width: 267px;
+    height: 31px;
+    margin: 0;
+  }
+
+  .about-title-word {
+    display: block;
+    width: 91px;
+    height: 31px;
+  }
+
+  .about-brand {
+    position: absolute;
+    top: 0;
+    left: 105px;
+    display: block;
+    width: 323.39px;
+    height: 47.88px;
+    margin: 0;
+    transform: scale(.501);
+    transform-origin: top left;
+  }
+
+  .about-brand::after { content: none; }
+
+  .about-brand-letter {
+    display: block;
+  }
+
+  .about-copy .section-subtitle {
+    position: absolute;
+    z-index: 2;
+    top: 108px;
+    left: 20px;
+    display: block;
+    width: 335px;
+    height: 17px;
+    margin: 0;
+  }
+
+  .about-text {
+    position: absolute;
+    z-index: 2;
+    top: 151px;
+    left: 20px;
+    display: block;
+    width: 335px;
+    height: 272px;
+    margin: 0;
+    overflow: hidden;
+    color: var(--mobile-blue);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 16.8px;
+    letter-spacing: 0;
+  }
+
+  .about-text p { display: inline; }
+  .about-text p + p { margin: 0; }
+  .about-text p + p::before { content: ' '; }
+
+  body.js-enabled .about-reveal,
+  body.js-enabled .about-reveal.visible {
+    opacity: 1;
+    transition: none;
+  }
+
+  .about-image {
+    position: absolute;
+    z-index: 1;
+    top: 449px;
+    left: 17px;
+    width: calc(100% - 40px);
+    height: 237px;
+    margin: 0;
+    border-radius: 22px;
+    clip-path: inset(0 round 22px);
+    object-fit: cover;
+    object-position: 50% 40.5%;
+  }
+
+  .about-carousel {
+    position: absolute;
+    z-index: 3;
+    top: 712px;
+    left: 20px;
+    width: calc(100% - 43px);
+    height: 332px;
+    margin: 0;
+  }
+
+  .about-carousel-track,
+  .about-carousel-set {
+    display: block;
+    width: 100%;
+    height: 332px;
+    animation: none;
+    transform: none;
+  }
+
+  .about-carousel-set + .about-carousel-set { display: none; }
+
+  .about-card,
+  .about-card-direct,
+  .about-card-legal,
+  .about-card-personal,
+  .about-card-locations {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 71px;
+    padding: 0;
+    border-radius: 22px;
+    background: var(--mobile-card);
+    box-shadow: 0 1.6px 1.6px rgba(0, 0, 0, .05);
+  }
+
+  .about-card:nth-child(1) { top: 0; }
+  .about-card:nth-child(2) { top: 87px; }
+  .about-card:nth-child(3) { top: 174px; }
+  .about-card:nth-child(4) { top: 261px; }
+
+  .about-card.mobile-rise-card,
+  .stage-card.mobile-rise-card {
+    opacity: 0;
+    clip-path: inset(-8px -8px 64px -8px);
+    transform: translateY(64px);
+    transition:
+      opacity .18s linear,
+      transform .8s cubic-bezier(.25, 1, .5, 1),
+      clip-path .8s cubic-bezier(.25, 1, .5, 1);
+    will-change: opacity, transform, clip-path;
+  }
+
+  .about-card.mobile-rise-card.mobile-rise-card--visible,
+  .stage-card.mobile-rise-card.mobile-rise-card--visible {
+    opacity: 1;
+    clip-path: inset(-8px -8px -8px -8px);
+    transform: translateY(0);
+  }
+
+  .about-card .about-card-icon,
+  .about-card-direct .about-card-icon,
+  .about-card-legal .about-card-icon,
+  .about-card-personal .about-card-icon,
+  .about-card-locations .about-card-icon {
+    position: absolute;
+    top: 17px;
+    left: 12px;
+    width: 39px;
+    height: 37px;
+    object-fit: contain;
+  }
+
+  .about-card-personal .about-card-icon {
+    top: 21px;
+    left: 10px;
+    width: 42px;
+    height: 29px;
+  }
+
+  .about-card-locations .about-card-icon {
+    top: 21px;
+    left: 4px;
+    width: 54px;
+    height: 29px;
+  }
+
+  .about-card h3 {
+    position: absolute;
+    top: 15px;
+    left: 61px;
+    display: block;
+    width: calc(100% - 78px);
+    height: 19px;
+    margin: 0;
+    color: var(--mobile-blue);
+    font-size: 15.955px;
+    font-weight: 500;
+    line-height: 19.353px;
+  }
+
+  .about-card p {
+    position: absolute;
+    top: 37px;
+    left: 61px;
+    display: block;
+    width: calc(100% - 78px);
+    height: 20px;
+    margin: 0;
+    overflow: hidden;
+    color: var(--mobile-blue);
+    font-size: 7.978px;
+    font-weight: 400;
+    line-height: 9.573px;
+  }
+
+  /* Golden Visa — Figma: y4735..5325. */
+  .golden-visa-section {
+    position: relative;
+    height: 590px;
+    padding: 0;
+    overflow: hidden;
+    background: var(--mobile-cream);
+  }
+
+  .golden-container {
+    position: relative;
+    display: block;
+    width: calc(100% - 40px);
+    height: 590px;
+    padding: 0;
+  }
+
+  .golden-content { display: contents; }
+
+  .golden-content .section-title {
+    position: absolute;
+    top: 34px;
+    left: 0;
+    width: 178px;
+    height: 31px;
+    margin: 0;
+  }
+
+  .golden-content .section-subtitle {
+    position: absolute;
+    top: 79px;
+    left: 0;
+    width: 335px;
+    height: 34px;
+    margin: 0;
+    color: var(--mobile-blue);
+    font-size: 16px;
+    line-height: 16.8px;
+    opacity: .8;
+  }
+
+  .golden-image-wrap,
+  .golden-carousel-3d,
+  .golden-carousel-inner {
+    position: absolute;
+    top: 133px;
+    left: 0;
+    width: calc(100% - 3px);
+    height: 301px;
+    border-radius: 22px;
+  }
+
+  .golden-carousel-3d,
+  .golden-carousel-inner {
+    top: 0;
+  }
+
+  .golden-carousel-face,
+  .golden-carousel-face[data-pos='0'],
+  .golden-carousel-face[data-pos='1'],
+  .golden-carousel-face[data-pos='2'],
+  .golden-carousel-face[data-pos='3'] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 301px;
+    border-radius: 22px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .golden-carousel-face[data-pos='0'] {
+    z-index: 4;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .golden-carousel-face picture,
+  .golden-carousel-face img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .golden-carousel-face img {
+    border-radius: 22px;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .visa-consult-badge,
+  .visa-consult-badge:hover,
+  .visa-consult-badge:focus-visible {
+    position: absolute;
+    z-index: 8;
+    top: 215px;
+    bottom: auto;
+    left: 113px;
+    display: block;
+    width: 111px;
+    height: 24px;
+    border-radius: 12px;
+    color: var(--mobile-blue);
+    background: var(--mobile-cream);
+    font-size: 10.652px;
+    line-height: 12.783px;
+    transform: none;
+  }
+
+  .visa-consult-badge.animate { animation: none; }
+
+  .visa-consult-badge > span:first-child {
+    position: absolute;
+    top: 5px;
+    left: 18px;
+    display: block;
+    width: 60px;
+    height: 13px;
+  }
+
+  .visa-consult-arrow {
+    position: absolute;
+    top: 1px;
+    right: 2px;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+  }
+
+  .visa-consult-arrow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 7px;
+    display: block;
+    width: 9px;
+    border-top: 1px solid currentColor;
+    transform: translateY(-50%);
+  }
+
+  .visa-consult-arrow::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    display: block;
+    width: 4px;
+    height: 4px;
+    border-top: 1px solid currentColor;
+    border-right: 1px solid currentColor;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .slider-wrapper {
+    position: absolute;
+    z-index: 6;
+    top: 386px;
+    left: 0;
+    width: calc(100% - 3px);
+    height: 180px;
+    margin: 0;
+    border-radius: 22px;
+    background: var(--mobile-card);
+    box-shadow: 0 1.585px 1.585px rgba(0, 0, 0, .05);
+  }
+
+  .slider-slides {
+    height: 100%;
+    border-radius: 22px;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+  }
+
+  .slide-title {
+    position: absolute;
+    top: 17px;
+    left: 17px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: calc(100% - 34px);
+    height: 19px;
+    margin: 0;
+    color: var(--mobile-blue);
+    font-size: 15.847px;
+    font-weight: 500;
+    line-height: 17.99px;
+  }
+
+  .slide-icon {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 17px;
+  }
+
+  .slide-text,
+  .slide-text-short {
+    position: absolute;
+    top: 51px;
+    left: 17px;
+    width: calc(100% - 34px);
+    height: 70px;
+    margin: 0;
+    overflow: hidden;
+    color: var(--mobile-blue);
+    font-size: 12.678px;
+    font-weight: 400;
+    line-height: 14.392px;
+    opacity: .8;
+  }
+
+  .slider-controls {
+    position: absolute;
+    right: 17px;
+    bottom: 20px;
+    left: 17px;
+    display: grid;
+    grid-template-columns: 26px 1fr 26px;
+    align-items: center;
+  }
+
+  .slider-btn {
+    width: 26px;
+    height: 19px;
+    transform: none;
+  }
+
+  .slider-counter {
+    color: var(--mobile-blue);
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: .04em;
+    opacity: .78;
+  }
+
+  /* Stages — Figma: y5325..5903. */
+  .stages-section {
+    position: relative;
+    height: 578px;
+    padding: 0;
+    overflow: hidden;
+    background: var(--mobile-cream);
+  }
+
+  .stages-container,
+  .stages-intro {
+    position: static;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  .stages-intro .section-title {
+    position: absolute;
+    top: 56px;
+    left: 20px;
+    display: block;
+    width: 204px;
+    height: 31px;
+    margin: 0;
+  }
+
+  .stages-intro .section-subtitle {
+    position: absolute;
+    top: 101px;
+    left: 20px;
+    display: block;
+    width: 335px;
+    height: 34px;
+    margin: 0;
+  }
+
+  .stages-carousel {
+    position: absolute;
+    z-index: 1;
+    top: 154px;
+    right: auto;
+    left: 20px;
+    width: calc(100% - 43px);
+    height: 344px;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .stages-carousel-track,
+  .stages-carousel-set {
+    display: block;
+    width: 100%;
+    height: 344px;
+    animation: none;
+    transform: none;
+  }
+
+  .stages-carousel-set + .stages-carousel-set { display: none; }
+
+  .stage-card {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 64px;
+    min-height: 64px;
+    border-radius: 22px;
+    background: var(--mobile-card);
+    box-shadow: 0 1.6px 1.6px rgba(0, 0, 0, .05);
+  }
+
+  .stage-card:nth-child(1) { top: 0; }
+  .stage-card:nth-child(2) { top: 70px; }
+  .stage-card:nth-child(3) { top: 140px; }
+  .stage-card:nth-child(4) { top: 210px; }
+  .stage-card:nth-child(5) { top: 280px; }
+
+  .stage-number {
+    position: absolute;
+    top: 21px;
+    left: 14px;
+    display: block;
+    width: 34px;
+    height: 28px;
+    color: var(--mobile-blue);
+    font-size: 29.11px;
+    font-weight: 500;
+    line-height: 27.939px;
+    text-align: center;
+    opacity: .4;
+  }
+
+  .stage-card h3 {
+    position: absolute;
+    top: 16px;
+    left: 59px;
+    display: block;
+    width: calc(100% - 76px);
+    height: 16px;
+    margin: 0;
+    color: var(--mobile-blue);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 15.523px;
+  }
+
+  .stage-card p {
+    position: absolute;
+    top: 38px;
+    left: 59px;
+    width: calc(100% - 76px);
+    height: 9px;
+    margin: 0;
+    color: var(--mobile-blue);
+    font-size: 8px;
+    font-weight: 400;
+    line-height: 9.082px;
+    opacity: .8;
+  }
+
+  .stage-card p br { display: none; }
+
+  /* Consultation — Figma: y5903..6497. */
+  .contacts-section {
+    position: relative;
+    height: 594px;
+    padding: 0;
+    background: var(--mobile-card);
+  }
+
+  .contacts-section > .container,
+  .form-container {
+    position: relative;
+    width: calc(100% - 40px);
+    height: 594px;
+    margin-inline: auto;
+  }
+
+  .contacts-section > .container {
+    width: 100%;
+  }
+
+  .form-container .section-title {
+    position: absolute;
+    top: 37px;
+    left: 0;
+    display: block;
+    width: 254px;
+    height: 31px;
+    margin: 0;
+  }
+
+  .form-container .section-subtitle {
+    position: absolute;
+    top: 82px;
+    left: 0;
+    display: block;
+    width: 249px;
+    height: 34px;
+    margin: 0;
+  }
+
+  .consultation-form {
+    position: absolute;
+    top: 138px;
+    left: 0;
+    display: block;
+    width: calc(100% - 3px);
+    height: 427px;
+  }
+
+  .form-row,
+  .form-group {
+    display: block;
+  }
+
+  .form-row .form-group {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 44px;
+  }
+
+  .form-row .form-group:nth-child(1) { top: 0; }
+  .form-row .form-group:nth-child(2) { top: 58px; }
+  .form-row .form-group:nth-child(3) { top: 116px; }
+
+  .form-group > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .form-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    border: .647px solid rgba(0, 48, 117, .4);
+    border-radius: 22px;
+    background: rgba(247, 244, 238, .4);
+    color: var(--mobile-blue);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 15.356px;
+  }
+
+  .form-input::placeholder {
+    color: rgba(0, 48, 117, .4);
+    opacity: 1;
+  }
+
+  .form-message {
+    position: absolute;
+    top: 174px;
+    left: 0;
+    width: 100%;
+    height: 132px;
+  }
+
+  .form-textarea {
+    position: static;
+    width: 100%;
+    height: 132px;
+    min-height: 132px;
+    padding-top: 15px;
+    resize: none;
+  }
+
+  .form-consent {
+    position: absolute;
+    top: 320px;
+    left: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    width: 344px;
+    min-height: 60px;
+  }
+
+  .form-consent-box {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    border: .647px solid rgba(0, 48, 117, .4);
+    border-radius: 6px;
+    background: rgba(247, 244, 238, .4);
+  }
+
+  .form-consent-box::after {
+    top: 3px;
+    left: 6px;
+    width: 6px;
+    height: 10px;
+    border-width: 2px;
+  }
+
+  .form-consent-text {
+    width: 313px;
+    min-height: 60px;
+    color: #99abc6;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 14.7px;
+    white-space: normal;
+  }
+
+  .btn-submit {
+    position: absolute;
+    top: 402px;
+    left: 77px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 149px;
+    height: 25px;
+    min-height: 25px;
+    padding: 0 0 0 13px;
+    margin: 0;
+    border-radius: 12.82px;
+    color: var(--mobile-cream);
+    background: var(--mobile-blue);
+    font-size: 9.907px;
+    font-weight: 400;
+    line-height: 11.888px;
+    opacity: 1;
+    transform: none;
+  }
+
+  .btn-submit:disabled { opacity: 1; }
+
+  .btn-submit > span:first-child {
+    display: block;
+    width: 105px;
+    height: 12px;
+  }
+
+  .btn-submit-arrow {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 6px;
+  }
+
+  .btn-submit-arrow::before {
+    width: 8px;
+    border-width: 1px;
+  }
+
+  .btn-submit-arrow::after {
+    width: 3px;
+    height: 3px;
+    border-width: 1px;
+  }
+
+  /* Footer — Figma: y6497..6661. */
+  .footer,
+  .footer-container {
+    height: 164px;
+  }
+
+  .footer {
+    padding: 0;
+    background: #03275b;
+  }
+
+  .footer-container {
+    position: relative;
+    display: block;
+  }
+
+  .footer-top,
+  .footer-bottom {
+    position: static;
+    display: block;
+  }
+
+  .footer .logo {
+    position: absolute;
+    top: 25px;
+    left: 0;
+    transform: scale(.458);
+    transform-origin: left center;
+  }
+
+  .footer .logo-letters {
+    display: flex;
+  }
+
+  .footer-socials {
+    position: absolute;
+    top: 35px;
+    right: 3px;
+    gap: 12px;
+    transform: none;
+  }
+
+  .footer-socials a,
+  .footer-socials img {
+    width: 16px;
+    height: 16px;
+  }
+
+  .footer-links {
+    position: absolute;
+    top: 94px;
+    left: 0;
+    display: grid;
+    gap: 15px;
+    transform: none;
+  }
+
+  .footer-links a {
+    font-size: 10.9px;
+    line-height: 10.461px;
+  }
+
+  .lang-dropdown-btn {
+    position: absolute;
+    top: 99px;
+    right: 3px;
+    width: 88px;
+    height: 28px;
+    padding: 0 27px 0 16px;
+    border-radius: 14px;
+    font-size: 11.256px;
+    line-height: 13.508px;
+    transform: none;
+  }
+
+  .lang-dropdown-btn::before {
+    top: 1px;
+    right: 1px;
+    width: 26px;
+    height: 26px;
+  }
+
+  .lang-refresh {
+    right: 6px;
+    width: 16px;
+    height: 15px;
+  }
+}
+
+@media (max-width: 600px) and (max-height: 700px) {
+  .hero-subtitle { top: calc(100% - 441px); }
+  .hero-title { top: calc(100% - 394px); }
+  .btn-hero { top: calc(100% - 178px); }
+  .badge-visa { top: calc(100% - 111px); }
+}
+
+@media (max-width: 360px) {
+  .hero-title {
+    width: calc(100% - 40px);
+    font-size: 44px;
+    line-height: 43px;
+  }
+
+  .hero-subtitle {
+    width: calc(100% - 40px);
+    font-size: 13px;
+    letter-spacing: 1.75px;
+  }
+
+  .project-name { font-size: 20px; }
+  .project-description { font-size: 13px; }
+  .about-text { font-size: 15px; line-height: 16.4px; }
+  .form-consent { width: calc(100vw - 31px); }
+  .form-consent-text { width: calc(100vw - 62px); font-size: 12.5px; }
+}

@@ -1,0 +1,661 @@
+/* Shared responsive layer for project detail pages and Golden Visa. */
+
+.project-page .mobile-menu-btn,
+.project-page .mobile-nav,
+.golden-visa-page .mobile-menu-btn,
+.golden-visa-page .mobile-nav {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .project-page,
+  .golden-visa-page {
+    width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+    background: #f7f4ee;
+  }
+
+  .project-page .container,
+  .project-page .header-container,
+  .golden-visa-page .container,
+  .golden-visa-page .header-container {
+    width: calc(100% - 40px);
+    max-width: none;
+    margin-inline: auto;
+  }
+
+  /* Shared mobile header. */
+  .project-page .header,
+  .project-page .header.header--hidden,
+  .golden-visa-page .header,
+  .golden-visa-page .header.header--hidden {
+    position: absolute;
+    z-index: 30;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 72px;
+    border-bottom: 1px solid rgba(247, 244, 238, .8);
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .project-page .header-container,
+  .golden-visa-page .header-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+  }
+
+  .project-page .header .logo,
+  .golden-visa-page .header .logo {
+    position: relative;
+    z-index: 2;
+    top: auto;
+    left: auto;
+    display: flex;
+    flex: 0 0 auto;
+    margin: 0;
+    transform: scale(.487);
+    transform-origin: left center;
+  }
+
+  .project-page .header .logo-letters,
+  .golden-visa-page .header .logo-letters {
+    display: flex;
+  }
+
+  .project-page .nav-menu,
+  .project-page .header-actions,
+  .golden-visa-page .nav-menu,
+  .golden-visa-page .header-actions {
+    display: none;
+  }
+
+  .project-page .mobile-menu-btn,
+  .golden-visa-page .mobile-menu-btn {
+    position: absolute;
+    z-index: 32;
+    top: 29px;
+    right: 0;
+    display: block;
+    width: 19px;
+    height: 13px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .project-page .mobile-menu-btn::before,
+  .project-page .mobile-menu-btn::after,
+  .project-page .mobile-menu-btn span,
+  .golden-visa-page .mobile-menu-btn::before,
+  .golden-visa-page .mobile-menu-btn::after,
+  .golden-visa-page .mobile-menu-btn span {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 19px;
+    height: 1px;
+    border-radius: 999px;
+    background: #fff;
+    transition: transform .2s ease, opacity .15s ease;
+  }
+
+  .project-page .mobile-menu-btn::before,
+  .golden-visa-page .mobile-menu-btn::before { top: 0; }
+  .project-page .mobile-menu-btn span,
+  .golden-visa-page .mobile-menu-btn span { top: 6px; }
+  .project-page .mobile-menu-btn::after,
+  .golden-visa-page .mobile-menu-btn::after { top: 12px; }
+
+  .project-page .mobile-menu-btn.active::before,
+  .golden-visa-page .mobile-menu-btn.active::before {
+    transform: translateY(6px) rotate(45deg);
+  }
+
+  .project-page .mobile-menu-btn.active span,
+  .golden-visa-page .mobile-menu-btn.active span { opacity: 0; }
+
+  .project-page .mobile-menu-btn.active::after,
+  .golden-visa-page .mobile-menu-btn.active::after {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+
+  .project-page .mobile-nav,
+  .golden-visa-page .mobile-nav {
+    position: absolute;
+    z-index: 31;
+    top: 58px;
+    right: 0;
+    display: grid;
+    width: 190px;
+    padding: 14px 18px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 18px;
+    background: rgba(3, 39, 91, .96);
+    color: #fff;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity .2s ease, visibility .2s ease, transform .2s ease;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .project-page .mobile-nav.active,
+  .golden-visa-page .mobile-nav.active {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .project-page .mobile-nav-link,
+  .golden-visa-page .mobile-nav-link {
+    padding: 10px 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, .14);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .project-page .mobile-nav-link:last-child,
+  .golden-visa-page .mobile-nav-link:last-child { border-bottom: 0; }
+
+  /* Project introduction: remove the retained desktop 46.22% column. */
+  .project-page main > section + section {
+    margin-top: 80px;
+  }
+
+  .project-page .project-hero + .project-intro {
+    margin-top: 80px;
+  }
+
+  .project-page .project-intro-grid {
+    display: block;
+    width: calc(100% - 40px);
+    min-width: 0;
+    height: auto;
+    margin-inline: auto;
+  }
+
+  .project-page .project-intro-media,
+  .project-page .project-intro-copy {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+
+  .project-page .project-intro-media .project-section-title {
+    width: 100%;
+    font-size: 34px;
+    line-height: 1;
+  }
+
+  .project-page .project-intro-image {
+    width: 100%;
+    height: auto;
+    margin-top: 28px;
+    aspect-ratio: 4 / 3;
+    border-radius: 24px;
+    object-fit: cover;
+  }
+
+  .project-page .project-intro-copy {
+    margin-top: 34px;
+    padding: 0;
+  }
+
+  .project-page .project-specs {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    gap: 16px;
+    font-size: 23px;
+    line-height: 1.12;
+  }
+
+  .project-page .project-spec {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    gap: 14px;
+  }
+
+  .project-page .project-spec-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+
+  .project-page .project-spec span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .project-page .project-description-full,
+  .project-page .project-intro-copy p {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 32px 0 0;
+    color: rgba(0, 48, 117, .82);
+    font-size: 18px;
+    line-height: 1.34;
+    overflow-wrap: anywhere;
+  }
+
+  /* Shared contact form. */
+  .project-page .contacts-section,
+  .golden-visa-page .contacts-section {
+    height: auto;
+    margin-top: 80px;
+    padding: 64px 0 72px;
+    overflow: hidden;
+    background: #f7f4ee;
+  }
+
+  .project-page .form-container,
+  .golden-visa-page .form-container {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+
+  .project-page .form-container .section-title,
+  .project-page .form-container .section-subtitle,
+  .golden-visa-page .form-container .section-title,
+  .golden-visa-page .form-container .section-subtitle {
+    position: static;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+
+  .project-page .form-container .section-title,
+  .golden-visa-page .form-container .section-title {
+    margin: 0;
+    color: #b68a3d;
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .project-page .form-container .section-subtitle,
+  .golden-visa-page .form-container .section-subtitle {
+    margin: 14px 0 0;
+    color: rgba(0, 48, 117, .8);
+    font-size: 16px;
+    line-height: 1.08;
+  }
+
+  .project-page .consultation-form,
+  .golden-visa-page .consultation-form {
+    position: static;
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    margin: 32px 0 0;
+  }
+
+  .project-page .form-row,
+  .golden-visa-page .form-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .project-page .form-group,
+  .project-page .form-message,
+  .golden-visa-page .form-group,
+  .golden-visa-page .form-message {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .project-page .form-message,
+  .golden-visa-page .form-message { margin-top: 12px; }
+
+  .project-page .form-input,
+  .golden-visa-page .form-input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    border: 1px solid rgba(0, 48, 117, .42);
+    border-radius: 24px;
+    color: #003075;
+    background: transparent;
+    font-size: 14px;
+    line-height: 1;
+    box-sizing: border-box;
+  }
+
+  .project-page .form-textarea,
+  .golden-visa-page .form-textarea {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 128px;
+    min-height: 128px;
+    margin: 0;
+    padding: 15px 16px;
+    border-radius: 22px;
+    resize: vertical;
+  }
+
+  .project-page .form-consent,
+  .golden-visa-page .form-consent {
+    position: relative;
+    inset: auto;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    margin: 16px 0 0;
+    gap: 10px;
+  }
+
+  .project-page .form-consent-box,
+  .golden-visa-page .form-consent-box {
+    position: relative;
+    top: 0;
+    left: 0;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    background: transparent;
+    box-sizing: border-box;
+  }
+
+  .project-page .form-consent-box::after,
+  .golden-visa-page .form-consent-box::after {
+    top: 2px;
+    left: 5px;
+    width: 5px;
+    height: 9px;
+    border-width: 0 2px 2px 0;
+  }
+
+  .project-page .form-consent-text,
+  .golden-visa-page .form-consent-text {
+    display: block;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    color: rgba(0, 48, 117, .72);
+    font-size: 12.5px;
+    line-height: 1.18;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .project-page .btn-submit,
+  .golden-visa-page .btn-submit {
+    position: static;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: min(100%, 260px);
+    min-width: 0;
+    height: 46px;
+    min-height: 46px;
+    margin: 24px 0 0;
+    padding: 0 18px;
+    border-radius: 23px;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  /* Shared compact footer. */
+  .project-page .footer,
+  .project-page .footer-container,
+  .golden-visa-page .footer,
+  .golden-visa-page .footer-container {
+    height: 164px;
+  }
+
+  .project-page .footer,
+  .golden-visa-page .footer {
+    padding: 0;
+    background: #03275b;
+  }
+
+  .project-page .footer-container,
+  .golden-visa-page .footer-container {
+    position: relative;
+    display: block;
+  }
+
+  .project-page .footer-top,
+  .project-page .footer-bottom,
+  .golden-visa-page .footer-top,
+  .golden-visa-page .footer-bottom {
+    position: static;
+    display: block;
+    height: auto;
+    margin: 0;
+  }
+
+  .project-page .footer .logo,
+  .golden-visa-page .footer .logo {
+    position: absolute;
+    top: 25px;
+    left: 0;
+    display: flex;
+    transform: scale(.458);
+    transform-origin: left center;
+  }
+
+  .project-page .footer .logo-letters,
+  .golden-visa-page .footer .logo-letters { display: flex; }
+
+  .project-page .footer-socials,
+  .golden-visa-page .footer-socials {
+    position: absolute;
+    top: 35px;
+    right: 3px;
+    left: auto;
+    display: flex;
+    gap: 12px;
+    transform: none;
+  }
+
+  .project-page .footer-socials a,
+  .project-page .footer-socials img,
+  .golden-visa-page .footer-socials a,
+  .golden-visa-page .footer-socials img {
+    width: 16px;
+    height: 16px;
+  }
+
+  .project-page .footer-links,
+  .golden-visa-page .footer-links {
+    position: absolute;
+    top: 94px;
+    left: 0;
+    display: grid;
+    width: auto;
+    gap: 15px;
+    transform: none;
+  }
+
+  .project-page .footer-links a,
+  .golden-visa-page .footer-links a {
+    font-size: 10.9px;
+    line-height: 1;
+  }
+
+  .project-page .lang-dropdown-btn,
+  .golden-visa-page .lang-dropdown-btn {
+    position: absolute;
+    top: 99px;
+    right: 3px;
+    width: 88px;
+    height: 28px;
+    padding: 0 27px 0 16px;
+    border-radius: 14px;
+    font-size: 11.25px;
+    line-height: 1;
+    transform: none;
+  }
+
+  .project-page .lang-dropdown-btn::before,
+  .golden-visa-page .lang-dropdown-btn::before {
+    top: 1px;
+    right: 1px;
+    width: 26px;
+    height: 26px;
+  }
+
+  .project-page .lang-refresh,
+  .golden-visa-page .lang-refresh {
+    right: 6px;
+    width: 16px;
+    height: 15px;
+  }
+
+  /* Golden Visa mobile tightening. */
+  .golden-visa-page main > section + section {
+    margin-top: 80px;
+  }
+
+  .golden-visa-page .gv-hero {
+    height: max(568px, 100dvh);
+    min-height: 568px;
+  }
+
+  .golden-visa-page .gv-hero-content {
+    padding-top: 142px;
+    padding-bottom: 40px;
+  }
+
+  .golden-visa-page .gv-hero h1 {
+    font-size: clamp(46px, 14vw, 58px);
+    line-height: .96;
+  }
+
+  .golden-visa-page .gv-hero-lead {
+    margin-top: 24px;
+    font-size: 14px;
+    line-height: 1.28;
+  }
+
+  .golden-visa-page .gv-hero-actions {
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero,
+  .golden-visa-page .gv-hero-actions .badge-visa {
+    width: 100%;
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .golden-visa-page .section-title,
+  .golden-visa-page .project-section-title {
+    font-size: 36px;
+    line-height: 1;
+  }
+
+  .golden-visa-page .gv-family-panel {
+    padding: 20px;
+  }
+
+  .golden-visa-page .gv-family-cards {
+    gap: 16px;
+  }
+
+  .golden-visa-page .gv-family-card {
+    height: 250px;
+  }
+
+  .golden-visa-page .gv-family-card img,
+  .golden-visa-page .gv-family-card:nth-child(n) img {
+    top: 42px;
+    height: 72px;
+  }
+
+  .golden-visa-page .gv-family-card h3,
+  .golden-visa-page .gv-family-card:not(:first-child) h3 {
+    top: 145px;
+    min-height: 0;
+    font-size: 24px;
+    line-height: 1.05;
+  }
+
+  .golden-visa-page .gv-family-summary h3 {
+    font-size: 32px;
+  }
+
+  .golden-visa-page .gv-family-summary p,
+  .golden-visa-page .gv-threshold-main p,
+  .golden-visa-page .gv-threshold-main span,
+  .golden-visa-page .gv-threshold-note p {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .golden-visa-page .gv-metric-card {
+    padding: 26px;
+  }
+
+  .golden-visa-page .gv-metric-card h3 {
+    font-size: 36px;
+  }
+
+  .golden-visa-page .gv-metric-card p {
+    font-size: 18px;
+  }
+
+  .golden-visa-page .project-card {
+    padding: 18px;
+    gap: 18px;
+  }
+
+  .golden-visa-page .project-name,
+  .golden-visa-page .project-price {
+    font-size: 28px;
+  }
+
+  .golden-visa-page .project-location,
+  .golden-visa-page .project-description,
+  .golden-visa-page .learn-more {
+    width: 100%;
+    font-size: 17px;
+    line-height: 1.22;
+  }
+}
+
+@media (max-width: 340px) {
+  .project-page .project-hero h1 { font-size: 44px; }
+  .project-page .project-specs { font-size: 21px; }
+  .project-page .footer-links a,
+  .golden-visa-page .footer-links a { font-size: 10px; }
+}

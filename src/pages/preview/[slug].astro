@@ -1,0 +1,48 @@
+---
+import ProjectPage from '../../components/ProjectPage.astro';
+import { seedProjects } from '../../data/projects';
+import { mapProjectRow } from '../../lib/projects';
+import type { Project } from '../../lib/project-types';
+import { createAstroSupabaseClient } from '../../lib/supabase-server';
+
+const slug = Astro.params.slug ?? '';
+const supabase = createAstroSupabaseClient(Astro.cookies, Astro.request);
+let project: Project | null = null;
+
+if (!supabase && import.meta.env.DEV) {
+  project = seedProjects.find((item) => item.slug === slug) ?? null;
+} else if (supabase) {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) {
+    return Astro.redirect('/admin');
+  }
+
+  const { data: membership } = await supabase
+    .from('admin_users')
+    .select('user_id')
+    .eq('user_id', authData.user.id)
+    .maybeSingle();
+
+  if (!membership) {
+    return Astro.redirect('/admin');
+  }
+
+  const { data } = await supabase
+    .from('projects')
+    .select('*, project_images(*)')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (data) {
+    project = mapProjectRow(data);
+  }
+}
+
+if (!project) {
+  return Astro.redirect('/admin');
+}
+
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+---
+
+<ProjectPage project={project} preview />

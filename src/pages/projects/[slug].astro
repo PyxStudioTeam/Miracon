@@ -1,0 +1,12 @@
+---
+import ProjectPage from '../../components/ProjectPage.astro';
+import { getPublishedProjectBySlug } from '../../lib/projects';
+
+const project = await getPublishedProjectBySlug(Astro.params.slug ?? '');
+
+if (!project) {
+  return Astro.redirect('/#projects');
+}
+---
+
+<ProjectPage project={project} />

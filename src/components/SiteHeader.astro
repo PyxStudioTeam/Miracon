@@ -1,0 +1,71 @@
+---
+interface Props {
+  projectCategory?: string;
+}
+
+const { projectCategory } = Astro.props;
+const projectsHref = projectCategory ? `/?filter=${projectCategory}#projects` : '/#projects';
+---
+
+<header class="header">
+  <div class="header-container">
+    <a href="/" class="logo" aria-label="MIRACON home">
+      <img src="/img/logo_mark.svg" alt="" class="logo-img">
+      <div class="logo-letters" aria-hidden="true">
+        {['M', 'I', 'R', 'A', 'C', 'O', 'N'].map((letter) => (
+          <img src={`/img/logo_letters/${letter}.svg`} alt="" class="logo-letter">
+        ))}
+      </div>
+    </a>
+
+    <nav class="nav-menu glass-gradient" aria-label="Main navigation">
+      <a href={projectsHref} class="nav-link">Projects</a>
+      <a href="/golden-visa" class="nav-link">Golden Visa</a>
+      <a href="/#about" class="nav-link">About us</a>
+      <a href="#contacts" class="nav-link">Contacts</a>
+    </nav>
+
+    <div class="header-actions">
+      <div class="lang-selector glass-gradient"><span class="lang-current">EN</span></div>
+      <div class="contact-menu">
+        <a href="#contacts" class="contact-btn" aria-haspopup="true">
+          <span class="contact-btn-icon"></span>
+          <span>Contact</span>
+          <span class="contact-btn-arrow" aria-hidden="true">
+            <img src="/img/contact_header/Vector 12.svg" alt="">
+          </span>
+        </a>
+        <div class="contact-dropdown" aria-label="Quick contact links">
+          <a href="tel:+306955340416" class="contact-dropdown-link contact-dropdown-link--phone">
+            <span class="contact-dropdown-text">+306955340416</span>
+            <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Vector (1).svg" alt=""></span>
+          </a>
+          <a href="mailto:iracon@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail">
+            <span class="contact-dropdown-text">iracon@miracon.gr</span>
+            <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Group 37313 (1).svg" alt=""></span>
+          </a>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece"
+            class="contact-dropdown-link contact-dropdown-link--geo"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open Egnatia 84, 54623 Thessaloniki, Greece in Google Maps"
+          >
+            <span class="contact-dropdown-text">Egnatia 84, 54623 Thessaloniki, Greece</span>
+            <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Vector (2).svg" alt=""></span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Open menu" aria-controls="mobileNav" aria-expanded="false">
+      <span aria-hidden="true"></span>
+    </button>
+    <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+      <a href={projectsHref} class="mobile-nav-link">Projects</a>
+      <a href="/golden-visa" class="mobile-nav-link">Golden Visa</a>
+      <a href="/#about" class="mobile-nav-link">About us</a>
+      <a href="#contacts" class="mobile-nav-link">Contacts</a>
+    </nav>
+  </div>
+</header>

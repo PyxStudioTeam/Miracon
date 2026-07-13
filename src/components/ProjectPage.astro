@@ -1,0 +1,212 @@
+---
+import type { Project } from '../lib/project-types';
+import ContactSection from './ContactSection.astro';
+import SiteFooter from './SiteFooter.astro';
+import SiteHeader from './SiteHeader.astro';
+
+interface Props {
+  project: Project;
+  preview?: boolean;
+}
+
+const { project, preview = false } = Astro.props;
+const iconUrls = {
+  bed: '/img/olympus-detail/icons/spec-bed.svg',
+  bath: '/img/olympus-detail/icons/spec-bath.svg',
+  area: '/img/olympus-detail/icons/spec-area.svg',
+  levels: '/img/olympus-detail/icons/spec-lvl.svg',
+};
+const benefitIconClass = (iconUrl: string) => {
+  const match = iconUrl.match(/amenity-([a-z-]+)\.svg$/i);
+  return match ? `project-amenity-icon--${match[1]}` : 'project-amenity-icon--custom';
+};
+const gallerySource = project.gallery.length > 0
+  ? project.gallery
+  : [{ id: `${project.id}-gallery-cover`, url: project.coverUrl, alt: project.title, role: 'gallery' as const, sortOrder: 0 }, ...project.cardImages.filter((image) => image.url !== project.coverUrl)];
+const gallery = [...gallerySource];
+while (gallery.length > 0 && gallery.length < 4) gallery.push(gallery[gallery.length % gallerySource.length]);
+const galleryClasses = ['project-gallery-image--far-left', 'project-gallery-image--left', 'project-gallery-image--main', 'project-gallery-image--right-small'];
+const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(project.mapQuery || project.address)}&output=embed`;
+const primaryCategory = project.categories[0] ?? 'coastal';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{preview ? `[Preview] ${project.seoTitle}` : project.seoTitle}</title>
+  <meta name="description" content={project.seoDescription}>
+  {preview && <meta name="robots" content="noindex,nofollow">}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@qpokychuk/gilroy@1.0.2/index.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/project.css">
+  <link rel="stylesheet" href="/inner-mobile.css">
+</head>
+<body class:list={['project-page', `project-page--${project.heroVariant}`, { 'project-page--idle-hero': project.heroIdleUi && project.heroVariant === 'immersive' }]}>
+  {preview && <div class="project-preview-banner">Draft preview <span>Only visible to the administrator</span></div>}
+  <SiteHeader projectCategory={primaryCategory} />
+  <main>
+    <section
+      class:list={['project-hero', `project-hero--${project.heroVariant}`]}
+      aria-labelledby="project-title"
+      data-project-hero
+      data-idle-ui={String(project.heroIdleUi && project.heroVariant === 'immersive')}
+      style={`--hero-focus-x: ${project.heroFocalX}%; --hero-focus-y: ${project.heroFocalY}%;`}
+    >
+      {project.heroType === 'video' ? (
+        <video class="project-hero-image project-hero-video" src={project.heroUrl} poster={project.heroPosterUrl ?? undefined} autoplay muted loop playsinline preload="metadata"></video>
+      ) : (
+        <img src={project.heroUrl || project.coverUrl} alt={project.title} class="project-hero-image">
+      )}
+      {project.heroType === 'video' && project.heroSoundEnabled && (
+        <button class="project-hero-sound-button" type="button" aria-label="Enable video sound" aria-pressed="false">
+          <img class="project-hero-sound-icon" src="/img/kriopigi-detail/sound.svg" alt="" aria-hidden="true">
+          <span class="project-hero-sound-text">Sound</span>
+        </button>
+      )}
+      <div class="container project-hero-content">
+        <div class="project-hero-stack">
+          <h1 id="project-title">{project.title}</h1>
+          <a href={`/?filter=${primaryCategory}#projects`} class="project-location-link">
+            <img src="/img/olympus-detail/icons/hero-location.svg" alt="" class="project-location-icon" aria-hidden="true">
+            <span class="project-location-text">{project.address}</span>
+          </a>
+          {project.brochureUrl && (
+            <a href={project.brochureUrl} class="project-brochure-link" target="_blank" rel="noreferrer">
+              <span class="project-brochure-icon" aria-hidden="true">
+                <img src="/img/olympus-detail/icons/hero-brochure-1.svg" alt="" class="project-brochure-icon-part project-brochure-icon-part--tray">
+                <img src="/img/olympus-detail/icons/hero-brochure-2.svg" alt="" class="project-brochure-icon-part project-brochure-icon-part--chevron">
+                <img src="/img/olympus-detail/icons/hero-brochure-3.svg" alt="" class="project-brochure-icon-part project-brochure-icon-part--stem">
+              </span>
+              <span>Brochure</span>
+            </a>
+          )}
+        </div>
+      </div>
+    </section>
+
+    <section class="project-intro" aria-labelledby="project-intro-title">
+      <div class="container project-intro-grid">
+        <div class="project-intro-media">
+          <h2 id="project-intro-title" class="project-section-title">{project.introTitle}</h2>
+          <img src={project.introImageUrl || project.coverUrl} alt={`${project.title} interior`} class="project-intro-image">
+        </div>
+        <div class="project-intro-copy">
+          <div class="project-specs" aria-label="Project specifications">
+            {project.characteristics.map((item) => (
+              <div class="project-spec">
+                <img src={iconUrls[item.icon]} alt="" class="project-spec-icon" aria-hidden="true">
+                <span>{item.label}: <strong>{item.value}</strong></span>
+              </div>
+            ))}
+          </div>
+          <p class="project-description-full">{project.fullDescription}</p>
+        </div>
+      </div>
+    </section>
+
+    {project.benefits.length > 0 && (
+      <section class="project-amenities" aria-labelledby="project-amenities-title">
+        <div class="container project-amenities-grid">
+          <div class="project-amenities-heading">
+            <h2 id="project-amenities-title" class="project-section-title">Amenities</h2>
+            <p>Every residence designed for comfort, views, and lasting quality</p>
+          </div>
+          <div class="project-amenities-list">
+            {project.benefits.map((benefit) => (
+              <article class="project-amenity-card">
+                <img src={benefit.icon} alt="" class:list={['project-amenity-icon', benefitIconClass(benefit.icon)]} aria-hidden="true">
+                <h3>{benefit.title}</h3>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    {gallery.length > 0 && (
+      <section id="project-gallery" class="project-gallery-strip" aria-label={`${project.title} gallery`}>
+        <div class="project-gallery-track">
+          {gallery.slice(0, 4).map((image, index) => (
+            <img
+              src={image.url}
+              alt={image.alt}
+              decoding="async"
+              class={`project-gallery-image ${galleryClasses[index]}`}
+              data-focal-x={image.focalX ?? 50}
+              data-focal-y={image.focalY ?? 50}
+              style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}
+            >
+          ))}
+          {gallery.slice(4).map((image) => (
+            <span
+              class="project-gallery-source"
+              data-src={image.url}
+              data-alt={image.alt}
+              data-focal-x={image.focalX ?? 50}
+              data-focal-y={image.focalY ?? 50}
+              hidden
+            ></span>
+          ))}
+        </div>
+        <div class="project-gallery-drag-hint" aria-hidden="true">
+          <span>&lsaquo;</span><strong>Drag</strong><span>&rsaquo;</span>
+        </div>
+        {project.brochureUrl && (
+          <a href={project.brochureUrl} class="project-floating-brochure" target="_blank" rel="noreferrer">
+            <img src="/img/olympus-detail/icons/brochure-circle.svg" alt="" class="project-floating-icon" aria-hidden="true"><span>Brochure</span>
+          </a>
+        )}
+      </section>
+    )}
+
+    {project.floorPlanGroups.length > 0 && (
+      <section class="project-floor-plans" aria-labelledby="project-floor-title">
+        <div class="container">
+          <h2 id="project-floor-title" class="project-section-title">Floor plans</h2>
+          <p class="project-section-subtitle">Modern living, perfectly designed</p>
+          <div class="project-plan-tabs" aria-label="Floor plan types">
+            {project.floorPlanGroups.map((group, index) => (
+              <button class:list={['project-plan-tab', { active: index === 0 }]} type="button" data-plan-filter={group.id}><span data-label={group.title}>{group.title}</span></button>
+            ))}
+          </div>
+          <div class="project-plan-list">
+            {project.floorPlanGroups.flatMap((group, groupIndex) => group.plans.map((plan) => (
+              <article class="project-plan-card" data-plan={group.id} hidden={groupIndex !== 0}>
+                <h3>{plan.title}</h3><img src={plan.imageUrl} alt={plan.alt}>
+              </article>
+            )))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    <section class="project-location-section" aria-label={`${project.title} location`} data-map-src={mapSrc}>
+      <div class="project-location-map-shell"><iframe class="project-location-map" title={`Map showing ${project.address}`} loading="lazy" referrerpolicy="no-referrer-when-downgrade" aria-hidden="true"></iframe></div>
+      {project.nearbyPlaces.length > 0 && (
+        <div class="project-location-marquee" aria-label="Nearby places">
+          <div class="project-location-track">
+            <div class="project-location-set">{project.nearbyPlaces.map((place) => <span>{place}</span>)}</div>
+            <div class="project-location-set" aria-hidden="true">{project.nearbyPlaces.map((place) => <span>{place}</span>)}</div>
+          </div>
+        </div>
+      )}
+    </section>
+
+    <ContactSection />
+  </main>
+  <SiteFooter />
+  <script is:inline src="/site.js"></script>
+</body>
+</html>
+
+<style>
+  .project-description-full { white-space: pre-line; }
+  .project-preview-banner { position: fixed; z-index: 100; top: 12px; left: 50%; padding: 10px 18px; border-radius: 999px; background: #b68a3d; color: white; font: 600 13px/1.2 Arial, sans-serif; transform: translateX(-50%); box-shadow: 0 8px 30px rgba(0, 48, 117, .25); }
+  .project-preview-banner span { margin-left: 10px; opacity: .75; font-weight: 400; }
+</style>
