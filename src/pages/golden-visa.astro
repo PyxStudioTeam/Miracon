@@ -1,3 +1,10 @@
+---
+import ProjectCard from '../components/ProjectCard.astro';
+import { getPublishedProjects } from '../lib/projects';
+
+const goldenVisaProjects = (await getPublishedProjects()).filter((project) => project.categories.includes('golden-visa'));
+---
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -228,37 +235,13 @@
 
     <section id="projects" class="projects-section gv-projects">
       <div class="container">
-        <h2 class="section-title">Featured Property</h2>
-        <p class="section-subtitle">Example of a property eligible for the Golden Visa</p>
+        <h2 class="section-title">{goldenVisaProjects.length === 1 ? 'Featured Property' : 'Golden Visa Properties'}</h2>
+        <p class="section-subtitle">Properties eligible for the Greek Golden Visa programme</p>
 
         <div class="projects-list">
-          <article class="project-card" data-category="city golden-visa">
-            <div class="project-info">
-              <div>
-                <h3 class="project-name">MONASTIRIOU 4 RESIDENCES</h3>
-                <p class="project-location"><span class="location-dot"></span>Central Thessaloniki</p>
-                <p class="project-description">Contemporary city apartments in the heart of Thessaloniki. High rental
-                  demand year-round from students, professionals and tourists. Golden Visa eligible from €250,000</p>
-              </div>
-              <div class="project-bottom">
-                <div class="project-price">from 165 000 €</div>
-                <a href="/projects/monastiriou-4-residences" class="learn-more">Learn more <span></span></a>
-              </div>
-            </div>
-            <div class="project-gallery">
-              <div class="gallery-main">
-                <img src="img/figma_monastiriou_main.png" alt="Monastiriou 4 Residences exterior">
-                <div class="project-tags">
-                  <span class="tag">Golden Visa</span>
-                  <span class="tag">City</span>
-                </div>
-              </div>
-              <div class="gallery-sides">
-                <img src="img/figma_monastiriou_side_1.png" alt="Monastiriou 4 front view">
-                <img src="img/figma_monastiriou_side_2.png" alt="Monastiriou 4 side view">
-              </div>
-            </div>
-          </article>
+          {goldenVisaProjects.length > 0
+            ? goldenVisaProjects.map((project) => <ProjectCard project={project} />)
+            : <p class="gv-projects-empty">Golden Visa properties will appear here when published.</p>}
         </div>
       </div>
     </section>

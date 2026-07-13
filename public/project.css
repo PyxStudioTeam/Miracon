@@ -1952,6 +1952,19 @@ body.js-enabled .project-page .project-brochure-link {
   animation: none;
 }
 
+.project-page .form-container .project-contact-copy {
+  display: block;
+  width: 760px;
+}
+
+.project-contact-copy span {
+  display: block;
+}
+
+.project-contact-copy span:first-child {
+  white-space: nowrap;
+}
+
 .project-page--idle-hero .project-hero-content,
 .project-page--idle-hero .project-hero-sound-button {
   transition: opacity 0.32s ease, visibility 0.32s ease;
@@ -2186,6 +2199,14 @@ body.js-enabled .project-page .project-brochure-link {
 }
 
 @media (max-width: 760px) {
+  .project-page .form-container .project-contact-copy {
+    width: 100%;
+  }
+
+  .project-contact-copy span:first-child {
+    white-space: normal;
+  }
+
   .project-hero {
     height: 620px;
     min-height: 620px;

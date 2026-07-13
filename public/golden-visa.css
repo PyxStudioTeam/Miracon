@@ -501,6 +501,15 @@
   line-height: 95.98%;
 }
 
+.gv-projects-empty {
+  padding: 48px;
+  border: 1px solid rgba(0, 48, 117, 0.18);
+  border-radius: 28px;
+  color: #003075;
+  font-size: 24px;
+  text-align: center;
+}
+
 .golden-visa-page .stages-section {
   height: 220px;
   padding: 10px 0;
