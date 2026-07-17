@@ -594,15 +594,26 @@ main>section+section {
   pointer-events: auto;
 }
 
+.hero-media {
+  position: absolute;
+  inset: 0;
+}
+
 .hero-video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
   transform: scale(var(--hero-video-scale));
   transform-origin: center;
-  will-change: transform;
+  transition: opacity 0.65s ease;
+  will-change: transform, opacity;
+}
+
+.hero-video.is-active {
+  opacity: 1;
 }
 
 .hero-content {

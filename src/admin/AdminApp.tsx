@@ -24,20 +24,24 @@ import {
   ExternalLink,
   Eye,
   FileText,
+  Film,
   GripVertical,
   ImagePlus,
   LayoutGrid,
   LoaderCircle,
   LogOut,
+  Monitor,
   Plus,
   Save,
   Search,
+  Smartphone,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
 import { useEffect, useState, type ChangeEvent, type MouseEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { seedProjects } from '../data/projects';
+import { fallbackHomeHeroVideos, mapHomeHeroVideo, type HomeHeroVideo } from '../lib/home-hero';
 import { mapProjectRow } from '../lib/projects';
 import {
   PROJECT_CATEGORIES,
@@ -50,6 +54,7 @@ import {
 import { getBrowserSupabaseClient } from '../lib/supabase-browser';
 
 type AdminSection = 'content' | 'specs' | 'media' | 'plans' | 'seo';
+type AdminView = 'projects' | 'home-hero';
 type Toast = { tone: 'success' | 'error'; message: string } | null;
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -231,6 +236,34 @@ function projectImagesToRows(project: Project) {
   }));
 }
 
+function homeHeroVideoToRow(video: HomeHeroVideo) {
+  return {
+    id: video.id,
+    title: video.title,
+    project_id: video.projectId,
+    desktop_url: video.desktopUrl,
+    desktop_storage_path: video.desktopStoragePath,
+    mobile_url: video.mobileUrl,
+    mobile_storage_path: video.mobileStoragePath,
+    sort_order: video.sortOrder,
+    is_active: video.isActive,
+  };
+}
+
+function emptyHomeHeroVideo(sortOrder: number): HomeHeroVideo {
+  return {
+    id: crypto.randomUUID(),
+    title: `Hero video ${sortOrder + 1}`,
+    projectId: null,
+    desktopUrl: '',
+    desktopStoragePath: null,
+    mobileUrl: null,
+    mobileStoragePath: null,
+    sortOrder,
+    isActive: false,
+  };
+}
+
 function BrandMark() {
   return <span className="admin-brand-mark"><img src="/img/logo_mark.svg" alt="" /></span>;
 }
@@ -336,6 +369,191 @@ function ProjectList({ projects, onOpen, onCreate, onReorder, onImport, canImpor
           <div className="empty-projects"><LayoutGrid size={28} /><h3>No projects here</h3><p>Create a project or change the current filter.</p>{canImport && <button className="secondary-button" onClick={onImport}>Import current website projects</button>}</div>
         )}
       </section>
+    </main>
+  );
+}
+
+function SortableHomeHeroVideo({
+  video,
+  index,
+  projects,
+  uploading,
+  onChange,
+  onRemove,
+  onUpload,
+}: {
+  video: HomeHeroVideo;
+  index: number;
+  projects: Project[];
+  uploading: string;
+  onChange: (patch: Partial<HomeHeroVideo>) => void;
+  onRemove: () => void;
+  onUpload: (kind: 'desktop' | 'mobile', event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: video.id });
+  const desktopUploadKey = `${video.id}:desktop`;
+  const mobileUploadKey = `${video.id}:mobile`;
+
+  return (
+    <article ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`home-hero-card ${isDragging ? 'is-dragging' : ''}`}>
+      <header>
+        <button className="home-hero-drag" {...attributes} {...listeners} aria-label={`Reorder ${video.title}`}><GripVertical size={18} /></button>
+        <span className="home-hero-order">{String(index + 1).padStart(2, '0')}</span>
+        <div><strong>{video.title || 'Untitled video'}</strong><small>{video.isActive ? 'Visible on homepage' : 'Hidden from homepage'}</small></div>
+        <label className="home-hero-toggle"><input type="checkbox" checked={video.isActive} onChange={(event) => onChange({ isActive: event.target.checked })} /><span></span>{video.isActive ? 'Active' : 'Hidden'}</label>
+        <button className="home-hero-remove" onClick={onRemove} aria-label={`Remove ${video.title}`}><Trash2 size={17} /></button>
+      </header>
+
+      <div className="home-hero-card-body">
+        <div className="home-hero-preview">
+          {video.desktopUrl ? <video src={video.desktopUrl} muted playsInline controls preload="metadata" /> : <div><Film size={28} /><span>Upload a desktop video</span></div>}
+        </div>
+
+        <div className="home-hero-fields">
+          <Field label="Internal title"><input value={video.title} onChange={(event) => onChange({ title: event.target.value })} /></Field>
+          <Field label="Related project"><select value={video.projectId ?? ''} onChange={(event) => onChange({ projectId: event.target.value || null })}><option value="">General MIRACON video</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></Field>
+          <div className="home-hero-assets">
+            <div><Monitor size={20} /><span><strong>Desktop MP4</strong><small>{video.desktopUrl ? 'Uploaded' : 'Required for active videos'}</small></span><label><input type="file" accept="video/mp4" onChange={(event) => onUpload('desktop', event)} />{uploading === desktopUploadKey ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{video.desktopUrl ? 'Replace' : 'Upload'}</label></div>
+            <div><Smartphone size={20} /><span><strong>Mobile MP4</strong><small>{video.mobileUrl ? 'Uploaded' : 'Desktop version will be used'}</small></span><label><input type="file" accept="video/mp4" onChange={(event) => onUpload('mobile', event)} />{uploading === mobileUploadKey ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{video.mobileUrl ? 'Replace' : 'Upload'}</label></div>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function HomeHeroManager({
+  initialVideos,
+  projects,
+  demo,
+  onSaved,
+  onToast,
+}: {
+  initialVideos: HomeHeroVideo[];
+  projects: Project[];
+  demo: boolean;
+  onSaved: (videos: HomeHeroVideo[]) => void;
+  onToast: (toast: Toast) => void;
+}) {
+  const [videos, setVideos] = useState<HomeHeroVideo[]>(() => structuredClone(initialVideos));
+  const [savedVideos, setSavedVideos] = useState<HomeHeroVideo[]>(() => structuredClone(initialVideos));
+  const [uploading, setUploading] = useState('');
+  const [saving, setSaving] = useState(false);
+  const supabase = getBrowserSupabaseClient();
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const isDirty = JSON.stringify(videos) !== JSON.stringify(savedVideos);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warnBeforeUnload);
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+  }, [isDirty]);
+
+  function updateVideo(id: string, patch: Partial<HomeHeroVideo>) {
+    setVideos((current) => current.map((video) => video.id === id ? { ...video, ...patch } : video));
+  }
+
+  function reorderVideos(event: DragEndEvent) {
+    if (!event.over || event.active.id === event.over.id) return;
+    setVideos((current) => {
+      const oldIndex = current.findIndex((video) => video.id === event.active.id);
+      const newIndex = current.findIndex((video) => video.id === event.over?.id);
+      return arrayMove(current, oldIndex, newIndex).map((video, index) => ({ ...video, sortOrder: index }));
+    });
+  }
+
+  async function uploadVideo(id: string, kind: 'desktop' | 'mobile', event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.type !== 'video/mp4') {
+      onToast({ tone: 'error', message: 'Only MP4 videos are supported' });
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      onToast({ tone: 'error', message: 'Video must be smaller than 50 MB' });
+      return;
+    }
+
+    const uploadKey = `${id}:${kind}`;
+    setUploading(uploadKey);
+    try {
+      if (demo || !supabase) {
+        const localUrl = URL.createObjectURL(file);
+        updateVideo(id, kind === 'desktop'
+          ? { desktopUrl: localUrl, desktopStoragePath: null }
+          : { mobileUrl: localUrl, mobileStoragePath: null });
+        return;
+      }
+
+      const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
+      const path = `home-hero/${id}/${kind}-${crypto.randomUUID()}-${safeName}`;
+      const { error } = await supabase.storage.from('site-media').upload(path, file, {
+        cacheControl: '31536000',
+        contentType: 'video/mp4',
+      });
+      if (error) throw error;
+
+      const publicUrl = supabase.storage.from('site-media').getPublicUrl(path).data.publicUrl;
+      updateVideo(id, kind === 'desktop'
+        ? { desktopUrl: publicUrl, desktopStoragePath: path }
+        : { mobileUrl: publicUrl, mobileStoragePath: path });
+      onToast({ tone: 'success', message: `${kind === 'desktop' ? 'Desktop' : 'Mobile'} video uploaded` });
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload video' });
+    } finally {
+      setUploading('');
+    }
+  }
+
+  async function savePlaylist() {
+    const normalized = videos.map((video, index) => ({ ...video, sortOrder: index }));
+    const invalidActiveVideo = normalized.find((video) => video.isActive && !video.desktopUrl);
+    if (invalidActiveVideo) {
+      onToast({ tone: 'error', message: `Upload a desktop video for “${invalidActiveVideo.title}” before activating it` });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (!demo && supabase) {
+        const { error } = await supabase.rpc('replace_homepage_videos', {
+          p_items: normalized.map(homeHeroVideoToRow),
+        });
+        if (error) throw error;
+
+        const nextPaths = new Set(normalized.flatMap((video) => [video.desktopStoragePath, video.mobileStoragePath]).filter((path): path is string => typeof path === 'string' && path.length > 0));
+        const stalePaths = savedVideos
+          .flatMap((video) => [video.desktopStoragePath, video.mobileStoragePath])
+          .filter((path): path is string => typeof path === 'string' && path.length > 0)
+          .filter((path) => !nextPaths.has(path));
+        if (stalePaths.length) await supabase.storage.from('site-media').remove(stalePaths);
+      } else {
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+      }
+
+      setVideos(normalized);
+      setSavedVideos(structuredClone(normalized));
+      onSaved(normalized);
+      onToast({ tone: 'success', message: 'Homepage video order saved' });
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to save homepage videos' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <main className="admin-main home-hero-manager">
+      <header className="list-header">
+        <div><span className="eyebrow">Homepage / Hero playlist</span><h1>Hero videos <sup>{videos.length.toString().padStart(2, '0')}</sup></h1><p>Videos play from top to bottom and repeat after the last item.</p></div>
+        <div className="home-hero-actions"><button className="secondary-button" onClick={() => setVideos((current) => [...current, emptyHomeHeroVideo(current.length)])}><Plus size={18} />Add video</button><button className="primary-button" onClick={savePlaylist} disabled={saving || !isDirty}>{saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Save playlist</button></div>
+      </header>
+
+      <section className="home-hero-help"><Film size={22} /><div><strong>Playback rules</strong><p>Desktop is required. Mobile is optional and automatically replaces desktop below 600 px. Only the current and next videos are loaded.</p></div></section>
+
+      {videos.length ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorderVideos}><SortableContext items={videos.map((video) => video.id)} strategy={verticalListSortingStrategy}><section className="home-hero-list">{videos.map((video, index) => <SortableHomeHeroVideo key={video.id} video={video} index={index} projects={projects} uploading={uploading} onChange={(patch) => updateVideo(video.id, patch)} onRemove={() => setVideos((current) => current.filter((item) => item.id !== video.id).map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })))} onUpload={(kind, event) => uploadVideo(video.id, kind, event)} />)}</section></SortableContext></DndContext> : <section className="home-hero-empty"><Film size={30} /><h2>No hero videos</h2><p>Add a video to create the homepage playlist. Until then the built-in fallback remains visible.</p><button className="primary-button" onClick={() => setVideos([emptyHomeHeroVideo(0)])}><Plus size={18} />Add first video</button></section>}
     </main>
   );
 }
@@ -767,6 +985,8 @@ export default function AdminApp() {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>(demo ? structuredClone(seedProjects) : []);
+  const [homeHeroVideos, setHomeHeroVideos] = useState<HomeHeroVideo[]>(demo ? structuredClone(fallbackHomeHeroVideos) : []);
+  const [view, setView] = useState<AdminView>('projects');
   const [selected, setSelected] = useState<Project | null>(null);
   const [globalToast, setGlobalToast] = useState<Toast>(null);
 
@@ -795,7 +1015,7 @@ export default function AdminApp() {
 
         setAuthenticated(true);
         setAuthorized(Boolean(membership));
-        if (membership) await loadProjects();
+        if (membership) await Promise.all([loadProjects(), loadHomeHeroVideos()]);
       } catch (error) {
         if (!active) return;
         setAuthenticated(false);
@@ -821,6 +1041,15 @@ export default function AdminApp() {
     else setProjects((data ?? []).map((row) => mapProjectRow(row)));
   }
 
+  async function loadHomeHeroVideos() {
+    if (!supabase) return;
+    const { data, error } = await withTimeout(
+      supabase.from('homepage_videos').select('*').order('sort_order'),
+    );
+    if (error) setGlobalToast({ tone: 'error', message: `Hero playlist: ${error.message}` });
+    else setHomeHeroVideos((data ?? []).map((row) => mapHomeHeroVideo(row)));
+  }
+
   async function login(email: string, password: string) {
     if (!supabase) return;
     setLoginLoading(true);
@@ -837,7 +1066,7 @@ export default function AdminApp() {
       if (membershipError) throw membershipError;
       setAuthenticated(true);
       setAuthorized(Boolean(membership));
-      if (membership) await loadProjects();
+      if (membership) await Promise.all([loadProjects(), loadHomeHeroVideos()]);
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Unable to connect to Supabase');
     } finally {
@@ -851,6 +1080,7 @@ export default function AdminApp() {
     setAuthenticated(false);
     setAuthorized(false);
     setProjects([]);
+    setHomeHeroVideos([]);
   }
 
   async function reorder(event: DragEndEvent) {
@@ -899,9 +1129,13 @@ export default function AdminApp() {
 
   return (
     <div className="admin-app">
-      {!selected && <aside className="admin-rail"><BrandLockup /><nav><button className="active" title="Projects"><LayoutGrid size={19} /><span>Projects</span></button><a href="/" target="_blank" rel="noreferrer"><ExternalLink size={19} /><span>View website</span></a></nav><div><span className="rail-env">{demo ? 'LOCAL MODE' : 'LIVE WORKSPACE'}</span>{!demo && <button onClick={logout} title="Sign out"><LogOut size={18} /><span>Sign out</span></button>}</div></aside>}
+      {!selected && <aside className="admin-rail"><BrandLockup /><nav><button className={view === 'projects' ? 'active' : ''} title="Projects" onClick={() => setView('projects')}><LayoutGrid size={19} /><span>Projects</span></button><button className={view === 'home-hero' ? 'active' : ''} title="Homepage hero" onClick={() => setView('home-hero')}><Film size={19} /><span>Home hero</span></button><a href="/" target="_blank" rel="noreferrer"><ExternalLink size={19} /><span>View website</span></a></nav><div><span className="rail-env">{demo ? 'LOCAL MODE' : 'LIVE WORKSPACE'}</span>{!demo && <button onClick={logout} title="Sign out"><LogOut size={18} /><span>Sign out</span></button>}</div></aside>}
       {demo && !selected && <div className="demo-banner">Local demo mode · connect Supabase to persist changes and upload media</div>}
-      {selected ? <ProjectEditor initialProject={selected} onBack={() => setSelected(null)} onSaved={saveToState} onDeleted={deleteFromState} demo={demo} /> : <ProjectList projects={projects} onOpen={setSelected} onCreate={() => setSelected(emptyProject(projects.length))} onReorder={reorder} onImport={importSeed} canImport={!demo && projects.length === 0} />}
+      {selected
+        ? <ProjectEditor initialProject={selected} onBack={() => setSelected(null)} onSaved={saveToState} onDeleted={deleteFromState} demo={demo} />
+        : view === 'home-hero'
+          ? <HomeHeroManager initialVideos={homeHeroVideos} projects={projects} demo={demo} onSaved={setHomeHeroVideos} onToast={setGlobalToast} />
+          : <ProjectList projects={projects} onOpen={setSelected} onCreate={() => setSelected(emptyProject(projects.length))} onReorder={reorder} onImport={importSeed} canImport={!demo && projects.length === 0} />}
       {globalToast && <div className={`admin-toast ${globalToast.tone}`} role="status" aria-live="polite">{globalToast.tone === 'success' ? <Check size={17} /> : <CircleAlert size={17} />}{globalToast.message}</div>}
     </div>
   );

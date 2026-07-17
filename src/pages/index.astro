@@ -2,10 +2,19 @@
 import ProjectCard from '../components/ProjectCard.astro';
 import OptimizedImage from '../components/OptimizedImage.astro';
 import SeoHead from '../components/SeoHead.astro';
+import { getHomeHeroVideos } from '../lib/home-hero';
 import { getPublishedProjects } from '../lib/projects';
 import { absoluteSiteUrl } from '../lib/seo';
 
 const projects = await getPublishedProjects();
+const homeHeroVideos = await getHomeHeroVideos();
+const firstHomeHeroVideo = homeHeroVideos[0];
+const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
+  id: video.id,
+  title: video.title,
+  desktopUrl: video.desktopUrl,
+  mobileUrl: video.mobileUrl,
+})));
 const homeUrl = absoluteSiteUrl('/', Astro.url);
 const homeStructuredData = {
   '@context': 'https://schema.org',
@@ -142,10 +151,13 @@ const homeStructuredData = {
   <main>
     <section class="hero-pin" aria-label="MIRACON hero">
       <div class="hero">
-        <video class="hero-video" autoplay muted loop playsinline preload="metadata">
-          <source media="(max-width: 600px)" src="/img/hero-bg-mobile.mp4" type="video/mp4">
-          <source src="/img/hero-bg-optimized.mp4" type="video/mp4">
-        </video>
+        <div class="hero-media" data-home-hero-playlist={serializedHomeHeroVideos}>
+          <video class="hero-video is-active" autoplay muted loop={homeHeroVideos.length === 1} playsinline preload="auto" poster="/img/figma_hero.png">
+            <source media="(max-width: 600px)" src={firstHomeHeroVideo.mobileUrl ?? firstHomeHeroVideo.desktopUrl} type="video/mp4">
+            <source src={firstHomeHeroVideo.desktopUrl} type="video/mp4">
+          </video>
+          <video class="hero-video" muted playsinline preload="none" poster="/img/figma_hero.png" aria-hidden="true"></video>
+        </div>
         <div class="container hero-content">
           <p class="hero-subtitle">Thessaloniki · Halkidiki · Greece</p>
           <h1 class="hero-title">Premium Residences<br>Prime Locations</h1>

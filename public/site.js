@@ -2,6 +2,119 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('js-enabled');
 
   /* ==========================================================================
+     HOME HERO VIDEO PLAYLIST
+     ========================================================================== */
+  const homeHeroPlaylist = document.querySelector('[data-home-hero-playlist]');
+  const homeHeroVideoSlots = homeHeroPlaylist
+    ? Array.from(homeHeroPlaylist.querySelectorAll('.hero-video'))
+    : [];
+
+  if (homeHeroPlaylist && homeHeroVideoSlots.length === 2) {
+    let playlist = [];
+    try {
+      playlist = JSON.parse(homeHeroPlaylist.dataset.homeHeroPlaylist || '[]');
+    } catch {
+      playlist = [];
+    }
+
+    if (playlist.length) {
+      const mobileMedia = window.matchMedia('(max-width: 600px)');
+      let currentIndex = 0;
+      let activeSlotIndex = 0;
+      let switching = false;
+      let failedAdvances = 0;
+
+      function videoUrl(item) {
+        return mobileMedia.matches && item.mobileUrl ? item.mobileUrl : item.desktopUrl;
+      }
+
+      function loadSlot(video, item, preload = 'metadata') {
+        const nextUrl = videoUrl(item);
+        if (!nextUrl || video.dataset.playlistSrc === nextUrl) return;
+        video.pause();
+        video.preload = preload;
+        video.src = nextUrl;
+        video.dataset.playlistSrc = nextUrl;
+        video.load();
+      }
+
+      function primeNextSlot() {
+        const activeVideo = homeHeroVideoSlots[activeSlotIndex];
+        activeVideo.loop = playlist.length === 1;
+        if (playlist.length === 1) return;
+
+        const nextIndex = (currentIndex + 1) % playlist.length;
+        const standbyVideo = homeHeroVideoSlots[1 - activeSlotIndex];
+        standbyVideo.loop = false;
+        loadSlot(standbyVideo, playlist[nextIndex], 'metadata');
+      }
+
+      function advancePlaylist() {
+        if (switching || playlist.length < 2) return;
+        switching = true;
+
+        const outgoingVideo = homeHeroVideoSlots[activeSlotIndex];
+        const incomingSlotIndex = 1 - activeSlotIndex;
+        const incomingVideo = homeHeroVideoSlots[incomingSlotIndex];
+        const nextIndex = (currentIndex + 1) % playlist.length;
+        loadSlot(incomingVideo, playlist[nextIndex], 'auto');
+        incomingVideo.currentTime = 0;
+        incomingVideo.muted = true;
+
+        const playPromise = incomingVideo.play();
+        Promise.resolve(playPromise).then(() => {
+          failedAdvances = 0;
+          incomingVideo.classList.add('is-active');
+          outgoingVideo.classList.remove('is-active');
+
+          window.setTimeout(() => {
+            outgoingVideo.pause();
+            activeSlotIndex = incomingSlotIndex;
+            currentIndex = nextIndex;
+            switching = false;
+            primeNextSlot();
+          }, 680);
+        }).catch(() => {
+          switching = false;
+          failedAdvances += 1;
+          currentIndex = nextIndex;
+          if (failedAdvances < playlist.length) {
+            advancePlaylist();
+          } else {
+            outgoingVideo.loop = true;
+            outgoingVideo.play().catch(() => {});
+          }
+        });
+      }
+
+      function reloadForViewport() {
+        const activeVideo = homeHeroVideoSlots[activeSlotIndex];
+        const standbyVideo = homeHeroVideoSlots[1 - activeSlotIndex];
+        standbyVideo.classList.remove('is-active');
+        loadSlot(activeVideo, playlist[currentIndex], 'auto');
+        activeVideo.classList.add('is-active');
+        activeVideo.muted = true;
+        activeVideo.play().catch(() => {});
+        primeNextSlot();
+      }
+
+      homeHeroVideoSlots.forEach((video) => {
+        video.addEventListener('ended', () => {
+          if (video.classList.contains('is-active')) advancePlaylist();
+        });
+      });
+
+      const initialVideo = homeHeroVideoSlots[activeSlotIndex];
+      initialVideo.dataset.playlistSrc = initialVideo.currentSrc || videoUrl(playlist[0]);
+      initialVideo.loop = playlist.length === 1;
+      initialVideo.muted = true;
+      initialVideo.play().catch(() => {});
+      primeNextSlot();
+      mobileMedia.addEventListener('change', reloadForViewport);
+    }
+  }
+
+  /* ==========================================================================
      HERO SCROLL
      ========================================================================== */
   const pageHeader = document.querySelector('.header');
