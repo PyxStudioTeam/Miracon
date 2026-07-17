@@ -2497,6 +2497,11 @@ body.js-enabled .about-reveal.visible {
     width: auto;
   }
 
+  .about-container > picture.optimized-image-picture {
+    display: block;
+    min-width: 0;
+  }
+
   .about-heading,
   .about-copy .section-subtitle,
   .about-text,
