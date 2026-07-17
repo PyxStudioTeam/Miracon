@@ -2135,7 +2135,9 @@ body.js-enabled .project-page .project-brochure-link {
 
   .project-intro-media {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 30px;
+    min-width: 0;
   }
 
   .project-intro-media .project-section-title,
@@ -2151,11 +2153,20 @@ body.js-enabled .project-page .project-brochure-link {
 
   .project-intro-image {
     width: 100%;
+    min-width: 0;
     margin-left: 0;
   }
 
   .project-intro-copy {
+    width: 100%;
+    min-width: 0;
     padding-top: 88px;
+  }
+
+  .project-specs,
+  .project-intro-copy p {
+    width: 100%;
+    min-width: 0;
   }
 
   .project-amenities-grid {
