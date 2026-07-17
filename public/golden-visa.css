@@ -1186,3 +1186,100 @@
     width: auto;
   }
 }
+
+/* Preserve the Figma desktop threshold card when browser/OS scaling reduces
+   the CSS viewport, instead of replacing it with the intermediate grid. */
+@media (min-width: 1181px) and (max-width: 1919px) {
+  .gv-threshold {
+    height: 15.2604vw;
+  }
+
+  .gv-threshold-card {
+    display: block;
+    height: 15.2604vw;
+    padding: 0;
+    border-radius: 2.0833vw;
+  }
+
+  .gv-threshold-main {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48.9583vw;
+    height: 15.2604vw;
+    padding: 2.8125vw 0 0 4.4271vw;
+  }
+
+  .gv-threshold-main h2 {
+    width: 23.9583vw;
+    height: 4.8958vw;
+    font-size: 5vw;
+  }
+
+  .gv-threshold-main p {
+    width: 37.8646vw;
+    margin: 1.0417vw 0 0 0.3646vw;
+    font-size: 1.6667vw;
+  }
+
+  .gv-threshold-main span {
+    position: absolute;
+    top: 5.4167vw;
+    left: 27.6563vw;
+    display: inline;
+    width: auto;
+    height: auto;
+    margin: 0;
+    font-size: 1.6667vw;
+  }
+
+  .gv-threshold-divider {
+    position: absolute;
+    top: 1.7708vw;
+    left: 48.9583vw;
+    display: block;
+    width: 1px;
+    height: 11.7188vw;
+  }
+
+  .gv-threshold-note {
+    position: absolute;
+    top: 0;
+    left: 52.8125vw;
+    display: flex;
+    align-items: center;
+    gap: 1.9792vw;
+    width: auto;
+    height: 15.2604vw;
+    padding: 0;
+  }
+
+  .gv-threshold-note p {
+    width: 25.4167vw;
+    font-size: 1.6667vw;
+  }
+
+  .gv-threshold-note strong {
+    font-size: 2.0833vw;
+  }
+
+  .gv-warning-icon {
+    flex-basis: 4.8958vw;
+    width: 4.8958vw;
+    height: 4.8958vw;
+  }
+
+  .gv-warning-shape {
+    top: 0.7292vw;
+    left: 0.4688vw;
+    width: 3.9063vw;
+    height: 3.4375vw;
+  }
+
+  .gv-warning-mark {
+    top: 1.5104vw;
+    left: 2.2917vw;
+    width: 0.3646vw;
+    height: 1.7188vw;
+  }
+}

@@ -2782,6 +2782,466 @@ body.js-enabled .about-reveal.visible {
     width: 20.2698vw;
   }
 
+  /* Keep the original Figma project-card geometry instead of switching to the
+     simplified intermediate grid when desktop scaling reduces the CSS viewport. */
+  .projects-list {
+    gap: 2.2396vw;
+  }
+
+  .project-card {
+    grid-template-columns: 27.5vw 52.9167vw;
+    gap: 3.3854vw;
+    height: 35.8333vw;
+    min-height: 35.8333vw;
+    padding: 1.3021vw 1.3021vw 1.3021vw 4.4271vw;
+    border-radius: 2.0833vw;
+  }
+
+  .project-info {
+    padding: 1.25vw 0 2.2396vw;
+  }
+
+  .project-name {
+    margin-bottom: 0.9375vw;
+    font-size: 2.5vw;
+  }
+
+  .project-location {
+    gap: 0.5208vw;
+    margin-bottom: 0.9896vw;
+    font-size: 1.6667vw;
+  }
+
+  .location-dot {
+    width: 0.9375vw;
+    height: 0.9375vw;
+  }
+
+  .project-description {
+    width: 26.25vw;
+    font-size: 1.6667vw;
+  }
+
+  .project-price {
+    margin-bottom: 2.7083vw;
+    font-size: 2.5vw;
+  }
+
+  .learn-more {
+    gap: 1.5104vw;
+    font-size: 1.6667vw;
+  }
+
+  .learn-more span {
+    width: 2.1085vw;
+    height: 0.9375vw;
+  }
+
+  .learn-more span::before {
+    width: 2.1085vw;
+    border-top-width: 0.1563vw;
+  }
+
+  .learn-more span::after {
+    width: 0.625vw;
+    height: 0.625vw;
+    border-top-width: 0.1563vw;
+    border-right-width: 0.1563vw;
+  }
+
+  .project-gallery {
+    grid-template-columns: 32.5521vw 19.3229vw;
+    gap: 1.0417vw;
+    height: 33.1771vw;
+    min-height: 0;
+  }
+
+  .gallery-main {
+    height: 33.1771vw;
+  }
+
+  .gallery-sides {
+    height: 33.1771vw;
+    grid-template-rows: 15.8333vw 15.7813vw;
+    gap: 1.5625vw;
+  }
+
+  .gallery-main img,
+  .gallery-sides img {
+    border-radius: 1.25vw;
+  }
+
+  .project-tags {
+    top: 0.8333vw;
+    left: 0.8333vw;
+    gap: 0.5729vw;
+  }
+
+  .tag {
+    min-width: 5.3646vw;
+    height: 2.0313vw;
+    padding: 0 1.1458vw;
+    border-radius: 0.8333vw;
+    font-size: 0.9375vw;
+  }
+
+  .tag:first-child:nth-last-child(2),
+  .tag:first-child:nth-last-child(2)~.tag:first-child {
+    min-width: 9.4271vw;
+  }
+
+  /* About keeps the original 1920px composition and scales as one scene. */
+  .about-section {
+    height: 48.4375vw;
+    padding: 0;
+    --about-carousel-set-width: 110.1042vw;
+    --about-carousel-set-gap: 2.0833vw;
+    --about-carousel-distance: -112.1875vw;
+  }
+
+  .about-container {
+    display: block;
+    height: 48.4375vw;
+  }
+
+  .about-copy {
+    position: relative;
+    width: 43.0729vw;
+  }
+
+  .about-container > picture.optimized-image-picture {
+    display: contents;
+    min-width: auto;
+  }
+
+  .about-heading {
+    position: absolute;
+    top: 6.4063vw;
+    left: 0.026vw;
+    gap: 1.5708vw;
+    width: auto;
+    height: 3.2292vw;
+    margin: 0;
+  }
+
+  .about-title-word {
+    width: 9.4271vw;
+    height: 3.2292vw;
+    font-size: 3.3333vw;
+  }
+
+  .about-brand {
+    width: 16.8432vw;
+    height: 2.4938vw;
+    margin-top: 0.0672vw;
+  }
+
+  .about-brand-letter {
+    height: 2.4938vw;
+  }
+
+  .about-brand-letter-m {
+    width: 2.9417vw;
+  }
+
+  .about-brand-letter-i {
+    left: 3.2099vw;
+    width: 0.9807vw;
+  }
+
+  .about-brand-letter-r {
+    left: 4.5552vw;
+    width: 2.1313vw;
+  }
+
+  .about-brand-letter-a {
+    left: 6.8818vw;
+    width: 2.4115vw;
+  }
+
+  .about-brand-letter-c {
+    left: 9.1823vw;
+    width: 2.2313vw;
+  }
+
+  .about-brand-letter-o {
+    left: 11.6526vw;
+    width: 2.5911vw;
+  }
+
+  .about-brand-letter-n {
+    left: 14.4349vw;
+    width: 2.4115vw;
+  }
+
+  .about-copy .section-subtitle {
+    position: absolute;
+    top: 10.9375vw;
+    left: 0.026vw;
+    display: flex;
+    width: 26.6146vw;
+    height: 1.6146vw;
+    margin: 0;
+    font-size: 1.6667vw;
+  }
+
+  .about-text {
+    position: absolute;
+    top: 14.4792vw;
+    left: 0.026vw;
+    width: 43.0729vw;
+    height: 15.9375vw;
+    font-size: 1.25vw;
+  }
+
+  .about-text p+p {
+    margin-top: 1.25vw;
+  }
+
+  .about-image {
+    position: absolute;
+    z-index: 4;
+    top: 0;
+    right: -5.2083vw;
+    width: 47.7083vw;
+    height: 48.4375vw;
+    min-height: 0;
+    border-radius: 2.0833vw;
+    clip-path: inset(0 round 2.0833vw);
+  }
+
+  .about-carousel {
+    position: absolute;
+    top: 32.7604vw;
+    left: -10.1563vw;
+    width: 110.1042vw;
+    height: 9.2708vw;
+    margin: 0;
+  }
+
+  .about-carousel-set {
+    gap: 2.0833vw;
+    height: 9.2708vw;
+  }
+
+  .about-card {
+    height: 9.2708vw;
+    border-radius: 2.0833vw;
+  }
+
+  .about-card-direct {
+    width: 25.9896vw;
+  }
+
+  .about-card-legal {
+    width: 26.0417vw;
+  }
+
+  .about-card-personal {
+    width: 27.6563vw;
+    border-radius: 1.6667vw;
+  }
+
+  .about-card-locations {
+    width: 24.1667vw;
+  }
+
+  .about-card-direct .about-card-icon {
+    top: 2.1661vw;
+    left: 1.6875vw;
+    width: 4.9406vw;
+    height: 4.7276vw;
+  }
+
+  .about-card-legal .about-card-icon {
+    top: 2.1875vw;
+    left: 1.6146vw;
+    width: 5.0813vw;
+    height: 4.8438vw;
+  }
+
+  .about-card-personal .about-card-icon {
+    top: 2.7083vw;
+    left: 1.3021vw;
+    width: 5.5302vw;
+    height: 3.8094vw;
+  }
+
+  .about-card-locations .about-card-icon {
+    top: 2.7083vw;
+    left: 0.5208vw;
+    width: 7.026vw;
+    height: 3.7891vw;
+  }
+
+  .about-card h3 {
+    top: 1.1979vw;
+    left: 8.0208vw;
+    width: calc(100% - 9.5313vw);
+    height: 2.5521vw;
+    font-size: 2.0833vw;
+    line-height: 2.5521vw;
+  }
+
+  .about-card p {
+    top: 4.0625vw;
+    left: 8.0208vw;
+    width: 15.9375vw;
+    height: 3.75vw;
+    font-size: 1.0417vw;
+    line-height: 1.25vw;
+  }
+
+  /* Scale the Golden Visa block as the original desktop composition. This
+     keeps the copy width and the controls' reserved bottom row in sync. */
+  .golden-visa-section {
+    height: 35.8854vw;
+    padding: 0;
+  }
+
+  .golden-container {
+    grid-template-columns: 36.1458vw 43.6458vw;
+    gap: 2.5521vw;
+    padding-left: 7.2396vw;
+  }
+
+  .golden-image-wrap,
+  .golden-carousel-3d {
+    width: 36.1458vw;
+    height: 35.3646vw;
+    aspect-ratio: auto;
+    border-radius: 2.0833vw;
+  }
+
+  .golden-carousel-face {
+    border-radius: 2.0833vw;
+  }
+
+  .golden-carousel-face[data-pos="0"],
+  .golden-carousel-face[data-pos="1"],
+  .golden-carousel-face[data-pos="2"] {
+    left: 0;
+    top: 0;
+    width: 36.1458vw;
+    height: 35.3646vw;
+  }
+
+  .golden-carousel-face[data-pos="3"] {
+    left: -33.2813vw;
+    top: 0;
+    width: 30.7292vw;
+    height: 30.0521vw;
+  }
+
+  .visa-consult-badge {
+    bottom: 2.2917vw;
+    width: 12.9688vw;
+    height: 2.7604vw;
+    border-radius: 2.0313vw;
+    font-size: 1.25vw;
+    line-height: 1.5104vw;
+  }
+
+  .visa-consult-badge>span:first-child {
+    top: 0.625vw;
+    left: 2.0833vw;
+    width: 6.9792vw;
+    height: 1.5104vw;
+  }
+
+  .visa-consult-arrow {
+    top: 0.1563vw;
+    right: 0.1563vw;
+    width: 2.4479vw;
+    height: 2.4479vw;
+  }
+
+  .visa-consult-arrow::before {
+    left: 0.7292vw;
+    width: 1.0417vw;
+    border-top-width: 0.1042vw;
+  }
+
+  .visa-consult-arrow::after {
+    right: 0.6771vw;
+    width: 0.4688vw;
+    height: 0.4688vw;
+    border-top-width: 0.1042vw;
+    border-right-width: 0.1042vw;
+  }
+
+  .golden-content {
+    height: 35.8854vw;
+    padding-top: 0.4167vw;
+  }
+
+  .golden-content .section-title {
+    margin-bottom: 1.0938vw;
+  }
+
+  .golden-content .section-subtitle {
+    width: 36.3021vw;
+    margin-bottom: 4.2708vw;
+    font-size: 1.6667vw;
+  }
+
+  .slider-wrapper {
+    position: absolute;
+    top: 11.6667vw;
+    left: 0;
+    width: 43.6458vw;
+    height: 23.6979vw;
+    border-radius: 2.0833vw;
+  }
+
+  .slider-slides {
+    border-radius: 2.0833vw;
+  }
+
+  .slide {
+    padding: 2.2917vw 3.0729vw 6.1458vw;
+  }
+
+  .slide-title {
+    gap: 1.0417vw;
+    width: 37.3958vw;
+    height: 2.3438vw;
+    margin-bottom: 0.6771vw;
+    font-size: 2.0833vw;
+    white-space: nowrap;
+  }
+
+  .slide-icon {
+    flex-basis: 2.0833vw;
+    width: 2.0833vw;
+    height: 2.0833vw;
+  }
+
+  .slide-text {
+    width: 37.3958vw;
+    font-size: 1.6667vw;
+  }
+
+  .slide-text-short {
+    width: 35.9375vw;
+  }
+
+  .slider-controls {
+    right: 3.0729vw;
+    bottom: 2.5vw;
+    left: 3.0729vw;
+    grid-template-columns: 3.6458vw 1fr 3.6458vw;
+  }
+
+  .slider-counter {
+    font-size: 1.25vw;
+  }
+
+  .slider-btn {
+    width: 3.6458vw;
+    height: 2.6563vw;
+  }
+
   .contacts-section {
     height: 44.2708vw;
     margin-top: 0;
