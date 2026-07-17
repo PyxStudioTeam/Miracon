@@ -1,0 +1,25 @@
+---
+import { getOptimizedImageSources } from '../lib/media';
+
+interface Props extends astroHTML.JSX.ImgHTMLAttributes {
+  src: string;
+  alt: string;
+  avifSrc?: string | null;
+  webpSrc?: string | null;
+}
+
+const { src, alt, avifSrc, webpSrc, ...attributes } = Astro.props;
+const optimizedSources = getOptimizedImageSources(src);
+const resolvedAvifSrc = avifSrc === undefined ? optimizedSources.avif : avifSrc;
+const resolvedWebpSrc = webpSrc === undefined ? optimizedSources.webp : webpSrc;
+---
+
+<picture class="optimized-image-picture">
+  {resolvedAvifSrc && <source srcset={resolvedAvifSrc} type="image/avif">}
+  {resolvedWebpSrc && <source srcset={resolvedWebpSrc} type="image/webp">}
+  <img src={src} alt={alt} {...attributes}>
+</picture>
+
+<style>
+  .optimized-image-picture { display: contents; }
+</style>

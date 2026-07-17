@@ -44,7 +44,10 @@ export function mapProjectRow(row: ProjectRow): Project {
     heroVariant: row.hero_variant === 'immersive' || isLegacyKriopigi ? 'immersive' : 'standard',
     heroSoundEnabled: row.hero_sound_enabled === undefined ? isLegacyKriopigi : Boolean(row.hero_sound_enabled),
     heroIdleUi: row.hero_idle_ui === undefined ? isLegacyKriopigi : Boolean(row.hero_idle_ui),
-    heroUrl: String(row.hero_url ?? '').replace('/img/kriopigi-detail/hero-video-optimized.mp4', '/img/kriopigi-detail/hero-video-web.mp4'),
+    heroUrl: String(row.hero_url ?? '').replace(
+      '/img/kriopigi-detail/hero-video-optimized.mp4',
+      '/img/kriopigi-detail/hero-video-web.mp4',
+    ),
     heroPosterUrl: row.hero_poster_url ? String(row.hero_poster_url) : null,
     heroFocalX: Number(row.hero_focal_x ?? 50),
     heroFocalY: Number(row.hero_focal_y ?? 50),

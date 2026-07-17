@@ -5,7 +5,7 @@ import { getPublishedProjectBySlug } from '../../lib/projects';
 const project = await getPublishedProjectBySlug(Astro.params.slug ?? '');
 
 if (!project) {
-  return Astro.redirect('/#projects');
+  return Astro.rewrite('/404');
 }
 ---
 

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
-    "build": "astro check && astro build",
+    "build": "astro check && astro build && node scripts/prune-vercel-output.mjs",
     "preview": "astro preview",
     "check": "astro check"
   },

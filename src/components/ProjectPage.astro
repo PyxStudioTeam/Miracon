@@ -1,6 +1,10 @@
 ---
 import type { Project } from '../lib/project-types';
+import { getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
+import { absoluteSiteUrl } from '../lib/seo';
 import ContactSection from './ContactSection.astro';
+import OptimizedImage from './OptimizedImage.astro';
+import SeoHead from './SeoHead.astro';
 import SiteFooter from './SiteFooter.astro';
 import SiteHeader from './SiteHeader.astro';
 
@@ -29,6 +33,45 @@ const galleryClasses = ['project-gallery-image--far-left', 'project-gallery-imag
 const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(project.mapQuery || project.address)}&output=embed`;
 const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(project.mapQuery || project.address)}`;
 const primaryCategory = project.categories[0] ?? 'coastal';
+const publicPath = `/projects/${encodeURIComponent(project.slug)}`;
+const publicUrl = absoluteSiteUrl(publicPath, Astro.url);
+const heroImageUrl = project.heroUrl || project.coverUrl;
+const heroImageSources = getOptimizedImageSources(heroImageUrl);
+const heroPosterUrl = project.heroPosterUrl || project.coverUrl;
+const heroPosterSources = getOptimizedImageSources(heroPosterUrl);
+const hideHeroPoster = project.slug === 'kriopigi-villas' && project.heroType === 'video';
+const optimizedHeroPosterUrl = hideHeroPoster ? '' : heroPosterSources.webp || heroPosterSources.avif || heroPosterUrl;
+const heroPreloadUrl = project.heroType === 'video'
+  ? optimizedHeroPosterUrl
+  : heroImageSources.avif || heroImageSources.webp || heroImageUrl;
+const heroPreloadType = heroPreloadUrl.endsWith('.avif')
+  ? 'image/avif'
+  : heroPreloadUrl.endsWith('.webp')
+    ? 'image/webp'
+    : undefined;
+const projectStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebPage',
+      '@id': `${publicUrl}#webpage`,
+      url: publicUrl,
+      name: project.seoTitle,
+      description: project.seoDescription,
+      image: absoluteSiteUrl(project.coverUrl, Astro.url),
+      dateModified: project.updatedAt,
+      inLanguage: 'en',
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteSiteUrl('/', Astro.url) },
+        { '@type': 'ListItem', position: 2, name: 'Projects', item: absoluteSiteUrl('/#projects', Astro.url) },
+        { '@type': 'ListItem', position: 3, name: project.title, item: publicUrl },
+      ],
+    },
+  ],
+};
 ---
 
 <!DOCTYPE html>
@@ -38,9 +81,17 @@ const primaryCategory = project.categories[0] ?? 'coastal';
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <title>{preview ? `[Preview] ${project.seoTitle}` : project.seoTitle}</title>
-  <meta name="description" content={project.seoDescription}>
-  {preview && <meta name="robots" content="noindex,nofollow">}
+  <SeoHead
+    title={preview ? `[Preview] ${project.seoTitle}` : project.seoTitle}
+    description={project.seoDescription}
+    path={publicPath}
+    image={project.coverUrl}
+    imageAlt={project.title}
+    type="article"
+    noindex={preview}
+    jsonLd={preview ? undefined : projectStructuredData}
+  />
+  {heroPreloadUrl && <link rel="preload" as="image" href={heroPreloadUrl} type={heroPreloadType} fetchpriority="high">}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -61,9 +112,9 @@ const primaryCategory = project.categories[0] ?? 'coastal';
       style={`--hero-focus-x: ${project.heroFocalX}%; --hero-focus-y: ${project.heroFocalY}%;`}
     >
       {project.heroType === 'video' ? (
-        <video class="project-hero-image project-hero-video" src={project.heroUrl} poster={project.heroPosterUrl ?? undefined} autoplay muted loop playsinline preload="metadata"></video>
+        <video class="project-hero-image project-hero-video" src={project.heroUrl} poster={optimizedHeroPosterUrl || undefined} autoplay muted loop playsinline preload="metadata"></video>
       ) : (
-        <img src={project.heroUrl || project.coverUrl} alt={project.title} class="project-hero-image">
+        <OptimizedImage src={heroImageUrl} alt={project.title} class="project-hero-image" fetchpriority="high" loading="eager" decoding="async" />
       )}
       {project.heroType === 'video' && project.heroSoundEnabled && (
         <button class="project-hero-sound-button" type="button" aria-label="Enable video sound" aria-pressed="false">
@@ -96,7 +147,7 @@ const primaryCategory = project.categories[0] ?? 'coastal';
       <div class="container project-intro-grid">
         <div class="project-intro-media">
           <h2 id="project-intro-title" class="project-section-title">{project.introTitle}</h2>
-          <img src={project.introImageUrl || project.coverUrl} alt={`${project.title} interior`} class="project-intro-image">
+          <OptimizedImage src={project.introImageUrl || project.coverUrl} alt={`${project.title} interior`} class="project-intro-image" loading="lazy" decoding="async" />
         </div>
         <div class="project-intro-copy">
           <div class="project-specs" aria-label="Project specifications">
@@ -136,10 +187,11 @@ const primaryCategory = project.categories[0] ?? 'coastal';
         <div class="project-gallery-track">
           {gallery.slice(0, 4).map((image, index) => (
             <img
-              src={image.url}
+              src={getLocalAvifSource(image.url) ?? image.url}
               alt={image.alt}
               decoding="async"
               class={`project-gallery-image ${galleryClasses[index]}`}
+              data-fallback-src={getLocalAvifSource(image.url) ? image.url : undefined}
               data-focal-x={image.focalX ?? 50}
               data-focal-y={image.focalY ?? 50}
               style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}
@@ -148,7 +200,8 @@ const primaryCategory = project.categories[0] ?? 'coastal';
           {gallery.slice(4).map((image) => (
             <span
               class="project-gallery-source"
-              data-src={image.url}
+              data-src={getLocalAvifSource(image.url) ?? image.url}
+              data-fallback-src={getLocalAvifSource(image.url) ? image.url : undefined}
               data-alt={image.alt}
               data-focal-x={image.focalX ?? 50}
               data-focal-y={image.focalY ?? 50}

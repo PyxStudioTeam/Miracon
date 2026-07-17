@@ -368,6 +368,15 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ==========================================================================
      PROJECT GALLERY SLIDER
      ========================================================================== */
+  document.querySelectorAll('img[data-fallback-src]').forEach(image => {
+    image.addEventListener('error', () => {
+      const fallbackSrc = image.dataset.fallbackSrc;
+      if (fallbackSrc && image.getAttribute('src') !== fallbackSrc) {
+        image.src = fallbackSrc;
+      }
+    });
+  });
+
   const gallerySlots = [
     { element: document.querySelector('.project-gallery-image--far-left'), offset: -2 },
     { element: document.querySelector('.project-gallery-image--left'), offset: -1 },
@@ -391,6 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gallerySlideKeys.add(key);
         gallerySlides.push({
           src,
+          fallbackSrc: image.getAttribute('data-fallback-src') || '',
           alt: image.getAttribute('data-alt') || image.getAttribute('alt') || '',
           focalX: Number(image.getAttribute('data-focal-x') || 50),
           focalY: Number(image.getAttribute('data-focal-y') || 50)
@@ -422,6 +432,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateImages = () => {
           gallerySlots.forEach(slot => {
             const slide = getGallerySlide(slot.offset);
+            if (slide.fallbackSrc) {
+              slot.element.dataset.fallbackSrc = slide.fallbackSrc;
+            } else {
+              delete slot.element.dataset.fallbackSrc;
+            }
             slot.element.src = slide.src;
             slot.element.alt = slide.alt;
             slot.element.style.objectPosition = `${slide.focalX}% ${slide.focalY}%`;

@@ -529,6 +529,177 @@
   padding: 10px 0;
 }
 
+@media (min-width: 1181px) and (max-width: 1919px) {
+  .golden-visa-page main>section+section,
+  .gv-hero+.gv-threshold {
+    margin-top: clamp(80px, 6.25vw, 120px);
+  }
+
+  .gv-hero-content {
+    padding-top: clamp(221px, 17.2396vw, 331px);
+  }
+
+  .gv-hero h1 {
+    width: min(100%, 1156px);
+    height: auto;
+    font-size: clamp(77px, 6.0417vw, 116px);
+  }
+
+  .gv-hero-lead {
+    width: min(100%, 1004px);
+    height: auto;
+    font-size: clamp(16px, 1.25vw, 24px);
+  }
+
+  .gv-hero-actions {
+    margin-top: clamp(65px, 5.1042vw, 98px);
+  }
+
+  .gv-threshold,
+  .gv-family {
+    height: auto;
+  }
+
+  .gv-threshold-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+    gap: clamp(30px, 2.6042vw, 50px);
+    height: auto;
+    padding: clamp(36px, 2.8125vw, 54px) clamp(40px, 4.4271vw, 85px);
+  }
+
+  .gv-threshold-main,
+  .gv-threshold-note,
+  .gv-threshold-main span {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+  }
+
+  .gv-threshold-main h2 {
+    width: auto;
+    height: auto;
+    font-size: clamp(64px, 5vw, 96px);
+  }
+
+  .gv-threshold-main p,
+  .gv-threshold-main span,
+  .gv-threshold-note p {
+    width: auto;
+    font-size: clamp(21px, 1.6667vw, 32px);
+  }
+
+  .gv-threshold-main span {
+    display: block;
+    margin-top: 12px;
+  }
+
+  .gv-threshold-divider {
+    display: none;
+  }
+
+  .gv-threshold-note {
+    align-self: center;
+    gap: clamp(22px, 1.9792vw, 38px);
+  }
+
+  .gv-family .section-title,
+  .gv-family .section-subtitle {
+    width: auto;
+    height: auto;
+  }
+
+  .gv-family-panel {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    padding: clamp(28px, 2.6042vw, 50px);
+  }
+
+  .gv-family-panel::before {
+    content: none;
+  }
+
+  .gv-family-cards,
+  .gv-family-summary,
+  .gv-primary-cta {
+    position: static;
+  }
+
+  .gv-family-cards {
+    order: 1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(16px, 2.7083vw, 52px);
+  }
+
+  .gv-family-card {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: clamp(22px, 2.0833vw, 40px);
+    height: clamp(250px, 19.0625vw, 366px);
+    padding: 24px 18px;
+  }
+
+  .gv-family-card img,
+  .gv-family-card:nth-child(n) img,
+  .gv-family-card h3,
+  .gv-family-card:not(:first-child) h3 {
+    position: static;
+    transform: none;
+  }
+
+  .gv-family-card img,
+  .gv-family-card:nth-child(n) img {
+    width: auto;
+    max-width: 128px;
+    height: clamp(64px, 4.7917vw, 92px);
+  }
+
+  .gv-family-card h3,
+  .gv-family-card:not(:first-child) h3 {
+    min-height: 0;
+    padding: 0;
+    font-size: clamp(26px, 2.0833vw, 40px);
+    line-height: 1.08;
+  }
+
+  .gv-family-summary {
+    order: 2;
+    width: auto;
+    margin-top: clamp(38px, 3.5938vw, 69px);
+  }
+
+  .gv-family-summary h3,
+  .gv-family-summary p {
+    width: auto;
+    height: auto;
+  }
+
+  .gv-family-summary h3 {
+    font-size: clamp(32px, 2.5vw, 48px);
+  }
+
+  .gv-family-summary p {
+    font-size: clamp(21px, 1.6667vw, 32px);
+  }
+
+  .gv-primary-cta {
+    order: 3;
+    margin: clamp(32px, 3.125vw, 60px) auto 0;
+    transform: none;
+  }
+
+  .gv-metrics-track {
+    margin-left: calc(
+      (100vw - min(var(--frame-width), calc(100vw - clamp(64px, 10.4167vw, 200px)))) / 2
+      - clamp(239px, 18.6458vw, 358px)
+    );
+  }
+}
+
 @media (max-width: 1180px) {
 
   .golden-visa-page .container,

@@ -104,6 +104,40 @@ function readImageSize(file: File): Promise<{ width: number; height: number }> {
   });
 }
 
+const PHOTO_UPLOAD_MAX_DIMENSION = 2400;
+const PHOTO_UPLOAD_QUALITY = 0.86;
+const OPTIMIZABLE_PHOTO_TYPES = new Set(['image/jpeg', 'image/png']);
+
+async function optimizePhotoForUpload(file: File): Promise<File> {
+  if (!OPTIMIZABLE_PHOTO_TYPES.has(file.type)) return file;
+
+  let bitmap: ImageBitmap | null = null;
+  try {
+    bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, PHOTO_UPLOAD_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) return file;
+    context.drawImage(bitmap, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/webp', PHOTO_UPLOAD_QUALITY);
+    });
+    if (!blob || (scale === 1 && blob.size >= file.size)) return file;
+
+    const baseName = file.name.replace(/\.[^.]+$/, '') || 'image';
+    return new File([blob], `${baseName}.webp`, { type: 'image/webp', lastModified: file.lastModified });
+  } catch {
+    return file;
+  } finally {
+    bitmap?.close();
+  }
+}
+
 const emptyProject = (sortOrder: number): Project => ({
   id: crypto.randomUUID(),
   slug: 'new-project',
@@ -476,10 +510,15 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     setUploading(role);
     const uploaded: ProjectImage[] = [];
     for (const file of Array.from(files)) {
-      const dimensions = await readImageSize(file);
-      const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
+      const uploadFile = await optimizePhotoForUpload(file);
+      const dimensions = await readImageSize(uploadFile);
+      const safeName = uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
       const path = `${project.id}/${crypto.randomUUID()}-${safeName}`;
-      const { error } = await supabase.storage.from('project-media').upload(path, file, { upsert: false });
+      const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
+        upsert: false,
+        cacheControl: '31536000',
+        contentType: uploadFile.type || undefined,
+      });
       if (error) {
         showToast({ tone: 'error', message: error.message });
         continue;
@@ -502,8 +541,13 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       return;
     }
     setUploading(field);
-    const path = `${project.id}/${crypto.randomUUID()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-    const { error } = await supabase.storage.from('project-media').upload(path, file);
+    const uploadFile = await optimizePhotoForUpload(file);
+    const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
+    const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
+      upsert: false,
+      cacheControl: '31536000',
+      contentType: uploadFile.type || undefined,
+    });
     if (error) showToast({ tone: 'error', message: error.message });
     else {
       update(field, supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl);
@@ -527,7 +571,11 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     }
     setUploading('brochure');
     const path = `${project.id}/${crypto.randomUUID()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-    const { error } = await supabase.storage.from('project-documents').upload(path, file);
+    const { error } = await supabase.storage.from('project-documents').upload(path, file, {
+      upsert: false,
+      cacheControl: '31536000',
+      contentType: file.type || undefined,
+    });
     if (error) showToast({ tone: 'error', message: error.message });
     else update('brochureUrl', supabase.storage.from('project-documents').getPublicUrl(path).data.publicUrl);
     setUploading('');
@@ -554,6 +602,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     const path = `${project.id}/${crypto.randomUUID()}-${safeName}`;
     const { error } = await supabase.storage.from('project-media').upload(path, file, {
       contentType: 'image/svg+xml',
+      cacheControl: '31536000',
       upsert: false,
     });
 
@@ -576,7 +625,11 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     }
     setUploading(planId);
     const path = `${project.id}/${crypto.randomUUID()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-    const { error } = await supabase.storage.from('project-media').upload(path, file);
+    const { error } = await supabase.storage.from('project-media').upload(path, file, {
+      upsert: false,
+      cacheControl: '31536000',
+      contentType: file.type || undefined,
+    });
     if (error) {
       showToast({ tone: 'error', message: error.message });
     } else {

@@ -1,0 +1,60 @@
+---
+import { absoluteSiteUrl } from '../lib/seo';
+
+interface Props {
+  title: string;
+  description: string;
+  path?: string;
+  image?: string;
+  imageAlt?: string;
+  type?: 'website' | 'article';
+  noindex?: boolean;
+  canonical?: boolean;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title,
+  description,
+  path = Astro.url.pathname,
+  image = '/img/figma_hero.png',
+  imageAlt = 'MIRACON premium residences in Greece',
+  type = 'website',
+  noindex = false,
+  canonical = true,
+  jsonLd,
+} = Astro.props;
+
+const cleanTitle = title.trim();
+const cleanDescription = description.trim().replace(/\s+/g, ' ');
+const canonicalUrl = absoluteSiteUrl(path, Astro.url);
+const imageUrl = absoluteSiteUrl(image, Astro.url);
+const robotsContent = noindex
+  ? 'noindex,nofollow,noarchive'
+  : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+const structuredData = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+---
+
+<title>{cleanTitle}</title>
+<meta name="description" content={cleanDescription}>
+<meta name="robots" content={robotsContent}>
+{canonical && <link rel="canonical" href={canonicalUrl}>}
+
+<meta property="og:site_name" content="MIRACON">
+<meta property="og:locale" content="en_GR">
+<meta property="og:type" content={type}>
+<meta property="og:title" content={cleanTitle}>
+<meta property="og:description" content={cleanDescription}>
+<meta property="og:url" content={canonicalUrl}>
+<meta property="og:image" content={imageUrl}>
+<meta property="og:image:alt" content={imageAlt}>
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content={cleanTitle}>
+<meta name="twitter:description" content={cleanDescription}>
+<meta name="twitter:image" content={imageUrl}>
+<meta name="twitter:image:alt" content={imageAlt}>
+
+{structuredData.map((entry) => (
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(entry).replaceAll('<', '\\u003c')}></script>
+))}

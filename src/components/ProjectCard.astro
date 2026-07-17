@@ -1,4 +1,5 @@
 ---
+import { getLocalAvifSource } from '../lib/media';
 import { categoryLabels, type Project } from '../lib/project-types';
 
 interface Props {
@@ -18,6 +19,8 @@ const figmaMobileCovers: Record<string, string> = {
   'giannitson-thessaloniki': '/img/figma-mobile/giannitson-thessaloniki.png',
 };
 const mobileCoverUrl = figmaMobileCovers[project.slug] ?? mainImage.url;
+const mobileCoverAvifUrl = getLocalAvifSource(mobileCoverUrl);
+const mainImageAvifUrl = getLocalAvifSource(mainImage.url);
 ---
 
 <article class="project-card" data-project-slug={project.slug} data-category={project.categories.join(' ')}>
@@ -35,7 +38,9 @@ const mobileCoverUrl = figmaMobileCovers[project.slug] ?? mainImage.url;
   <div class="project-gallery">
     <div class="gallery-main">
       <picture>
+        {mobileCoverAvifUrl && <source media="(max-width: 600px)" srcset={mobileCoverAvifUrl} type="image/avif">}
         <source media="(max-width: 600px)" srcset={mobileCoverUrl}>
+        {mainImageAvifUrl && <source srcset={mainImageAvifUrl} type="image/avif">}
         <img src={mainImage.url} alt={mainImage.alt} loading="lazy" style={`object-position: ${project.coverFocalX}% ${project.coverFocalY}%;`}>
       </picture>
       <div class="project-tags">
@@ -43,7 +48,21 @@ const mobileCoverUrl = figmaMobileCovers[project.slug] ?? mainImage.url;
       </div>
     </div>
     <div class="gallery-sides">
-      {sideImages.map((image) => <img src={image.url} alt={image.alt} loading="lazy" style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}>)}
+      {sideImages.map((image) => (
+        <picture class="project-card-side-picture">
+          {getLocalAvifSource(image.url) && <source srcset={getLocalAvifSource(image.url)!} type="image/avif">}
+          <img src={image.url} alt={image.alt} loading="lazy" style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}>
+        </picture>
+      ))}
     </div>
   </div>
 </article>
+
+<style>
+  .project-card-side-picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+</style>

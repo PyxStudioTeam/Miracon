@@ -1,8 +1,45 @@
 ---
 import ProjectCard from '../components/ProjectCard.astro';
+import OptimizedImage from '../components/OptimizedImage.astro';
+import SeoHead from '../components/SeoHead.astro';
 import { getPublishedProjects } from '../lib/projects';
+import { absoluteSiteUrl } from '../lib/seo';
 
 const projects = await getPublishedProjects();
+const homeUrl = absoluteSiteUrl('/', Astro.url);
+const homeStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${homeUrl}#website`,
+      url: homeUrl,
+      name: 'MIRACON',
+      inLanguage: 'en',
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${homeUrl}#organization`,
+      name: 'MIRACON',
+      url: homeUrl,
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteSiteUrl('/favicon.svg', Astro.url),
+        width: 512,
+        height: 512,
+      },
+      image: absoluteSiteUrl('/img/figma_hero.png', Astro.url),
+      telephone: '+306955340416',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Egnatia 84',
+        postalCode: '54623',
+        addressLocality: 'Thessaloniki',
+        addressCountry: 'GR',
+      },
+    },
+  ],
+};
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -12,9 +49,14 @@ const projects = await getPublishedProjects();
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <title>MIRACON — Premium Residences in Greece</title>
-  <meta name="description"
-    content="Premium residences and prime locations in Thessaloniki and Halkidiki. Direct Greek developer with full legal support.">
+  <SeoHead
+    title="MIRACON — Premium Residences in Greece"
+    description="Premium residences and prime locations in Thessaloniki and Halkidiki. Direct Greek developer with full legal support."
+    path="/"
+    image="/img/figma_hero.png"
+    imageAlt="MIRACON premium residences in Greece"
+    jsonLd={homeStructuredData}
+  />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
@@ -100,9 +142,9 @@ const projects = await getPublishedProjects();
   <main>
     <section class="hero-pin" aria-label="MIRACON hero">
       <div class="hero">
-        <img class="hero-mobile-image" src="/img/figma-mobile/hero.png" alt="" aria-hidden="true">
         <video class="hero-video" autoplay muted loop playsinline preload="metadata">
-          <source src="img/hero-bg-optimized.mp4" type="video/mp4">
+          <source media="(max-width: 600px)" src="/img/hero-bg-mobile.mp4" type="video/mp4">
+          <source src="/img/hero-bg-optimized.mp4" type="video/mp4">
         </video>
         <div class="container hero-content">
           <p class="hero-subtitle">Thessaloniki · Halkidiki · Greece</p>
@@ -168,7 +210,7 @@ const projects = await getPublishedProjects();
           </div>
         </div>
       </div>
-      <img src="img/about_bg.png" alt="Premium residence with sea view" class="about-image about-reveal">
+      <OptimizedImage src="/img/about_bg.png" alt="Premium residence with sea view" class="about-image about-reveal" loading="lazy" decoding="async" />
 
       <div class="about-carousel" aria-label="MIRACON benefits">
         <div class="about-carousel-track">
@@ -228,18 +270,29 @@ const projects = await getPublishedProjects();
             <div class="golden-carousel-inner">
               <div class="golden-carousel-face">
                 <picture>
+                  <source media="(max-width: 600px)" srcset="/img/figma-mobile/golden-visa.avif" type="image/avif">
                   <source media="(max-width: 600px)" srcset="/img/figma-mobile/golden-visa.png">
-                  <img src="img/figma_golden_visa.png" alt="Greek Residency">
+                  <source srcset="/img/figma_golden_visa.avif" type="image/avif">
+                  <img src="/img/figma_golden_visa.png" alt="Greek Residency" loading="lazy" decoding="async">
                 </picture>
               </div>
               <div class="golden-carousel-face">
-                <img src="img/golden_visa_2.png" alt="Investment threshold">
+                <picture>
+                  <source srcset="/img/golden_visa_2.avif" type="image/avif">
+                  <img src="/img/golden_visa_2.png" alt="Investment threshold" loading="lazy" decoding="async">
+                </picture>
               </div>
               <div class="golden-carousel-face">
-                <img src="img/golden_visa_3.png" alt="Family included">
+                <picture>
+                  <source srcset="/img/golden_visa_3.avif" type="image/avif">
+                  <img src="/img/golden_visa_3.png" alt="Family included" loading="lazy" decoding="async">
+                </picture>
               </div>
               <div class="golden-carousel-face">
-                <img src="img/golden_visa_4.png" alt="Schengen access">
+                <picture>
+                  <source srcset="/img/golden_visa_4.avif" type="image/avif">
+                  <img src="/img/golden_visa_4.png" alt="Schengen access" loading="lazy" decoding="async">
+                </picture>
               </div>
             </div>
           </div>

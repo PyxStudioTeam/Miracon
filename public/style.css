@@ -2344,25 +2344,33 @@ body.js-enabled .about-reveal.visible {
 
 /* ===========================================================================
    RESPONSIVE LANDING-PAGE STRUCTURE
-   Desktop coordinates stay untouched. Below 1180px the structural wrappers
+   Desktop coordinates stay untouched at the 1920px reference width. Below it
    switch to Grid/Flex so text, CMS content and media can reflow safely.
    =========================================================================== */
-@media (max-width: 1180px) {
+@media (max-width: 1919px) {
   body {
     min-width: 0;
   }
 
   .container,
   .header-container {
-    width: min(var(--frame-width), calc(100vw - 64px));
+    width: min(var(--frame-width), calc(100vw - clamp(64px, 10.4167vw, 200px)));
   }
 
   main>section+section {
-    margin-top: 96px;
+    margin-top: clamp(80px, 6.25vw, 120px);
+  }
+
+  .section-title {
+    font-size: clamp(43px, 3.3333vw, 64px);
+  }
+
+  .section-subtitle {
+    font-size: clamp(21px, 1.6667vw, 32px);
   }
 
   .header {
-    top: 20px;
+    top: clamp(20px, 1.5625vw, 30px);
   }
 
   .header-container {
@@ -2392,7 +2400,7 @@ body.js-enabled .about-reveal.visible {
   }
 
   .hero-content {
-    padding-top: clamp(260px, 34vh, 340px);
+    padding-top: clamp(223px, 17.45vw, 335px);
   }
 
   .hero-subtitle,
@@ -2402,7 +2410,7 @@ body.js-enabled .about-reveal.visible {
   }
 
   .hero-title {
-    font-size: clamp(72px, 9vw, 104px);
+    font-size: clamp(69px, 5.4167vw, 104px);
     line-height: 0.96;
   }
 
@@ -2413,25 +2421,29 @@ body.js-enabled .about-reveal.visible {
 
   .project-card {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-    gap: 32px;
+    gap: clamp(22px, 1.6667vw, 32px);
     height: auto;
-    min-height: 600px;
-    padding: 32px;
+    min-height: clamp(459px, 35.8333vw, 688px);
+    padding: clamp(22px, 1.6667vw, 32px);
   }
 
   .project-info {
-    padding: 16px 0 24px;
+    padding: clamp(11px, 0.8333vw, 16px) 0 clamp(16px, 1.25vw, 24px);
   }
 
   .project-name {
-    font-size: clamp(34px, 4vw, 48px);
+    font-size: clamp(32px, 2.5vw, 48px);
   }
 
   .project-location,
   .project-description,
-  .project-price,
   .learn-more {
-    font-size: clamp(22px, 2.65vw, 32px);
+    font-size: clamp(21px, 1.6667vw, 32px);
+  }
+
+  .project-price {
+    margin-bottom: clamp(35px, 2.7083vw, 52px);
+    font-size: clamp(32px, 2.5vw, 48px);
   }
 
   .project-description {
@@ -2439,9 +2451,10 @@ body.js-enabled .about-reveal.visible {
   }
 
   .project-gallery {
-    grid-template-columns: minmax(0, 1.65fr) minmax(180px, 1fr);
+    grid-template-columns: minmax(0, 1.65fr) minmax(clamp(120px, 9.375vw, 180px), 1fr);
+    gap: clamp(14px, 1.0417vw, 20px);
     height: 100%;
-    min-height: 536px;
+    min-height: clamp(425px, 33.1771vw, 637px);
   }
 
   .gallery-main,
@@ -2452,7 +2465,20 @@ body.js-enabled .about-reveal.visible {
 
   .gallery-sides {
     grid-template-rows: repeat(2, minmax(0, 1fr));
-    gap: 20px;
+    gap: clamp(14px, 1.0417vw, 20px);
+  }
+
+  .filter-tabs {
+    flex-wrap: wrap;
+    gap: clamp(24px, 2.2396vw, 43px);
+    margin-bottom: clamp(36px, 2.8125vw, 54px);
+  }
+
+  .filter-tab {
+    height: clamp(52px, 4.0625vw, 78px);
+    min-width: clamp(73px, 5.6771vw, 109px);
+    padding: 0 clamp(25px, 1.9271vw, 37px);
+    font-size: clamp(21px, 1.6667vw, 32px);
   }
 
   .about-section {
@@ -2574,7 +2600,10 @@ body.js-enabled .about-reveal.visible {
   }
 
   .stages-carousel {
-    left: calc((100vw - min(var(--frame-width), calc(100vw - 64px))) / 2 + 470px);
+    left: calc(
+      (100vw - min(var(--frame-width), calc(100vw - clamp(64px, 10.4167vw, 200px)))) / 2
+      + clamp(424px, 27.6042vw, 530px)
+    );
   }
 
   .contacts-section,
@@ -2643,6 +2672,36 @@ body.js-enabled .about-reveal.visible {
   .btn-submit {
     justify-self: center;
     margin-top: 8px;
+  }
+
+  .footer {
+    height: auto;
+    padding: clamp(48px, 4.8438vw, 93px) 0;
+  }
+
+  .footer-container {
+    display: grid;
+    gap: clamp(42px, 4.0104vw, 77px);
+    height: auto;
+  }
+
+  .footer-top,
+  .footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer .logo,
+  .footer-socials,
+  .footer-links,
+  .lang-dropdown-btn {
+    position: static;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+    gap: clamp(28px, 3.4375vw, 66px);
   }
 }
 
