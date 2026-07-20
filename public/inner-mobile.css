@@ -438,6 +438,12 @@
     height: 10px;
   }
 
+  .project-page .btn-submit > span:first-child,
+  .golden-visa-page .btn-submit > span:first-child {
+    width: auto;
+    white-space: nowrap;
+  }
+
   .project-page .btn-submit-arrow::before,
   .golden-visa-page .btn-submit-arrow::before {
     width: 14px;
