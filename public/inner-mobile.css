@@ -422,32 +422,32 @@
     justify-content: space-between;
     width: min(100%, 260px);
     min-width: 0;
-    height: 46px;
-    min-height: 46px;
-    margin: 24px 0 0;
-    padding: 0 18px;
-    border-radius: 23px;
-    font-size: 14px;
+    height: 44px;
+    min-height: 44px;
+    margin: 28px 0 0;
+    padding: 0 24px;
+    border-radius: 22px;
+    font-size: 17px;
     line-height: 1;
   }
 
   .project-page .btn-submit-arrow,
   .golden-visa-page .btn-submit-arrow {
-    flex-basis: 18px;
-    width: 18px;
-    height: 12px;
+    flex-basis: 14px;
+    width: 14px;
+    height: 10px;
   }
 
   .project-page .btn-submit-arrow::before,
   .golden-visa-page .btn-submit-arrow::before {
-    width: 18px;
+    width: 14px;
     border-width: 2px;
   }
 
   .project-page .btn-submit-arrow::after,
   .golden-visa-page .btn-submit-arrow::after {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-width: 2px;
   }
 
@@ -723,22 +723,28 @@
   .project-page .project-brochure-link {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    width: 230px;
-    height: 56px;
+    gap: 12px;
+    width: 203px;
+    height: 61px;
     margin-top: 26px;
-    padding: 0 22px 0 4px;
-    border-radius: 28px;
-    font-size: 20px;
+    padding: 0 24px 0 4px;
+    border-radius: 31px;
+    background: var(--page-bg);
+    color: #003075;
+    font-size: 22px;
   }
 
   .project-page .project-brochure-icon {
     position: static;
-    flex: 0 0 48px;
-    width: 48px;
-    height: 48px;
-    transform: scale(.79);
-    transform-origin: center;
+    flex: 0 0 54px;
+    width: 54px;
+    height: 54px;
+    background: url('/img/olympus-detail/icons/brochure-circle.svg') center / contain no-repeat;
+    transform: none;
+  }
+
+  .project-page .project-brochure-icon-part {
+    display: none;
   }
 
   .project-page .project-brochure-link > span:last-child {
@@ -746,7 +752,7 @@
     display: block;
     width: auto;
     height: auto;
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1;
   }
 
@@ -860,6 +866,108 @@
     border-radius: 23px;
     font-size: 18px;
     line-height: 1;
+  }
+
+  .golden-visa-page .stages-section {
+    position: relative;
+    height: 662px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .golden-visa-page .stages-container,
+  .golden-visa-page .stages-intro {
+    position: static;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  .golden-visa-page .stages-intro .section-title {
+    position: absolute;
+    top: 56px;
+    left: 20px;
+    width: calc(100% - 40px);
+    height: auto;
+    margin: 0;
+  }
+
+  .golden-visa-page .stages-intro .section-subtitle {
+    position: absolute;
+    top: 101px;
+    left: 20px;
+    width: calc(100% - 40px);
+    height: auto;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.1;
+  }
+
+  .golden-visa-page .stages-carousel {
+    position: absolute;
+    top: 154px;
+    right: auto;
+    left: 20px;
+    width: calc(100% - 40px);
+    height: 452px;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .golden-visa-page .stages-carousel-track,
+  .golden-visa-page .stages-carousel-set {
+    display: block;
+    width: 100%;
+    height: 452px;
+    animation: none;
+    transform: none;
+  }
+
+  .golden-visa-page .stages-carousel-set + .stages-carousel-set {
+    display: none;
+  }
+
+  .golden-visa-page .stage-card {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 84px;
+    min-height: 84px;
+    border-radius: 22px;
+  }
+
+  .golden-visa-page .stage-card:nth-child(1) { top: 0; }
+  .golden-visa-page .stage-card:nth-child(2) { top: 92px; }
+  .golden-visa-page .stage-card:nth-child(3) { top: 184px; }
+  .golden-visa-page .stage-card:nth-child(4) { top: 276px; }
+  .golden-visa-page .stage-card:nth-child(5) { top: 368px; }
+
+  .golden-visa-page .stage-number {
+    top: 27px;
+    left: 14px;
+    width: 34px;
+    height: 28px;
+    font-size: 29px;
+    line-height: 28px;
+  }
+
+  .golden-visa-page .stage-card h3 {
+    top: 16px;
+    left: 59px;
+    width: calc(100% - 76px);
+    height: auto;
+    font-size: 16px;
+    line-height: 1.1;
+    white-space: normal;
+  }
+
+  .golden-visa-page .stage-card p {
+    top: 46px;
+    left: 59px;
+    width: calc(100% - 76px);
+    height: auto;
+    font-size: 11px;
+    line-height: 1.2;
   }
 }
 
