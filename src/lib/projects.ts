@@ -6,6 +6,19 @@ type ProjectRow = Record<string, unknown> & {
   project_images?: Record<string, unknown>[];
 };
 
+const artemisBenefits: Project['benefits'] = [
+  { id: 'shore', title: '400 metres from the sea', icon: '/img/olympus-detail/icons/amenity-shore.svg' },
+  { id: 'availability', title: 'Last 3 residences available', icon: '/img/olympus-detail/icons/amenity-apartments.svg' },
+  { id: 'ready', title: 'Ready to move in', icon: '/img/olympus-detail/icons/amenity-ready.svg' },
+  { id: 'parking', title: 'Dedicated parking', icon: '/img/olympus-detail/icons/amenity-thessaloniki.svg' },
+  { id: 'storage', title: 'Private storage', icon: '/img/olympus-detail/icons/amenity-finish.svg' },
+  { id: 'location', title: 'Nea Kallikratia location', icon: '/img/olympus-detail/icons/amenity-views.svg' },
+];
+
+const fallbackProjects = seedProjects
+  .filter((project) => project.status === 'published')
+  .sort((a, b) => a.sortOrder - b.sortOrder);
+
 function mapImage(row: Record<string, unknown>): ProjectImage {
   return {
     id: String(row.id),
@@ -23,7 +36,10 @@ function mapImage(row: Record<string, unknown>): ProjectImage {
 
 export function mapProjectRow(row: ProjectRow): Project {
   const images = (row.project_images ?? []).map(mapImage).sort((a, b) => a.sortOrder - b.sortOrder);
+  const rowBenefits = Array.isArray(row.benefits) ? row.benefits : [];
   const isLegacyKriopigi = String(row.slug) === 'kriopigi-villas' && row.hero_variant === undefined;
+  const hasIncorrectArtemisData = String(row.slug) === 'artemis-residences'
+    && rowBenefits.some((benefit) => String((benefit as Record<string, unknown>).title ?? '').includes('9-storey'));
 
   return {
     id: String(row.id),
@@ -56,8 +72,8 @@ export function mapProjectRow(row: ProjectRow): Project {
     mapQuery: String(row.map_query ?? ''),
     cardImages: images.filter((image) => image.role === 'card'),
     gallery: images.filter((image) => image.role === 'gallery'),
-    characteristics: (row.characteristics ?? []) as Project['characteristics'],
-    benefits: (row.benefits ?? []) as Project['benefits'],
+    characteristics: hasIncorrectArtemisData ? [] : (row.characteristics ?? []) as Project['characteristics'],
+    benefits: hasIncorrectArtemisData ? artemisBenefits : rowBenefits as Project['benefits'],
     floorPlanGroups: (row.floor_plan_groups ?? []) as Project['floorPlanGroups'],
     nearbyPlaces: (row.nearby_places ?? []) as string[],
     seoTitle: String(row.seo_title ?? row.title),
@@ -70,30 +86,53 @@ export async function getPublishedProjects(): Promise<Project[]> {
   const supabase = createPublicSupabaseClient();
 
   if (!supabase) {
-    return import.meta.env.DEV
-      ? seedProjects.filter((project) => project.status === 'published').sort((a, b) => a.sortOrder - b.sortOrder)
-      : [];
+    return fallbackProjects;
   }
 
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*, project_images(*)')
-    .eq('status', 'published')
-    .order('sort_order');
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*, project_images(*)')
+      .eq('status', 'published')
+      .order('sort_order');
 
-  if (error) {
-    console.error('Unable to load projects from Supabase:', error.message);
-    return [];
+    if (error) {
+      console.error('Unable to load projects from Supabase:', error.message);
+      return fallbackProjects;
+    }
+
+    if (!data?.length) return fallbackProjects;
+
+    return (data as ProjectRow[]).map(mapProjectRow);
+  } catch (error) {
+    console.error('Unable to load projects from Supabase:', error);
+    return fallbackProjects;
   }
-
-  if (!data?.length) {
-    return [];
-  }
-
-  return (data as ProjectRow[]).map(mapProjectRow);
 }
 
 export async function getPublishedProjectBySlug(slug: string): Promise<Project | null> {
-  const projects = await getPublishedProjects();
-  return projects.find((project) => project.slug === slug) ?? null;
+  if (!slug) return null;
+
+  const fallbackProject = fallbackProjects.find((project) => project.slug === slug) ?? null;
+  const supabase = createPublicSupabaseClient();
+  if (!supabase) return fallbackProject;
+
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*, project_images(*)')
+      .eq('status', 'published')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (error) {
+      console.error(`Unable to load project "${slug}" from Supabase:`, error.message);
+      return fallbackProject;
+    }
+
+    return data ? mapProjectRow(data as ProjectRow) : null;
+  } catch (error) {
+    console.error(`Unable to load project "${slug}" from Supabase:`, error);
+    return fallbackProject;
+  }
 }

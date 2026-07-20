@@ -144,6 +144,15 @@
   opacity: 0.8;
 }
 
+.gv-threshold-main p,
+.gv-threshold-note p,
+.gv-family-summary p,
+.gv-metric-card p {
+  text-align: justify;
+  text-align-last: left;
+  hyphens: auto;
+}
+
 .gv-threshold-main span {
   position: absolute;
   top: 104px;
@@ -733,7 +742,6 @@
     position: relative;
   }
 
-  .golden-visa-page .nav-menu,
   .golden-visa-page .lang-selector {
     display: none;
   }

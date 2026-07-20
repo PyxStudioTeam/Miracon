@@ -40,8 +40,8 @@ const projectsHref = projectCategory ? `/?filter=${projectCategory}#projects` : 
             <span class="contact-dropdown-text">+306955340416</span>
             <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Vector (1).svg" alt=""></span>
           </a>
-          <a href="mailto:miracon@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail">
-            <span class="contact-dropdown-text">miracon@miracon.gr</span>
+          <a href="mailto:info@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail">
+            <span class="contact-dropdown-text">info@miracon.gr</span>
             <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Group 37313 (1).svg" alt=""></span>
           </a>
           <a
@@ -65,7 +65,14 @@ const projectsHref = projectCategory ? `/?filter=${projectCategory}#projects` : 
       <a href={projectsHref} class="mobile-nav-link">Projects</a>
       <a href="/golden-visa" class="mobile-nav-link">Golden Visa</a>
       <a href="/#about" class="mobile-nav-link">About us</a>
-      <a href="#contacts" class="mobile-nav-link">Contacts</a>
+      <button class="mobile-nav-contact" type="button" aria-expanded="false" aria-controls="mobileContactDetails">
+        <span>Contacts</span><span aria-hidden="true">+</span>
+      </button>
+      <div class="mobile-nav-contacts" id="mobileContactDetails">
+        <a href="tel:+306955340416">+30 695 534 0416</a>
+        <a href="mailto:info@miracon.gr">info@miracon.gr</a>
+        <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">Egnatia 84, Thessaloniki</a>
+      </div>
     </nav>
   </div>
 </header>

@@ -134,7 +134,7 @@
     top: 58px;
     right: 0;
     display: grid;
-    width: 190px;
+    width: min(280px, calc(100vw - 40px));
     padding: 14px 18px;
     border: 1px solid rgba(255, 255, 255, .22);
     border-radius: 18px;
@@ -166,6 +166,49 @@
 
   .project-page .mobile-nav-link:last-child,
   .golden-visa-page .mobile-nav-link:last-child { border-bottom: 0; }
+
+  .project-page .mobile-nav-contact,
+  .golden-visa-page .mobile-nav-contact {
+    display: flex;
+    width: 100%;
+    padding: 10px 2px;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, .14);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .project-page .mobile-nav-contact > span:last-child,
+  .golden-visa-page .mobile-nav-contact > span:last-child {
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1;
+    transition: transform .2s ease;
+  }
+
+  .project-page .mobile-nav-contact[aria-expanded='true'] > span:last-child,
+  .golden-visa-page .mobile-nav-contact[aria-expanded='true'] > span:last-child {
+    transform: rotate(45deg);
+  }
+
+  .project-page .mobile-nav-contacts,
+  .golden-visa-page .mobile-nav-contacts {
+    display: none;
+    padding: 8px 0 4px;
+    gap: 8px;
+  }
+
+  .project-page .mobile-nav-contacts.active,
+  .golden-visa-page .mobile-nav-contacts.active { display: grid; }
+
+  .project-page .mobile-nav-contacts a,
+  .golden-visa-page .mobile-nav-contacts a {
+    color: rgba(255, 255, 255, .78);
+    font-size: 13px;
+    line-height: 1.25;
+  }
 
   /* Project introduction: remove the retained desktop 46.22% column. */
   .project-page main > section + section {
@@ -442,6 +485,13 @@
   .golden-visa-page .btn-submit > span:first-child {
     width: auto;
     white-space: nowrap;
+  }
+
+  .project-page .form-status,
+  .golden-visa-page .form-status {
+    position: static;
+    margin: 12px 0 0;
+    font-size: 14px;
   }
 
   .project-page .btn-submit-arrow::before,
@@ -876,9 +926,13 @@
 
   .golden-visa-page .stages-section {
     position: relative;
-    height: 662px;
+    height: 606px;
     padding: 0;
     overflow: hidden;
+  }
+
+  .golden-visa-page .stages-section + .contacts-section {
+    margin-top: 0;
   }
 
   .golden-visa-page .stages-container,
@@ -974,6 +1028,23 @@
     height: auto;
     font-size: 11px;
     line-height: 1.2;
+  }
+
+  .golden-visa-page .stage-card.mobile-rise-card {
+    opacity: 0;
+    clip-path: inset(-8px -8px 64px -8px);
+    transform: translateY(64px);
+    transition:
+      opacity .18s linear,
+      transform .8s cubic-bezier(.25, 1, .5, 1),
+      clip-path .8s cubic-bezier(.25, 1, .5, 1);
+    will-change: opacity, transform, clip-path;
+  }
+
+  .golden-visa-page .stage-card.mobile-rise-card.mobile-rise-card--visible {
+    opacity: 1;
+    clip-path: inset(-8px -8px -8px -8px);
+    transform: translateY(0);
   }
 }
 

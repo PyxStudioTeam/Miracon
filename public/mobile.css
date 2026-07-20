@@ -6,6 +6,110 @@
   display: none;
 }
 
+@media (min-width: 601px) and (max-width: 820px) {
+  .nav-menu,
+  .header-actions {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    position: absolute;
+    z-index: 30;
+    top: 4px;
+    right: 0;
+    display: block;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .mobile-menu-btn::before,
+  .mobile-menu-btn::after,
+  .mobile-menu-btn span {
+    content: '';
+    position: absolute;
+    left: 12px;
+    width: 20px;
+    height: 1px;
+    border-radius: 999px;
+    background: #fff;
+    transition: transform .2s ease, opacity .15s ease;
+  }
+
+  .mobile-menu-btn::before { top: 15px; }
+  .mobile-menu-btn span { top: 21px; }
+  .mobile-menu-btn::after { top: 27px; }
+  .mobile-menu-btn.active::before { transform: translateY(6px) rotate(45deg); }
+  .mobile-menu-btn.active span { opacity: 0; }
+  .mobile-menu-btn.active::after { transform: translateY(-6px) rotate(-45deg); }
+
+  .mobile-nav {
+    position: absolute;
+    z-index: 25;
+    top: 58px;
+    right: 0;
+    display: grid;
+    width: min(280px, calc(100vw - 40px));
+    padding: 14px 18px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 18px;
+    background: rgba(3, 39, 91, .96);
+    color: #fff;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity .2s ease, visibility .2s ease, transform .2s ease;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .mobile-nav.active {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .mobile-nav-link,
+  .mobile-nav-contact {
+    padding: 10px 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, .14);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .mobile-nav-contact {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mobile-nav-contact > span:last-child {
+    font-size: 22px;
+    font-weight: 300;
+    transition: transform .2s ease;
+  }
+
+  .mobile-nav-contact[aria-expanded='true'] > span:last-child { transform: rotate(45deg); }
+
+  .mobile-nav-contacts {
+    display: none;
+    padding: 8px 0 4px;
+    gap: 8px;
+  }
+
+  .mobile-nav-contacts.active { display: grid; }
+
+  .mobile-nav-contacts a {
+    color: rgba(255, 255, 255, .78);
+    font-size: 13px;
+    line-height: 1.25;
+  }
+}
+
 @media (max-width: 600px) {
   :root {
     --mobile-blue: #003075;
@@ -168,7 +272,7 @@
     top: 58px;
     right: 0;
     display: grid;
-    width: 190px;
+    width: min(280px, calc(100vw - 40px));
     padding: 14px 18px;
     border: 1px solid rgba(255, 255, 255, .22);
     border-radius: 18px;
@@ -195,6 +299,43 @@
   }
 
   .mobile-nav-link:last-child { border-bottom: 0; }
+
+  .mobile-nav-contact {
+    display: flex;
+    width: 100%;
+    padding: 10px 2px;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, .14);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .mobile-nav-contact > span:last-child {
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1;
+    transition: transform .2s ease;
+  }
+
+  .mobile-nav-contact[aria-expanded='true'] > span:last-child {
+    transform: rotate(45deg);
+  }
+
+  .mobile-nav-contacts {
+    display: none;
+    padding: 8px 0 4px;
+    gap: 8px;
+  }
+
+  .mobile-nav-contacts.active { display: grid; }
+
+  .mobile-nav-contacts a {
+    color: rgba(255, 255, 255, .78);
+    font-size: 13px;
+    line-height: 1.25;
+  }
 
   /* Hero — Figma: y0..721. */
   .hero-pin,
@@ -475,11 +616,10 @@
   }
 
   .project-card {
-    position: relative;
-    grid-template-columns: none;
-    flex: 0 0 520px;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
     width: 100%;
-    height: 520px;
     min-height: 520px;
     padding: 0;
     border-radius: 22px;
@@ -497,12 +637,12 @@
   }
 
   .project-gallery {
-    position: absolute;
-    top: 17px;
-    left: 17px;
+    position: relative;
+    order: -1;
     display: block;
-    width: calc(100% - 34px);
+    width: auto;
     height: 231px;
+    margin: 17px 17px 0;
     padding: 0;
   }
 
@@ -552,19 +692,18 @@
   .tag--golden-visa { width: 110px; }
 
   .project-info {
-    position: absolute;
-    inset: 0;
-    display: block;
-    padding: 0;
+    position: static;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    padding: 24px 17px 20px;
   }
 
   .project-name {
-    position: absolute;
-    top: 273px;
-    left: 17px;
-    width: calc(100% - 34px);
-    min-height: 21px;
-    margin: 0;
+    position: static;
+    width: auto;
+    min-height: 0;
+    margin: 0 0 8px;
     color: var(--mobile-blue);
     font-size: 22px;
     font-weight: 500;
@@ -573,24 +712,17 @@
     text-transform: uppercase;
   }
 
-  .project-card[data-project-slug='monastiriou-4-residences'] .project-name,
-  .project-card[data-project-slug='giannitson-thessaloniki'] .project-name {
-    top: 262px;
-  }
-
   .project-card[data-project-slug='monastiriou-4-residences'] .project-name {
     text-transform: none;
   }
 
   .project-location {
-    position: absolute;
-    top: 301px;
-    left: 17px;
+    position: static;
     display: flex;
     align-items: center;
     gap: 5px;
-    height: 17px;
-    margin: 0;
+    height: auto;
+    margin: 0 0 14px;
     color: var(--mobile-blue);
     font-size: 14px;
     font-weight: 400;
@@ -606,16 +738,13 @@
   }
 
   .project-description {
-    position: absolute;
-    top: 331px;
-    left: 17px;
+    position: static;
     display: flex;
-    align-items: center;
-    width: calc(100% - 34px);
-    height: 80px;
-    max-height: 80px;
+    width: auto;
+    height: auto;
+    max-height: none;
     margin: 0;
-    overflow: hidden;
+    overflow: visible;
     color: var(--mobile-blue);
     font-size: 14px;
     font-weight: 400;
@@ -624,18 +753,20 @@
   }
 
   .project-bottom {
-    position: static;
-    display: contents;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: auto;
+    padding-top: 24px;
   }
 
   .project-price {
-    position: absolute;
-    top: 424px;
-    left: 17px;
+    position: static;
     display: flex;
     align-items: center;
-    width: 162px;
-    height: 61px;
+    width: auto;
+    height: auto;
     margin: 0;
     color: var(--mobile-blue);
     font-size: 22px;
@@ -644,13 +775,11 @@
   }
 
   .learn-more {
-    position: absolute;
-    top: 477px;
-    left: 17px;
+    position: static;
     display: inline-flex;
     align-items: center;
     gap: 14px;
-    height: 17px;
+    height: auto;
     color: var(--mobile-gold);
     font-size: 14px;
     line-height: 16.8px;
@@ -1291,10 +1420,13 @@
     top: 82px;
     left: 0;
     display: block;
-    width: 249px;
-    height: 34px;
+    width: 100%;
+    height: auto;
     margin: 0;
+    line-height: 1.1;
   }
+
+  .form-container .section-subtitle br { display: none; }
 
   .consultation-form {
     position: absolute;
@@ -1452,6 +1584,14 @@
     width: 5px;
     height: 5px;
     border-width: 2px;
+  }
+
+  .form-status {
+    top: 456px;
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.2;
+    text-align: center;
   }
 
   /* Footer — Figma: y6497..6661. */

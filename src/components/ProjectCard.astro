@@ -21,6 +21,7 @@ const figmaMobileCovers: Record<string, string> = {
 const mobileCoverUrl = figmaMobileCovers[project.slug] ?? mainImage.url;
 const mobileCoverAvifUrl = getLocalAvifSource(mobileCoverUrl);
 const mainImageAvifUrl = getLocalAvifSource(mainImage.url);
+const cardDescription = project.shortDescription.replace(/\.+\s*$/, '');
 ---
 
 <article class="project-card" data-project-slug={project.slug} data-category={project.categories.join(' ')}>
@@ -28,7 +29,7 @@ const mainImageAvifUrl = getLocalAvifSource(mainImage.url);
     <div>
       <h3 class="project-name">{project.title}</h3>
       <p class="project-location"><span class="location-dot"></span>{project.address}</p>
-      <p class="project-description">{project.shortDescription}</p>
+      <p class="project-description"><span>{cardDescription}</span></p>
     </div>
     <div class="project-bottom">
       <div class="project-price">{project.price}</div>

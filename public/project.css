@@ -27,6 +27,14 @@
   line-height: 1.12;
 }
 
+.project-description-full,
+.project-intro-copy p,
+.project-amenities-heading p {
+  text-align: justify;
+  text-align-last: left;
+  hyphens: auto;
+}
+
 .project-hero {
   position: relative;
   height: 628px;
@@ -1277,21 +1285,11 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   }
 }
 
-@media (max-width: 1680px) {
-  .project-page .nav-menu {
-    display: none;
-  }
-}
-
 @media (max-width: 1180px) {
 
   .project-page .container,
   .project-page .header-container {
     width: calc(100vw - 48px);
-  }
-
-  .project-page .nav-menu {
-    display: none;
   }
 
   .project-page .header-actions {

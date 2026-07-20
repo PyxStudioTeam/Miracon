@@ -150,14 +150,16 @@ const projectStructuredData = {
           <OptimizedImage src={project.introImageUrl || project.coverUrl} alt={`${project.title} interior`} class="project-intro-image" loading="lazy" decoding="async" />
         </div>
         <div class="project-intro-copy">
-          <div class="project-specs" aria-label="Project specifications">
-            {project.characteristics.map((item) => (
-              <div class="project-spec">
-                <img src={iconUrls[item.icon]} alt="" class="project-spec-icon" aria-hidden="true">
-                <span>{item.label}: <strong>{item.value}</strong></span>
-              </div>
-            ))}
-          </div>
+          {project.characteristics.length > 0 && (
+            <div class="project-specs" aria-label="Project specifications">
+              {project.characteristics.map((item) => (
+                <div class="project-spec">
+                  <img src={iconUrls[item.icon]} alt="" class="project-spec-icon" aria-hidden="true">
+                  <span>{item.label}: <strong>{item.value}</strong></span>
+                </div>
+              ))}
+            </div>
+          )}
           <p class="project-description-full">{project.fullDescription}</p>
         </div>
       </div>

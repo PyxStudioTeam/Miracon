@@ -266,22 +266,78 @@ document.addEventListener('DOMContentLoaded', () => {
   const mobileMenuBtn = document.getElementById('mobileMenuBtn');
   const mobileNav = document.getElementById('mobileNav');
   const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+  const mobileContactButton = document.querySelector('.mobile-nav-contact');
+  const mobileContactDetails = document.getElementById('mobileContactDetails');
 
   if (mobileMenuBtn && mobileNav) {
-    mobileMenuBtn.addEventListener('click', () => {
-      const isOpen = mobileNav.classList.toggle('active');
+    const menuFocusableElements = () => Array.from(mobileNav.querySelectorAll(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(element => !element.closest('.mobile-nav-contacts') || mobileContactDetails?.classList.contains('active'));
+
+    const setMenuOpen = (isOpen, shouldFocusMenu = false) => {
+      mobileNav.classList.toggle('active', isOpen);
       mobileMenuBtn.classList.toggle('active', isOpen);
       mobileMenuBtn.setAttribute('aria-expanded', String(isOpen));
       mobileMenuBtn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+      mobileNav.setAttribute('aria-hidden', String(!isOpen));
+      if (!isOpen && mobileContactButton && mobileContactDetails) {
+        mobileContactButton.setAttribute('aria-expanded', 'false');
+        mobileContactDetails.classList.remove('active');
+        mobileContactDetails.setAttribute('aria-hidden', 'true');
+      }
+      if (isOpen && shouldFocusMenu) menuFocusableElements()[0]?.focus();
+    };
+
+    mobileNav.setAttribute('aria-hidden', 'true');
+    if (mobileContactDetails) mobileContactDetails.setAttribute('aria-hidden', 'true');
+
+    mobileMenuBtn.addEventListener('click', () => {
+      setMenuOpen(!mobileNav.classList.contains('active'), true);
     });
 
     mobileNavLinks.forEach(link => {
       link.addEventListener('click', () => {
-        mobileNav.classList.remove('active');
-        mobileMenuBtn.classList.remove('active');
-        mobileMenuBtn.setAttribute('aria-expanded', 'false');
-        mobileMenuBtn.setAttribute('aria-label', 'Open menu');
+        setMenuOpen(false);
       });
+    });
+
+    if (mobileContactButton && mobileContactDetails) {
+      mobileContactButton.addEventListener('click', () => {
+        const isOpen = mobileContactDetails.classList.toggle('active');
+        mobileContactButton.setAttribute('aria-expanded', String(isOpen));
+        mobileContactDetails.setAttribute('aria-hidden', String(!isOpen));
+      });
+
+      mobileContactDetails.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          setMenuOpen(false);
+        });
+      });
+    }
+
+    document.addEventListener('keydown', event => {
+      if (!mobileNav.classList.contains('active')) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMenuOpen(false);
+        mobileMenuBtn.focus();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const focusableElements = menuFocusableElements();
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (!firstElement || !lastElement) return;
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
     });
   }
 
@@ -297,9 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Set active tab
-      filterTabs.forEach(t => t.classList.remove('active'));
+      // Keep the visual state and the control's accessible state in sync.
+      filterTabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-pressed', 'false');
+      });
       tab.classList.add('active');
+      tab.setAttribute('aria-pressed', 'true');
 
       const filterValue = tab.getAttribute('data-filter');
 
@@ -652,44 +712,77 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ==========================================================================
      CONSULTATION FORM SUBMISSION
      ========================================================================== */
-  const consultationForm = document.getElementById('consultationForm');
+  const consultationForms = document.querySelectorAll('[data-consultation-form]');
 
-  if (consultationForm) {
-    const consent = document.getElementById('formConsent');
+  consultationForms.forEach((consultationForm) => {
+    const consent = consultationForm.querySelector('[name="consent"]');
     const submitBtn = consultationForm.querySelector('.btn-submit');
+    const status = consultationForm.querySelector('.form-status');
+    const formStartedAt = Date.now();
+
+    const setStatus = (message, type) => {
+      if (!status) return;
+      status.textContent = message;
+      status.hidden = false;
+      status.dataset.status = type;
+    };
 
     const updateSubmitState = () => {
-      if (submitBtn && consent) {
-        submitBtn.disabled = !consent.checked;
-      }
+      if (submitBtn && consent) submitBtn.disabled = !consent.checked;
     };
 
     updateSubmitState();
+    if (consent) consent.addEventListener('change', updateSubmitState);
 
-    if (consent) {
-      consent.addEventListener('change', updateSubmitState);
-    }
+    consultationForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(consultationForm);
+      const name = String(formData.get('name') || '').trim();
+      const phone = String(formData.get('phone') || '').trim();
+      const email = String(formData.get('email') || '').trim();
+      const emailInput = consultationForm.querySelector('[name="email"]');
 
-    consultationForm.addEventListener('submit', (e) => {
-      e.preventDefault();
+      if (!name || (!phone && !email)) {
+        setStatus('Please enter your name and at least one contact detail.', 'error');
+        return;
+      }
 
-      const name = document.getElementById('formName').value.trim();
-      const userName = name ? `, ${name}` : '';
-
-      // Simulated success message
-      const originalContent = submitBtn.innerHTML;
+      if (email && emailInput && !emailInput.checkValidity()) {
+        setStatus('Please enter a valid email address.', 'error');
+        return;
+      }
 
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>Sending...</span>';
+      setStatus('Sending your request...', 'pending');
 
-      setTimeout(() => {
-        alert(`Thank you${userName}! Your consultation request has been sent successfully.`);
+      try {
+        const response = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            phone,
+            email,
+            message: String(formData.get('message') || ''),
+            website: String(formData.get('website') || ''),
+            consent: formData.get('consent') === 'on',
+            page: window.location.pathname,
+            formStartedAt,
+          }),
+        });
+        const result = await response.json();
+
+        if (!response.ok) throw new Error(result.message || 'Unable to send your request.');
+
         consultationForm.reset();
-        submitBtn.innerHTML = originalContent;
+        setStatus('Thank you. Your request has been sent.', 'success');
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : 'Unable to send your request. Please try again later.', 'error');
+      } finally {
         updateSubmitState();
-      }, 1500);
+      }
     });
-  }
+  });
 
   // Parse URL search parameters to activate filter automatically
   const urlParams = new URLSearchParams(window.location.search);

@@ -117,9 +117,9 @@ const homeStructuredData = {
                 <img src="img/contact_header/Vector (1).svg" alt="">
               </span>
             </a>
-            <a href="mailto:miracon@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail"
-              aria-label="Email miracon@miracon.gr">
-              <span class="contact-dropdown-text">miracon@miracon.gr</span>
+            <a href="mailto:info@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail"
+              aria-label="Email info@miracon.gr">
+              <span class="contact-dropdown-text">info@miracon.gr</span>
               <span class="contact-dropdown-circle" aria-hidden="true">
                 <img src="img/contact_header/Group 37313 (1).svg" alt="">
               </span>
@@ -143,7 +143,14 @@ const homeStructuredData = {
         <a href="#projects" class="mobile-nav-link">Projects</a>
         <a href="/golden-visa" class="mobile-nav-link">Golden Visa</a>
         <a href="#about" class="mobile-nav-link">About us</a>
-        <a href="#contacts" class="mobile-nav-link">Contacts</a>
+        <button class="mobile-nav-contact" type="button" aria-expanded="false" aria-controls="mobileContactDetails">
+          <span>Contacts</span><span aria-hidden="true">+</span>
+        </button>
+        <div class="mobile-nav-contacts" id="mobileContactDetails">
+          <a href="tel:+306955340416">+30 695 534 0416</a>
+          <a href="mailto:info@miracon.gr">info@miracon.gr</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">Egnatia 84, Thessaloniki</a>
+        </div>
       </nav>
     </div>
   </header>
@@ -181,14 +188,14 @@ const homeStructuredData = {
         <p class="section-subtitle">Three exclusive developments. Two prime locations. One trusted developer</p>
 
         <div class="filter-tabs" aria-label="Project filters">
-          <button class="filter-tab active" data-filter="all"><span data-label="All">All</span></button>
-          <button class="filter-tab" data-filter="coastal"><span data-label="Coastal">Coastal</span></button>
-          <button class="filter-tab" data-filter="city"><span data-label="City">City</span></button>
-          <button class="filter-tab" data-filter="golden-visa"><span data-label="Golden Visa">Golden
+          <button class="filter-tab active" type="button" data-filter="all" aria-pressed="true" aria-controls="projectsList"><span data-label="All">All</span></button>
+          <button class="filter-tab" type="button" data-filter="coastal" aria-pressed="false" aria-controls="projectsList"><span data-label="Coastal">Coastal</span></button>
+          <button class="filter-tab" type="button" data-filter="city" aria-pressed="false" aria-controls="projectsList"><span data-label="City">City</span></button>
+          <button class="filter-tab" type="button" data-filter="golden-visa" aria-pressed="false" aria-controls="projectsList"><span data-label="Golden Visa">Golden
               Visa</span></button>
         </div>
 
-        <div class="projects-list">
+        <div class="projects-list" id="projectsList">
           {projects.map((project) => <ProjectCard project={project} />)}
         </div>
       </div>
@@ -334,8 +341,8 @@ const homeStructuredData = {
                   <img src="img/golden_visa/trending-up_2.svg" alt="" class="slide-icon">
                   Investment threshold
                 </h3>
-                <p class="slide-text">The minimum qualifying investment is €250,000. Both Esopou 19 and Monastiriou 4 in
-                  central Thessaloniki meet this threshold — making MIRACON projects an ideal entry point into the
+                <p class="slide-text">The minimum qualifying investment is €250,000. Selected residences at Monastiriou 4
+                  in central Thessaloniki meet this threshold — making MIRACON projects an ideal entry point into the
                   programme</p>
               </article>
               <article class="slide">
@@ -445,29 +452,29 @@ const homeStructuredData = {
           <h2 class="section-title">Free consultation</h2>
           <p class="section-subtitle">Lorem ipsum dolo lorem ipsum dolor sit amet<br>consecteturr</p>
 
-          <form class="consultation-form" id="consultationForm">
+          <form class="consultation-form" data-consultation-form novalidate>
             <div class="form-row">
               <label class="form-group">
                 <span>Name</span>
-                <input type="text" id="formName" class="form-input" placeholder="Name">
+                <input type="text" name="name" class="form-input" placeholder="Name" required>
               </label>
               <label class="form-group">
                 <span>Phone</span>
-                <input type="tel" id="formPhone" class="form-input" placeholder="Phone">
+                <input type="tel" name="phone" class="form-input" placeholder="Phone">
               </label>
               <label class="form-group">
                 <span>Email</span>
-                <input type="email" id="formEmail" class="form-input" placeholder="Email">
+                <input type="email" name="email" class="form-input" placeholder="Email">
               </label>
             </div>
 
             <label class="form-group form-message">
               <span>What info are you interested in?</span>
-              <textarea id="formMessage" class="form-input form-textarea" placeholder="What info are you interested in?"></textarea>
+              <textarea name="message" class="form-input form-textarea" placeholder="What info are you interested in?"></textarea>
             </label>
 
             <label class="form-consent">
-              <input type="checkbox" id="formConsent" class="form-consent-input">
+              <input type="checkbox" name="consent" class="form-consent-input" required>
               <span class="form-consent-box" aria-hidden="true"></span>
               <span class="form-consent-text">I agree to the processing of my personal data in accordance with the <a
                   href="#">Privacy Policy</a> and consent to being contacted using the details provided</span>
@@ -477,6 +484,8 @@ const homeStructuredData = {
               <span>Request a consultation</span>
               <span class="btn-submit-arrow"></span>
             </button>
+            <input class="form-honeypot" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <p class="form-status" aria-live="polite" hidden></p>
           </form>
         </div>
       </div>
