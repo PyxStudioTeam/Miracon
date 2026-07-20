@@ -739,12 +739,12 @@
     flex: 0 0 54px;
     width: 54px;
     height: 54px;
-    background: url('/img/olympus-detail/icons/brochure-circle.svg') center / contain no-repeat;
+    background: #003075;
     transform: none;
   }
 
   .project-page .project-brochure-icon-part {
-    display: none;
+    display: block;
   }
 
   .project-page .project-brochure-link > span:last-child {
