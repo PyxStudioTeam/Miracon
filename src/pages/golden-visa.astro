@@ -50,6 +50,7 @@ const goldenVisaStructuredData = {
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
     rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@qpokychuk/gilroy@1.0.2/index.min.css" rel="stylesheet">
+  <link rel="preload" as="image" href="/img/golden-visa/hero-interior.avif" type="image/avif" fetchpriority="high">
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/golden-visa.css">
   <link rel="stylesheet" href="/inner-mobile.css">
@@ -131,8 +132,8 @@ const goldenVisaStructuredData = {
 
   <main id="top">
     <section class="gv-hero" aria-labelledby="golden-visa-title">
-      <OptimizedImage src="/img/golden-visa/hero-beach.jpg" alt="Beachfront residences in Greece" class="gv-hero-bg gv-hero-bg-base" fetchpriority="high" decoding="async" />
-      <OptimizedImage src="/img/golden-visa/hero-interior.jpg" alt="Premium residence interior" class="gv-hero-bg gv-hero-bg-front" fetchpriority="high" decoding="async" />
+      <OptimizedImage src="/img/golden-visa/hero-beach.jpg" alt="" class="gv-hero-bg gv-hero-bg-base" loading="lazy" decoding="async" />
+      <OptimizedImage src="/img/golden-visa/hero-interior.jpg" alt="Premium residence interior" class="gv-hero-bg gv-hero-bg-front" loading="eager" fetchpriority="high" decoding="async" />
       <div class="gv-hero-softener" aria-hidden="true"></div>
       <div class="container gv-hero-content">
         <h1 id="golden-visa-title">Your Pathway<br>to Greek Residency</h1>

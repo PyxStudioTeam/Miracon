@@ -17,7 +17,7 @@ const resolvedWebpSrc = webpSrc === undefined ? optimizedSources.webp : webpSrc;
 <picture class="optimized-image-picture">
   {resolvedAvifSrc && <source srcset={resolvedAvifSrc} type="image/avif">}
   {resolvedWebpSrc && <source srcset={resolvedWebpSrc} type="image/webp">}
-  <img src={src} alt={alt} {...attributes}>
+  <img src={src} alt={alt} decoding="async" {...attributes}>
 </picture>
 
 <style>

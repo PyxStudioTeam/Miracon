@@ -41,7 +41,7 @@ const mainImageAvifUrl = getLocalAvifSource(mainImage.url);
         {mobileCoverAvifUrl && <source media="(max-width: 600px)" srcset={mobileCoverAvifUrl} type="image/avif">}
         <source media="(max-width: 600px)" srcset={mobileCoverUrl}>
         {mainImageAvifUrl && <source srcset={mainImageAvifUrl} type="image/avif">}
-        <img src={mainImage.url} alt={mainImage.alt} loading="lazy" style={`object-position: ${project.coverFocalX}% ${project.coverFocalY}%;`}>
+        <img src={mainImage.url} alt={mainImage.alt} loading="lazy" decoding="async" style={`object-position: ${project.coverFocalX}% ${project.coverFocalY}%;`}>
       </picture>
       <div class="project-tags">
         {project.categories.map((category) => <span class={`tag tag--${category}`}>{categoryLabels[category]}</span>)}
@@ -51,7 +51,7 @@ const mainImageAvifUrl = getLocalAvifSource(mainImage.url);
       {sideImages.map((image) => (
         <picture class="project-card-side-picture">
           {getLocalAvifSource(image.url) && <source srcset={getLocalAvifSource(image.url)!} type="image/avif">}
-          <img src={image.url} alt={image.alt} loading="lazy" style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}>
+          <img src={image.url} alt={image.alt} loading="lazy" decoding="async" style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}>
         </picture>
       ))}
     </div>

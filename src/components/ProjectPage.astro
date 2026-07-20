@@ -189,6 +189,7 @@ const projectStructuredData = {
             <img
               src={getLocalAvifSource(image.url) ?? image.url}
               alt={image.alt}
+              loading="lazy"
               decoding="async"
               class={`project-gallery-image ${galleryClasses[index]}`}
               data-fallback-src={getLocalAvifSource(image.url) ? image.url : undefined}
@@ -233,7 +234,7 @@ const projectStructuredData = {
           <div class="project-plan-list">
             {project.floorPlanGroups.flatMap((group, groupIndex) => group.plans.map((plan) => (
               <article class="project-plan-card" data-plan={group.id} hidden={groupIndex !== 0}>
-                <h3>{plan.title}</h3><img src={plan.imageUrl} alt={plan.alt}>
+                <h3>{plan.title}</h3><img src={plan.imageUrl} alt={plan.alt} loading="lazy" decoding="async">
               </article>
             )))}
           </div>

@@ -431,6 +431,26 @@
     line-height: 1;
   }
 
+  .project-page .btn-submit-arrow,
+  .golden-visa-page .btn-submit-arrow {
+    flex-basis: 18px;
+    width: 18px;
+    height: 12px;
+  }
+
+  .project-page .btn-submit-arrow::before,
+  .golden-visa-page .btn-submit-arrow::before {
+    width: 18px;
+    border-width: 2px;
+  }
+
+  .project-page .btn-submit-arrow::after,
+  .golden-visa-page .btn-submit-arrow::after {
+    width: 6px;
+    height: 6px;
+    border-width: 2px;
+  }
+
   /* Shared compact footer. */
   .project-page .footer,
   .project-page .footer-container,
@@ -541,7 +561,7 @@
 
   /* Golden Visa mobile tightening. */
   .golden-visa-page main > section + section {
-    margin-top: 80px;
+    margin-top: 48px;
   }
 
   .golden-visa-page .gv-hero {
@@ -607,6 +627,7 @@
     min-height: 0;
     font-size: 24px;
     line-height: 1.05;
+    overflow-wrap: anywhere;
   }
 
   .golden-visa-page .gv-family-summary h3 {
@@ -649,6 +670,196 @@
     width: 100%;
     font-size: 17px;
     line-height: 1.22;
+    overflow-wrap: anywhere;
+  }
+
+  /* Project heroes retain the desktop video but use the homepage's readable
+     mobile contrast and compact control proportions. */
+  .project-page .project-hero,
+  .project-page .project-hero--immersive {
+    height: max(620px, 100svh);
+    min-height: 620px;
+  }
+
+  .project-page .project-hero::after {
+    z-index: 0;
+    background: linear-gradient(180deg, rgba(0, 20, 48, .12) 0%, rgba(0, 20, 48, .04) 42%, rgba(0, 20, 48, .58) 100%);
+  }
+
+  .project-page .project-hero-content {
+    z-index: 1;
+  }
+
+  .project-page .project-hero-stack,
+  .project-page .project-hero--immersive .project-hero-stack {
+    width: 100%;
+    transform: translateY(18px);
+  }
+
+  .project-page .project-hero h1 {
+    font-size: clamp(46px, 12.5vw, 54px);
+    line-height: .96;
+    text-shadow: 0 3px 12px rgba(0, 0, 0, .3);
+  }
+
+  .project-page .project-location-link {
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .project-page .project-location-icon {
+    flex-basis: 20px;
+    width: 20px;
+    height: 26px;
+  }
+
+  .project-page .project-location-text {
+    padding-top: 3px;
+    font-size: 15px;
+    line-height: 1.18;
+    letter-spacing: .07em;
+  }
+
+  .project-page .project-brochure-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: 230px;
+    height: 56px;
+    margin-top: 26px;
+    padding: 0 22px 0 4px;
+    border-radius: 28px;
+    font-size: 20px;
+  }
+
+  .project-page .project-brochure-icon {
+    position: static;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    transform: scale(.79);
+    transform-origin: center;
+  }
+
+  .project-page .project-brochure-link > span:last-child {
+    position: static;
+    display: block;
+    width: auto;
+    height: auto;
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .project-page .project-hero-sound-button {
+    right: 20px;
+    bottom: 24px;
+    width: 132px;
+    height: 46px;
+    border-radius: 23px;
+    transform: none;
+  }
+
+  .project-page .project-hero-sound-icon {
+    top: 12px;
+    left: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .project-page .project-hero-sound-text {
+    top: 13px;
+    left: 58px;
+    width: 56px;
+    height: 20px;
+    font-size: 16px;
+    line-height: 20px;
+  }
+
+  /* Golden Visa follows the same vertical rhythm as the homepage hero. */
+  .golden-visa-page .gv-hero {
+    height: max(620px, 100svh);
+    min-height: 620px;
+  }
+
+  .golden-visa-page .gv-hero::after {
+    background: linear-gradient(180deg, rgba(0, 15, 35, .2) 0%, rgba(0, 15, 35, .1) 38%, rgba(0, 15, 35, .6) 100%);
+  }
+
+  .golden-visa-page .gv-hero-softener {
+    top: 27%;
+    left: -170px;
+    width: 620px;
+    height: 300px;
+    opacity: .72;
+  }
+
+  .golden-visa-page .gv-hero-content {
+    padding-top: clamp(190px, 31svh, 250px);
+    padding-bottom: 0;
+  }
+
+  .golden-visa-page .gv-hero h1 {
+    display: block;
+    width: 100%;
+    font-size: clamp(46px, 12.5vw, 54px);
+    line-height: .96;
+  }
+
+  .golden-visa-page .gv-hero-lead {
+    width: 100%;
+    margin-top: 20px;
+    font-size: 14px;
+    line-height: 1.3;
+    letter-spacing: .07em;
+  }
+
+  .golden-visa-page .gv-hero-actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-top: 34px;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero {
+    width: 217px;
+    height: 46px;
+    min-height: 46px;
+    padding-left: 24px;
+    border-radius: 23px;
+    gap: 16px;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero .btn-arrow {
+    flex-basis: 15px;
+    width: 15px;
+    height: 14px;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero .btn-arrow::before {
+    width: 15px;
+    height: 1.5px;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero .btn-arrow::after {
+    width: 7px;
+    height: 7px;
+    border-width: 1.5px;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero span:not(.btn-arrow) {
+    width: auto;
+    height: auto;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .golden-visa-page .gv-hero-actions .badge-visa {
+    width: 258px;
+    height: 46px;
+    min-height: 46px;
+    border-radius: 23px;
+    font-size: 18px;
+    line-height: 1;
   }
 }
 
