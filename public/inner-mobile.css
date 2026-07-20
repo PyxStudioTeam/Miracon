@@ -729,8 +729,8 @@
     margin-top: 26px;
     padding: 0 24px 0 4px;
     border-radius: 31px;
-    background: var(--page-bg);
-    color: #003075;
+    background: #003075;
+    color: #ffffff;
     font-size: 22px;
   }
 
