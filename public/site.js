@@ -718,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const consent = consultationForm.querySelector('[name="consent"]');
     const submitBtn = consultationForm.querySelector('.btn-submit');
     const status = consultationForm.querySelector('.form-status');
-    const formStartedAt = Date.now();
+    const web3FormsKey = consultationForm.dataset.web3formsKey;
 
     const setStatus = (message, type) => {
       if (!status) return;
@@ -756,23 +756,24 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus('Sending your request...', 'pending');
 
       try {
-        const response = await fetch('/api/leads', {
+        if (!web3FormsKey) throw new Error('The form is temporarily unavailable. Please try again later.');
+
+        const web3FormsPayload = new FormData(consultationForm);
+        web3FormsPayload.append('access_key', web3FormsKey);
+        web3FormsPayload.append('from_name', 'MIRACON Website');
+        web3FormsPayload.append('subject', `Consultation request from ${name}`);
+        web3FormsPayload.append('page', window.location.pathname);
+        if (!email) web3FormsPayload.set('email', 'not-provided@miracon.gr');
+        if (email) web3FormsPayload.set('replyto', email);
+
+        const response = await fetch('https://api.web3forms.com/submit', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name,
-            phone,
-            email,
-            message: String(formData.get('message') || ''),
-            website: String(formData.get('website') || ''),
-            consent: formData.get('consent') === 'on',
-            page: window.location.pathname,
-            formStartedAt,
-          }),
+          headers: { Accept: 'application/json' },
+          body: web3FormsPayload,
         });
         const result = await response.json();
 
-        if (!response.ok) throw new Error(result.message || 'Unable to send your request.');
+        if (!response.ok || !result.success) throw new Error(result.message || 'Unable to send your request.');
 
         consultationForm.reset();
         setStatus('Thank you. Your request has been sent.', 'success');
