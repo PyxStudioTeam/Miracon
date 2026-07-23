@@ -54,17 +54,24 @@ const publicUrl = absoluteSiteUrl(publicPath, Astro.url);
 const heroImageUrl = project.heroUrl || project.coverUrl;
 const heroImageVariants = getImageVariantSet(project.imageVariants, heroImageUrl);
 const heroImageSources = getOptimizedImageSources(heroImageUrl, heroImageVariants);
-const heroPosterUrl = project.heroPosterUrl || project.coverUrl;
-const heroPosterVariants = getImageVariantSet(project.imageVariants, heroPosterUrl);
-const heroPosterSources = getOptimizedImageSources(heroPosterUrl, heroPosterVariants);
-const hideHeroPoster = project.slug === 'kriopigi-villas' && project.heroType === 'video';
-const optimizedHeroPosterUrl = hideHeroPoster ? '' : heroPosterSources.webp || heroPosterSources.avif || heroPosterUrl;
-const walkthroughPosterUrl = project.walkthroughVideoPosterUrl ?? '';
-const walkthroughPosterSources = getOptimizedImageSources(walkthroughPosterUrl, getImageVariantSet(project.imageVariants, walkthroughPosterUrl));
-const optimizedWalkthroughPosterUrl = walkthroughPosterSources.webp || walkthroughPosterSources.avif || walkthroughPosterUrl;
-const showWalkthroughVideo = project.walkthroughVideoEnabled && Boolean(project.walkthroughVideoDesktopUrl.trim());
+const resolveVideoPlaylist = (videos: Project['heroVideos']) => videos
+  .filter((video) => Boolean(video.desktopUrl.trim()))
+  .map((video) => {
+    const posterUrl = video.posterUrl ?? '';
+    const posterSources = getOptimizedImageSources(posterUrl, getImageVariantSet(project.imageVariants, posterUrl));
+    return {
+      desktopUrl: video.desktopUrl,
+      mobileUrl: video.mobileUrl,
+      posterUrl: posterSources.webp || posterSources.avif || posterUrl || null,
+    };
+  });
+const heroVideoPlaylist = resolveVideoPlaylist(project.heroVideos);
+const walkthroughVideoPlaylist = resolveVideoPlaylist(project.walkthroughVideos);
+const optimizedHeroPosterUrl = heroVideoPlaylist[0]?.posterUrl || project.heroPosterUrl || project.coverUrl;
+const showWalkthroughVideo = project.walkthroughVideoEnabled && walkthroughVideoPlaylist.length > 0;
 const walkthroughVideoTitle = project.walkthroughVideoTitle.trim() || 'Virtual walkthrough';
-const heroPreloadUrl = project.heroType === 'video'
+const showHeroVideo = project.heroType === 'video' && heroVideoPlaylist.length > 0;
+const heroPreloadUrl = showHeroVideo
   ? optimizedHeroPosterUrl
   : heroImageSources.avif || heroImageSources.webp || heroImageUrl;
 const heroPreloadType = heroPreloadUrl.endsWith('.avif')
@@ -137,15 +144,19 @@ const projectStructuredData = {
       data-idle-ui={String(project.heroIdleUi && project.heroVariant === 'immersive')}
       style={`--hero-focus-x: ${project.heroFocalX}%; --hero-focus-y: ${project.heroFocalY}%;`}
     >
-      {project.heroType === 'video' ? (
-        <video class="project-hero-image project-hero-video" poster={optimizedHeroPosterUrl || undefined} autoplay muted loop playsinline preload="metadata">
-          {project.heroMobileUrl && <source media="(max-width: 760px)" src={project.heroMobileUrl} type="video/mp4">}
-          <source src={project.heroUrl} type="video/mp4">
-        </video>
+      {showHeroVideo ? (
+        <div class="project-hero-image project-hero-video project-video-deck" data-project-video-deck="hero" data-video-playlist={JSON.stringify(heroVideoPlaylist)}>
+          <video class="project-video-slot is-active" poster={optimizedHeroPosterUrl || undefined} autoplay muted loop={heroVideoPlaylist.length === 1} playsinline preload="auto">
+            {heroVideoPlaylist[0].mobileUrl && <source media="(max-width: 760px)" src={heroVideoPlaylist[0].mobileUrl} type="video/mp4">}
+            <source src={heroVideoPlaylist[0].desktopUrl} type="video/mp4">
+          </video>
+          <video class="project-video-slot" muted playsinline preload="none"></video>
+        </div>
       ) : (
         <OptimizedImage src={heroImageUrl} alt={project.title} variants={heroImageVariants} sizes="100vw" class="project-hero-image" fetchpriority="high" loading="eager" decoding="async" />
       )}
-      {project.heroType === 'video' && project.heroSoundEnabled && (
+      {showHeroVideo && <button class="project-video-reduced-play" type="button" data-video-control-for="hero" aria-label="Play hero video">Play video</button>}
+      {showHeroVideo && project.heroSoundEnabled && (
         <button class="project-hero-sound-button" type="button" aria-label="Enable video sound" aria-pressed="false">
           <img class="project-hero-sound-icon" src="/img/kriopigi-detail/sound.svg" alt="" aria-hidden="true">
           <span class="project-hero-sound-text">Sound</span>
@@ -262,10 +273,14 @@ const projectStructuredData = {
       <section class="project-walkthrough" aria-labelledby="project-walkthrough-title">
         <div class="container project-walkthrough-inner">
           <h2 id="project-walkthrough-title" class="project-section-title">{walkthroughVideoTitle}</h2>
-          <video class="project-walkthrough-video" controls playsinline preload="metadata" poster={optimizedWalkthroughPosterUrl || undefined}>
-            {project.walkthroughVideoMobileUrl && <source media="(max-width: 760px)" src={project.walkthroughVideoMobileUrl} type="video/mp4">}
-            <source src={project.walkthroughVideoDesktopUrl} type="video/mp4">
-          </video>
+          <div class="project-walkthrough-video project-video-deck" data-project-video-deck="walkthrough" data-has-mobile={String(walkthroughVideoPlaylist.some((video) => Boolean(video.mobileUrl)))} data-video-playlist={JSON.stringify(walkthroughVideoPlaylist)}>
+            <video class="project-video-slot is-active" poster={walkthroughVideoPlaylist[0].posterUrl || undefined} autoplay muted loop={walkthroughVideoPlaylist.length === 1} playsinline preload="metadata">
+              {walkthroughVideoPlaylist[0].mobileUrl && <source media="(max-width: 760px)" src={walkthroughVideoPlaylist[0].mobileUrl} type="video/mp4">}
+              <source src={walkthroughVideoPlaylist[0].desktopUrl} type="video/mp4">
+            </video>
+            <video class="project-video-slot" muted playsinline preload="none"></video>
+            <button class="project-video-reduced-play" type="button" aria-label="Play walkthrough video">Play video</button>
+          </div>
         </div>
       </section>
     )}

@@ -295,6 +295,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .presentation-switch { display: flex; padding: 3px; border: 1px solid #c8cdd0; border-radius: 3px; background: white; }
 .presentation-switch button { min-height: 34px; padding: 0 13px; border: 0; border-radius: 2px; background: transparent; cursor: pointer; font-size: 10px; }
 .presentation-switch button.active { background: var(--admin-navy); color: white; }
+.hero-media-mode { display: flex; margin-top: 18px; padding-top: 16px; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid #d1d5d5; }
+.hero-media-mode > span { color: var(--admin-muted); font: 9px 'DM Mono', monospace; letter-spacing: .06em; text-transform: uppercase; }
 .presentation-options { display: grid; margin-top: 18px; padding-top: 16px; grid-template-columns: 1fr 1fr; gap: 18px; border-top: 1px solid #d1d5d5; }
 .presentation-options label { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 10px; cursor: pointer; }
 .presentation-options label.disabled { opacity: .42; cursor: not-allowed; }
@@ -336,6 +338,43 @@ button:disabled { cursor: wait; opacity: .55; }
 .walkthrough-media-slots .media-slot:last-child { grid-column: 1 / -1; }
 .media-slot-actions { display: flex !important; align-items: stretch; gap: 5px !important; }
 .media-slot-actions button { display: flex; padding: 8px; align-items: center; gap: 4px; border: 1px solid #dfc9c5; border-radius: 2px; background: #fff8f7; color: var(--admin-red); cursor: pointer; font-size: 8px; }
+
+.project-video-playlist { margin: 0 0 52px; }
+.walkthrough-admin-panel .project-video-playlist { margin: 20px 0 0; }
+.project-video-playlist-heading { display: flex; margin-bottom: 12px; padding-bottom: 10px; align-items: flex-end; justify-content: space-between; gap: 18px; border-bottom: 1px solid rgba(7,52,102,.25); }
+.project-video-playlist-heading h3 { margin: 0 0 3px; font-family: Georgia, serif; font-size: 25px; font-weight: 400; }
+.project-video-playlist-heading span { color: var(--admin-muted); font: 9px 'DM Mono', monospace; }
+.project-video-playlist-heading button { display: flex; padding: 9px 0; align-items: center; gap: 6px; border: 0; background: transparent; cursor: pointer; font-size: 10px; }
+.project-video-list { display: grid; gap: 12px; }
+.project-video-card { overflow: hidden; border: 1px solid rgba(7,52,102,.1); border-radius: var(--admin-radius); background: rgba(255,255,255,.76); box-shadow: 0 10px 30px rgba(5,42,80,.04); }
+.project-video-card.is-dragging { z-index: 30; box-shadow: 0 24px 55px rgba(5,42,80,.18); }
+.project-video-card > header { display: grid; min-height: 54px; padding: 8px 12px; grid-template-columns: 34px 32px 1fr 36px; align-items: center; gap: 8px; border-bottom: 1px solid rgba(7,52,102,.1); }
+.project-video-card > header > span { color: var(--admin-gold); font: 10px 'DM Mono', monospace; }
+.project-video-card > header > strong { font-family: Georgia, serif; font-size: 17px; font-weight: 400; }
+.project-video-drag,
+.project-video-remove { display: grid; width: 34px; height: 34px; padding: 0; place-items: center; border: 0; border-radius: 8px; background: transparent; cursor: pointer; }
+.project-video-drag { color: #989d9f; cursor: grab; touch-action: none; }
+.project-video-remove { color: var(--admin-red); }
+.project-video-card-body { display: grid; padding: 14px; grid-template-columns: minmax(260px, .9fr) minmax(390px, 1.1fr); gap: 16px; }
+.project-video-preview { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 11px; background: #07182c; }
+.project-video-preview video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.project-video-preview > div { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; color: rgba(255,255,255,.68); font-size: 10px; }
+.project-video-assets { display: grid; align-content: start; gap: 7px; }
+.project-video-assets > div { display: grid; min-height: 64px; padding: 8px 10px; grid-template-columns: 34px minmax(100px, 1fr) auto; align-items: center; gap: 9px; border: 1px solid rgba(7,52,102,.1); border-radius: 10px; background: var(--admin-paper); }
+.project-video-assets > div > img { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; }
+.project-video-assets > div > svg { color: var(--admin-gold); }
+.project-video-assets > div > span { display: grid; gap: 2px; }
+.project-video-assets strong { font-size: 10px; }
+.project-video-assets small { color: var(--admin-muted); font-size: 8px; }
+.project-video-assets > div > div { display: flex; gap: 5px; }
+.project-video-assets label,
+.project-video-assets button { display: flex; min-height: 34px; padding: 0 9px; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--admin-line); border-radius: 8px; background: white; cursor: pointer; font-size: 8px; }
+.project-video-assets label input { display: none; }
+.project-video-assets button { border-color: #dfc9c5; background: #fff8f7; color: var(--admin-red); }
+
+@media (max-width: 980px) {
+  .project-video-card-body { grid-template-columns: 1fr; }
+}
 
 .plan-groups { display: grid; gap: 24px; margin-bottom: 22px; }
 .plan-group-editor { padding: 18px; border: 1px solid var(--admin-line); background: white; }
@@ -909,11 +948,19 @@ button:disabled { cursor: wait; opacity: .55; }
   .media-slot > img { width: 58px; height: 58px; }
   .presentation-heading { align-items: stretch; flex-direction: column; }
   .presentation-switch { display: grid; grid-template-columns: 1fr 1fr; }
+  .hero-media-mode { align-items: stretch; flex-direction: column; }
   .presentation-options { grid-template-columns: 1fr; }
   .walkthrough-admin-heading { align-items: stretch; flex-direction: column; }
   .walkthrough-toggle { justify-content: start; }
   .walkthrough-media-slots .media-slot:last-child { grid-column: auto; }
   .media-slot-actions { align-items: stretch; flex-direction: column; }
+  .project-video-playlist-heading { align-items: stretch; flex-direction: column; }
+  .project-video-playlist-heading button { align-self: flex-start; }
+  .project-video-card-body { grid-template-columns: 1fr; }
+  .project-video-assets > div { grid-template-columns: 30px minmax(0, 1fr); }
+  .project-video-assets > div > div { grid-column: 1 / -1; }
+  .project-video-assets label,
+  .project-video-assets button { flex: 1; }
   .plan-group-editor { padding: 14px; }
   .plan-row { grid-template-columns: 42px 1fr 28px; }
   .plan-upload { grid-column: 2; width: 100%; }

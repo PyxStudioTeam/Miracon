@@ -59,6 +59,7 @@ import {
   type Project,
   type ProjectCategory,
   type ProjectImage,
+  type ProjectVideoItem,
 } from '../lib/project-types';
 import { getBrowserSupabaseClient } from '../lib/supabase-browser';
 
@@ -74,6 +75,9 @@ function normalizedSlug(value: string) {
 }
 
 function getPublishRequirements(project: Project) {
+  const heroMediaComplete = project.heroType === 'image'
+    ? Boolean(project.heroUrl)
+    : project.heroVideos.length > 0 && project.heroVideos.every((video) => Boolean(video.desktopUrl));
   const requirements = [
     { label: 'Project name', complete: Boolean(project.title.trim()), section: 'content' as AdminSection },
     { label: 'Valid public URL', complete: slugPattern.test(normalizedSlug(project.slug)), section: 'seo' as AdminSection },
@@ -83,12 +87,12 @@ function getPublishRequirements(project: Project) {
     { label: 'Card description', complete: Boolean(project.shortDescription.trim()), section: 'content' as AdminSection },
     { label: 'Full description', complete: Boolean(project.fullDescription.trim()), section: 'content' as AdminSection },
     { label: 'Catalog cover', complete: Boolean(project.coverUrl), section: 'media' as AdminSection },
-    { label: 'Page hero', complete: Boolean(project.heroUrl), section: 'media' as AdminSection },
+    { label: 'Page hero', complete: heroMediaComplete, section: 'media' as AdminSection },
     { label: 'Intro image', complete: Boolean(project.introImageUrl), section: 'media' as AdminSection },
-    { label: 'Video poster', complete: project.heroType !== 'video' || Boolean(project.heroPosterUrl), section: 'media' as AdminSection },
+    { label: 'Video poster', complete: project.heroType !== 'video' || Boolean(project.heroVideos[0]?.posterUrl), section: 'media' as AdminSection },
   ];
   if (project.walkthroughVideoEnabled) {
-    requirements.push({ label: 'Walkthrough video', complete: Boolean(project.walkthroughVideoDesktopUrl), section: 'media' });
+    requirements.push({ label: 'Walkthrough video', complete: project.walkthroughVideos.length > 0 && project.walkthroughVideos.every((video) => Boolean(video.desktopUrl)), section: 'media' });
   }
   return requirements;
 }
@@ -105,6 +109,26 @@ function withTimeout<T>(operation: PromiseLike<T>, timeoutMs = 10000): Promise<T
       window.setTimeout(() => reject(new Error('Supabase request timed out')), timeoutMs);
     }),
   ]);
+}
+
+function emptyProjectVideo(): ProjectVideoItem {
+  return { id: crypto.randomUUID(), desktopUrl: '', mobileUrl: null, posterUrl: null };
+}
+
+function syncLegacyVideoFields(project: Project): Project {
+  const firstHero = project.heroVideos[0];
+  const firstWalkthrough = project.walkthroughVideos[0];
+  return {
+    ...project,
+    ...(project.heroType === 'video' ? {
+      heroUrl: firstHero?.desktopUrl ?? '',
+      heroMobileUrl: firstHero?.mobileUrl ?? null,
+      heroPosterUrl: firstHero?.posterUrl ?? null,
+    } : {}),
+    walkthroughVideoDesktopUrl: firstWalkthrough?.desktopUrl ?? '',
+    walkthroughVideoMobileUrl: firstWalkthrough?.mobileUrl ?? null,
+    walkthroughVideoPosterUrl: firstWalkthrough?.posterUrl ?? null,
+  };
 }
 
 const emptyProject = (sortOrder: number): Project => ({
@@ -129,11 +153,13 @@ const emptyProject = (sortOrder: number): Project => ({
   heroUrl: '',
   heroMobileUrl: null,
   heroPosterUrl: null,
+  heroVideos: [],
   walkthroughVideoEnabled: false,
   walkthroughVideoTitle: 'Virtual walkthrough',
   walkthroughVideoDesktopUrl: '',
   walkthroughVideoMobileUrl: null,
   walkthroughVideoPosterUrl: null,
+  walkthroughVideos: [],
   heroFocalX: 50,
   heroFocalY: 50,
   introImageUrl: '',
@@ -182,11 +208,13 @@ function projectToRow(project: Project) {
     hero_url: project.heroUrl,
     hero_mobile_url: project.heroMobileUrl ?? null,
     hero_poster_url: project.heroPosterUrl,
+    hero_videos: project.heroVideos,
     walkthrough_video_enabled: project.walkthroughVideoEnabled,
     walkthrough_video_title: project.walkthroughVideoTitle,
     walkthrough_video_desktop_url: project.walkthroughVideoDesktopUrl,
     walkthrough_video_mobile_url: project.walkthroughVideoMobileUrl,
     walkthrough_video_poster_url: project.walkthroughVideoPosterUrl,
+    walkthrough_videos: project.walkthroughVideos,
     hero_focal_x: project.heroFocalX,
     hero_focal_y: project.heroFocalY,
     intro_image_url: project.introImageUrl,
@@ -260,6 +288,8 @@ function pruneImageVariants(project: Project): Project {
     project.heroType === 'image' ? project.heroUrl : '',
     project.heroPosterUrl ?? '',
     project.walkthroughVideoPosterUrl ?? '',
+    ...project.heroVideos.map((video) => video.posterUrl ?? ''),
+    ...project.walkthroughVideos.map((video) => video.posterUrl ?? ''),
     project.introImageUrl,
     ...project.cardImages.map((image) => image.url),
     ...project.gallery.map((image) => image.url),
@@ -650,6 +680,80 @@ function ImageCollection({ title, images, onChange, onUpload, uploading }: { tit
   );
 }
 
+type ProjectVideoField = 'desktopUrl' | 'mobileUrl' | 'posterUrl';
+
+function SortableProjectVideo({
+  video,
+  index,
+  uploading,
+  onChange,
+  onRemove,
+  onUpload,
+}: {
+  video: ProjectVideoItem;
+  index: number;
+  uploading: string;
+  onChange: (video: ProjectVideoItem) => void;
+  onRemove: () => void;
+  onUpload: (field: ProjectVideoField, event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: video.id });
+  const assets: { field: ProjectVideoField; label: string; hint: string; accept: string }[] = [
+    { field: 'desktopUrl', label: 'Desktop MP4', hint: 'Required', accept: 'video/mp4' },
+    { field: 'mobileUrl', label: 'Mobile MP4', hint: 'Desktop fallback', accept: 'video/mp4' },
+    { field: 'posterUrl', label: 'Poster', hint: 'Optional image', accept: 'image/*' },
+  ];
+
+  return (
+    <article ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`project-video-card ${isDragging ? 'is-dragging' : ''}`}>
+      <header><button type="button" className="project-video-drag" {...attributes} {...listeners}><GripVertical size={17} /></button><span>{String(index + 1).padStart(2, '0')}</span><strong>Video {index + 1}</strong><button type="button" className="project-video-remove" onClick={onRemove}><Trash2 size={16} /></button></header>
+      <div className="project-video-card-body">
+        <div className="project-video-preview">
+          {video.desktopUrl ? <video key={video.desktopUrl} src={video.desktopUrl} poster={video.posterUrl ?? undefined} autoPlay muted loop playsInline preload="metadata" /> : <div><Film size={28} /><span>Upload desktop MP4</span></div>}
+        </div>
+        <div className="project-video-assets">
+          {assets.map(({ field, label, hint, accept }) => {
+            const value = video[field];
+            const uploadKey = `${video.id}-${field}`;
+            return <div key={field}>{field === 'posterUrl' ? value ? <img src={value} alt="" /> : <ImagePlus size={20} /> : <Film size={20} />}<span><strong>{label}</strong><small>{value ? 'Selected' : hint}</small></span><div><label><input type="file" accept={accept} onChange={(event) => onUpload(field, event)} />{uploading.endsWith(uploadKey) ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}{value ? 'Replace' : 'Upload'}</label>{value && <button type="button" onClick={() => onChange({ ...video, [field]: field === 'desktopUrl' ? '' : null })}><X size={14} />Clear</button>}</div></div>;
+          })}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ProjectVideoPlaylist({
+  title,
+  hint,
+  videos,
+  uploading,
+  onChange,
+  onUpload,
+}: {
+  title: string;
+  hint: string;
+  videos: ProjectVideoItem[];
+  uploading: string;
+  onChange: (videos: ProjectVideoItem[]) => void;
+  onUpload: (itemId: string, field: ProjectVideoField, event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  function dragEnd(event: DragEndEvent) {
+    if (!event.over || event.active.id === event.over.id) return;
+    const oldIndex = videos.findIndex((video) => video.id === event.active.id);
+    const newIndex = videos.findIndex((video) => video.id === event.over?.id);
+    onChange(arrayMove(videos, oldIndex, newIndex));
+  }
+
+  return (
+    <div className="project-video-playlist">
+      <div className="project-video-playlist-heading"><div><h3>{title}</h3><span>{videos.length ? `${videos.length} video${videos.length === 1 ? '' : 's'} · drag to reorder` : hint}</span></div><button type="button" onClick={() => onChange([...videos, emptyProjectVideo()])}><Plus size={16} />Add video</button></div>
+      {videos.length ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}><SortableContext items={videos.map((video) => video.id)} strategy={verticalListSortingStrategy}><div className="project-video-list">{videos.map((video, index) => <SortableProjectVideo key={video.id} video={video} index={index} uploading={uploading} onChange={(nextVideo) => onChange(videos.map((item) => item.id === video.id ? nextVideo : item))} onRemove={() => onChange(videos.filter((item) => item.id !== video.id))} onUpload={(field, event) => onUpload(video.id, field, event)} />)}</div></SortableContext></DndContext> : <div className="media-empty">No videos added</div>}
+    </div>
+  );
+}
+
 function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { initialProject: Project; onBack: () => void; onSaved: (project: Project) => void; onDeleted: (id: string) => void; demo: boolean }) {
   const [project, setProject] = useState<Project>(() => structuredClone(initialProject));
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialProject));
@@ -681,6 +785,24 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     setProject((current) => ({ ...current, [key]: value }));
   }
 
+  function updateProjectVideos(collection: 'heroVideos' | 'walkthroughVideos', videos: ProjectVideoItem[]) {
+    setProject((current) => ({
+      ...current,
+      [collection]: videos,
+      ...(collection === 'walkthroughVideos' && videos.length === 0 ? { walkthroughVideoEnabled: false } : {}),
+    }));
+  }
+
+  function setHeroMediaType(heroType: Project['heroType']) {
+    setProject((current) => {
+      if (heroType === 'video') {
+        return { ...current, heroType, heroVideos: current.heroVideos.length ? current.heroVideos : [emptyProjectVideo()] };
+      }
+      const heroUrl = current.heroUrl.toLowerCase().includes('.mp4') ? current.coverUrl : current.heroUrl;
+      return { ...current, heroType, heroUrl, heroMobileUrl: null, heroSoundEnabled: false, heroIdleUi: false };
+    });
+  }
+
   function showToast(nextToast: Toast) {
     setToast(nextToast);
     window.setTimeout(() => setToast(null), 3200);
@@ -699,7 +821,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       return false;
     }
 
-    const nextProject = pruneImageVariants({ ...project, slug, status, updatedAt: new Date().toISOString(), seoTitle: project.seoTitle || `${project.title} — MIRACON`, seoDescription: project.seoDescription || project.shortDescription });
+    const nextProject = pruneImageVariants(syncLegacyVideoFields({ ...project, slug, status, updatedAt: new Date().toISOString(), seoTitle: project.seoTitle || `${project.title} — MIRACON`, seoDescription: project.seoDescription || project.shortDescription }));
     setSaving(true);
     try {
       if (demo || !supabase) {
@@ -824,7 +946,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     }
   }
 
-  async function uploadSingle(event: ChangeEvent<HTMLInputElement>, field: 'coverUrl' | 'heroUrl' | 'heroMobileUrl' | 'heroPosterUrl' | 'introImageUrl' | 'walkthroughVideoDesktopUrl' | 'walkthroughVideoMobileUrl' | 'walkthroughVideoPosterUrl') {
+  async function uploadSingle(event: ChangeEvent<HTMLInputElement>, field: 'coverUrl' | 'heroUrl' | 'introImageUrl') {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || !supabase) {
@@ -833,36 +955,20 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     }
     setUploading(field);
     try {
-      const kind = file.type.startsWith('video/') ? 'video' : 'image';
-      const videoOnly = field === 'heroMobileUrl' || field === 'walkthroughVideoDesktopUrl' || field === 'walkthroughVideoMobileUrl';
-      if (field !== 'heroUrl' && !videoOnly && kind !== 'image') throw new Error('This slot accepts images only');
-      if (videoOnly && kind !== 'video') throw new Error('This slot accepts MP4 video only');
-      const mobileVideo = field === 'heroMobileUrl' || field === 'walkthroughVideoMobileUrl';
+      if (!file.type.startsWith('image/')) throw new Error('This slot accepts images only');
       let primaryUrl: string;
-      let posterUrl: string | null = null;
       let variants: ImageVariantSet | null = null;
       if (mediaWorkerEnabled) {
         const media = await processMediaUpload(supabase, file, {
-          kind,
+          kind: 'image',
           outputBucket: 'project-media',
           context: { target: field, projectId: project.id },
-          profile: kind === 'image'
-            ? { image: { widths: [480, 768, 1280, 1920, 2400], avif_quality: 52, webp_quality: 82, primary_format: 'webp' } }
-            : {
-                video: mobileVideo
-                  ? { max_width: 1080, max_height: 1920, crf: 25, preset: 'medium', audio_bitrate: '96k' }
-                  : { max_width: 1920, max_height: 1080, crf: 23, preset: 'medium', audio_bitrate: '128k' },
-                poster: { width: mobileVideo ? 720 : 1280, quality: 82, at_seconds: 1 },
-              },
+          profile: { image: { widths: [480, 768, 1280, 1920, 2400], avif_quality: 52, webp_quality: 82, primary_format: 'webp' } },
         });
         primaryUrl = media.primaryUrl;
-        posterUrl = media.posterUrl;
-        if (kind === 'image') variants = toImageVariantSet(media);
+        variants = toImageVariantSet(media);
       } else {
-        if (kind === 'video' && (file.type !== 'video/mp4' || file.size > 50 * 1024 * 1024)) {
-          throw new Error('Video must be an MP4 file smaller than 50 MB');
-        }
-        const uploadFile = kind === 'image' ? await optimizePhotoForDirectUpload(file) : file;
+        const uploadFile = await optimizePhotoForDirectUpload(file);
         const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
         const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
           upsert: false,
@@ -874,28 +980,98 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       }
       setProject((current) => {
         const next = { ...current, [field]: primaryUrl } as Project;
-        if (kind === 'image' && variants) {
+        if (variants) {
           next.imageVariants = {
             version: 1,
             images: addImageVariant(current.imageVariants?.images ?? {}, primaryUrl, variants),
           };
         }
         if (field === 'heroUrl') {
-          next.heroType = kind;
-          if (kind === 'image') {
-            next.heroMobileUrl = null;
-            next.heroSoundEnabled = false;
-            next.heroIdleUi = false;
-          } else if (!next.heroPosterUrl && posterUrl) {
-            next.heroPosterUrl = posterUrl;
-          }
-        }
-        if (field === 'walkthroughVideoDesktopUrl' && posterUrl) {
-          next.walkthroughVideoPosterUrl = posterUrl;
+          next.heroType = 'image';
+          next.heroMobileUrl = null;
+          next.heroSoundEnabled = false;
+          next.heroIdleUi = false;
         }
         return next;
       });
-      showToast({ tone: 'success', message: `${kind === 'video' ? 'Video' : 'Image'} ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
+      showToast({ tone: 'success', message: `Image ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
+    } catch (error) {
+      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process media' });
+    } finally {
+      setUploading('');
+    }
+  }
+
+  async function uploadProjectVideo(
+    event: ChangeEvent<HTMLInputElement>,
+    collection: 'heroVideos' | 'walkthroughVideos',
+    itemId: string,
+    field: ProjectVideoField,
+  ) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !supabase) {
+      showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
+      return;
+    }
+
+    const kind = field === 'posterUrl' ? 'image' : 'video';
+    const uploadKey = `${collection}-${itemId}-${field}`;
+    setUploading(uploadKey);
+    try {
+      if (kind === 'video' && file.type !== 'video/mp4') throw new Error('This slot accepts MP4 video only');
+      if (kind === 'image' && !file.type.startsWith('image/')) throw new Error('This slot accepts images only');
+
+      let primaryUrl: string;
+      let generatedPosterUrl: string | null = null;
+      let variants: ImageVariantSet | null = null;
+      if (mediaWorkerEnabled) {
+        const mobileVideo = field === 'mobileUrl';
+        const media = await processMediaUpload(supabase, file, {
+          kind,
+          outputBucket: 'project-media',
+          context: { target: collection, projectId: project.id, itemId, rendition: field },
+          profile: kind === 'image'
+            ? { image: { widths: [480, 768, 1280, 1920, 2400], avif_quality: 52, webp_quality: 82, primary_format: 'webp' } }
+            : {
+                video: mobileVideo
+                  ? { max_width: 1080, max_height: 1920, crf: 25, preset: 'medium', audio_bitrate: '96k' }
+                  : { max_width: 1920, max_height: 1080, crf: 23, preset: 'medium', audio_bitrate: '128k' },
+                poster: { width: mobileVideo ? 720 : 1280, quality: 82, at_seconds: 1 },
+              },
+        });
+        primaryUrl = media.primaryUrl;
+        generatedPosterUrl = media.posterUrl;
+        if (kind === 'image') variants = toImageVariantSet(media);
+      } else {
+        if (kind === 'video' && file.size > 50 * 1024 * 1024) throw new Error('Video must be smaller than 50 MB');
+        const uploadFile = kind === 'image' ? await optimizePhotoForDirectUpload(file) : file;
+        const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
+        const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
+          upsert: false,
+          cacheControl: '31536000',
+          contentType: uploadFile.type || undefined,
+        });
+        if (error) throw error;
+        primaryUrl = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
+      }
+
+      setProject((current) => {
+        const nextVideos = current[collection].map((video) => video.id === itemId ? {
+          ...video,
+          [field]: primaryUrl,
+          ...(field === 'desktopUrl' && generatedPosterUrl && !video.posterUrl ? { posterUrl: generatedPosterUrl } : {}),
+        } : video);
+        const next = { ...current, [collection]: nextVideos } as Project;
+        if (kind === 'image' && variants) {
+          next.imageVariants = {
+            version: 1,
+            images: addImageVariant(current.imageVariants?.images ?? {}, primaryUrl, variants),
+          };
+        }
+        return next;
+      });
+      showToast({ tone: 'success', message: `${kind === 'video' ? 'Video' : 'Poster'} ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
     } catch (error) {
       showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process media' });
     } finally {
@@ -1121,19 +1297,19 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
             <div className="section-heading"><span>03 / Media</span><h2>Visual materials</h2><p>Cover, page imagery, gallery, walkthrough and brochure.</p></div>
             <div className="hero-presentation-panel">
               <div className="presentation-heading"><div><span>Hero presentation</span><strong>{project.heroVariant === 'immersive' ? 'Immersive viewport' : 'Standard editorial'}</strong></div><div className="presentation-switch"><button type="button" className={project.heroVariant === 'standard' ? 'active' : ''} onClick={() => setProject((current) => ({ ...current, heroVariant: 'standard', heroIdleUi: false }))}>Standard</button><button type="button" className={project.heroVariant === 'immersive' ? 'active' : ''} onClick={() => update('heroVariant', 'immersive')}>Immersive</button></div></div>
+              <div className="hero-media-mode"><span>Hero media</span><div className="presentation-switch"><button type="button" className={project.heroType === 'image' ? 'active' : ''} onClick={() => setHeroMediaType('image')}>Image</button><button type="button" className={project.heroType === 'video' ? 'active' : ''} onClick={() => setHeroMediaType('video')}>Video playlist</button></div></div>
               <div className="presentation-options">
                 <label className={project.heroType !== 'video' ? 'disabled' : ''}><input type="checkbox" checked={project.heroSoundEnabled} disabled={project.heroType !== 'video'} onChange={(event) => update('heroSoundEnabled', event.target.checked)} /><span></span><div><strong>Sound control</strong><small>Allow visitors to enable video sound</small></div></label>
                 <label className={project.heroType !== 'video' || project.heroVariant !== 'immersive' ? 'disabled' : ''}><input type="checkbox" checked={project.heroIdleUi} disabled={project.heroType !== 'video' || project.heroVariant !== 'immersive'} onChange={(event) => update('heroIdleUi', event.target.checked)} /><span></span><div><strong>Hide idle interface</strong><small>Let the video take over after inactivity</small></div></label>
               </div>
             </div>
             <div className="media-slots">
-              {([['coverUrl', 'Catalog cover'], ['heroUrl', 'Page hero / desktop'], ['introImageUrl', 'Intro image']] as const).map(([field, label]) => <div className="media-slot" key={field}>{project[field] && !(field === 'heroUrl' && project.heroType === 'video') ? <img src={project[field]} alt="" /> : field === 'heroUrl' && project.heroType === 'video' ? <Film size={24} /> : <ImagePlus size={24} />}<div><strong>{label}</strong><span>{project[field] ? field === 'heroUrl' ? `${project.heroType} selected` : 'Image selected' : 'No media'}</span></div><label><input type="file" accept={field === 'heroUrl' ? 'image/*,video/mp4' : 'image/*'} onChange={(event) => uploadSingle(event, field)} />{uploading === field ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Replace</label></div>)}
-              {mediaWorkerEnabled && project.heroType === 'video' && <div className="media-slot"><Film size={24} /><div><strong>Page hero / mobile</strong><span>{project.heroMobileUrl ? 'Mobile video selected' : 'Desktop video will be used'}</span></div><label><input type="file" accept="video/mp4" onChange={(event) => uploadSingle(event, 'heroMobileUrl')} />{uploading === 'heroMobileUrl' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{project.heroMobileUrl ? 'Replace' : 'Upload'}</label></div>}
-              <div className="media-slot"><>{project.heroPosterUrl ? <img src={project.heroPosterUrl} alt="" /> : <ImagePlus size={24} />}</><div><strong>Video poster</strong><span>{project.heroPosterUrl ? 'Poster selected' : 'Shown before video loads'}</span></div><label><input type="file" accept="image/*" onChange={(event) => uploadSingle(event, 'heroPosterUrl')} />{uploading === 'heroPosterUrl' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Replace</label></div>
+              {([['coverUrl', 'Catalog cover'], ['heroUrl', 'Page hero image'], ['introImageUrl', 'Intro image']] as const).filter(([field]) => field !== 'heroUrl' || project.heroType === 'image').map(([field, label]) => <div className="media-slot" key={field}>{project[field] ? <img src={project[field]} alt="" /> : <ImagePlus size={24} />}<div><strong>{label}</strong><span>{project[field] ? 'Image selected' : 'No media'}</span></div><label><input type="file" accept="image/*" onChange={(event) => uploadSingle(event, field)} />{uploading === field ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Replace</label></div>)}
               <div className="media-slot document-slot"><FileText size={26} /><div><strong>PDF brochure</strong><span>{project.brochureUrl ? 'Document attached' : 'No document'}</span></div><label><input type="file" accept="application/pdf" onChange={uploadBrochure} />{uploading === 'brochure' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Upload</label></div>
             </div>
+            {project.heroType === 'video' && <ProjectVideoPlaylist title="Hero video sequence" hint="Add the first hero video" videos={project.heroVideos} uploading={uploading} onChange={(videos) => updateProjectVideos('heroVideos', videos)} onUpload={(itemId, field, event) => uploadProjectVideo(event, 'heroVideos', itemId, field)} />}
             <div className="focal-grid">
-              <FocalPointEditor label="Hero focal point" imageUrl={project.heroType === 'image' ? project.heroUrl : project.heroPosterUrl ?? ''} x={project.heroFocalX} y={project.heroFocalY} onChange={(heroFocalX, heroFocalY) => setProject((current) => ({ ...current, heroFocalX, heroFocalY }))} />
+              <FocalPointEditor label="Hero focal point" imageUrl={project.heroType === 'image' ? project.heroUrl : project.heroVideos[0]?.posterUrl ?? ''} x={project.heroFocalX} y={project.heroFocalY} onChange={(heroFocalX, heroFocalY) => setProject((current) => ({ ...current, heroFocalX, heroFocalY }))} />
               <FocalPointEditor label="Cover focal point" imageUrl={project.coverUrl} x={project.coverFocalX} y={project.coverFocalY} onChange={(coverFocalX, coverFocalY) => setProject((current) => ({ ...current, coverFocalX, coverFocalY }))} />
             </div>
             <ImageCollection title="Catalog card images" images={project.cardImages} onChange={(images) => update('cardImages', images)} onUpload={(files) => uploadFiles(files, 'card')} uploading={uploading === 'card'} />
@@ -1144,11 +1320,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
                 <label className="walkthrough-toggle"><input type="checkbox" checked={project.walkthroughVideoEnabled} onChange={(event) => update('walkthroughVideoEnabled', event.target.checked)} /><span></span><em>{project.walkthroughVideoEnabled ? 'Visible' : 'Hidden'}</em></label>
               </div>
               <label className="walkthrough-title-field"><span>Section heading</span><input value={project.walkthroughVideoTitle} placeholder="Virtual walkthrough" onChange={(event) => update('walkthroughVideoTitle', event.target.value)} /></label>
-              {project.walkthroughVideoDesktopUrl && <video className="walkthrough-admin-preview" controls playsInline preload="metadata" poster={project.walkthroughVideoPosterUrl ?? undefined}><source src={project.walkthroughVideoDesktopUrl} type="video/mp4" /></video>}
-              <div className="media-slots walkthrough-media-slots">
-                {([['walkthroughVideoDesktopUrl', 'Desktop MP4'], ['walkthroughVideoMobileUrl', 'Mobile MP4 · optional']] as const).map(([field, label]) => <div className="media-slot" key={field}><Film size={24} /><div><strong>{label}</strong><span>{project[field] ? 'Video selected' : field === 'walkthroughVideoMobileUrl' ? 'Desktop video will be used' : 'Required when section is visible'}</span></div><div className="media-slot-actions"><label><input type="file" accept="video/mp4" onChange={(event) => uploadSingle(event, field)} />{uploading === field ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{project[field] ? 'Replace' : 'Upload'}</label>{project[field] && <button type="button" onClick={() => setProject((current) => field === 'walkthroughVideoDesktopUrl' ? { ...current, walkthroughVideoEnabled: false, walkthroughVideoDesktopUrl: '', walkthroughVideoMobileUrl: null, walkthroughVideoPosterUrl: null } : { ...current, walkthroughVideoMobileUrl: null })}><X size={14} />Clear</button>}</div></div>)}
-                <div className="media-slot">{project.walkthroughVideoPosterUrl ? <img src={project.walkthroughVideoPosterUrl} alt="" /> : <ImagePlus size={24} />}<div><strong>Video poster · optional</strong><span>{project.walkthroughVideoPosterUrl ? 'Poster selected' : 'Shown before playback starts'}</span></div><div className="media-slot-actions"><label><input type="file" accept="image/*" onChange={(event) => uploadSingle(event, 'walkthroughVideoPosterUrl')} />{uploading === 'walkthroughVideoPosterUrl' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{project.walkthroughVideoPosterUrl ? 'Replace' : 'Upload'}</label>{project.walkthroughVideoPosterUrl && <button type="button" onClick={() => update('walkthroughVideoPosterUrl', null)}><X size={14} />Clear</button>}</div></div>
-              </div>
+              <ProjectVideoPlaylist title="Walkthrough sequence" hint="Add the first walkthrough video" videos={project.walkthroughVideos} uploading={uploading} onChange={(videos) => updateProjectVideos('walkthroughVideos', videos)} onUpload={(itemId, field, event) => uploadProjectVideo(event, 'walkthroughVideos', itemId, field)} />
             </div>
           </>}
           {section === 'plans' && <>
@@ -1296,9 +1468,10 @@ export default function AdminApp() {
   async function importSeed() {
     if (!supabase) return;
     for (const project of seedProjects) {
+      const syncedProject = syncLegacyVideoFields(project);
       const { error } = await supabase.rpc('save_project_with_images', {
-        p_project: projectToRow(project),
-        p_images: projectImagesToRows(project),
+        p_project: projectToRow(syncedProject),
+        p_images: projectImagesToRows(syncedProject),
       });
       if (error) {
         setGlobalToast({ tone: 'error', message: error.message });

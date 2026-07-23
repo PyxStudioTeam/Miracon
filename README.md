@@ -52,7 +52,8 @@ On the first authenticated visit, an empty database shows an **Import current we
 - Preview is rendered at `/preview/[slug]`, requires the administrator session, has `noindex`, and is sent with `Cache-Control: private, no-store`.
 - Project and gallery ordering are stored explicitly and can be changed by drag and drop.
 - By default, JPEG/PNG images are resized to at most 2400px and converted to WebP in the administrator browser before direct Storage upload. Videos are uploaded directly.
-- Projects can optionally show a desktop/mobile walkthrough video after the gallery and before floor plans.
+- Projects can optionally show ordered desktop/mobile walkthrough videos after the gallery and before floor plans. Public playback is muted, control-free, cropped to the frame, and crossfades between clips.
+- Image and video hero modes are selectable per project; video heroes support the same ordered desktop/mobile playlist, including immersive presentation and the optional sound control.
 - With `PUBLIC_MEDIA_WORKER_ENABLED=true`, originals use the private `media-sources` bucket and responsive AVIF/WebP images plus optimized MP4 videos are generated asynchronously.
 - PDF brochures and SVG benefit icons use their public project buckets. They join automatic cleanup only when worker mode is enabled.
 - Uploaded image sources are limited to 20 MB, 40 megapixels, and 10,000 px per side. Video sources are MP4 up to 50 MB and are validated again by the worker.

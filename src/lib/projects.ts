@@ -1,5 +1,5 @@
 import { seedProjects } from '../data/projects';
-import type { ImageVariantSet, Project, ProjectImage, ProjectImageVariantManifest } from './project-types';
+import type { ImageVariantSet, Project, ProjectImage, ProjectImageVariantManifest, ProjectVideoItem } from './project-types';
 import { createPublicSupabaseClient } from './supabase';
 
 type ProjectRow = Record<string, unknown> & {
@@ -77,15 +77,67 @@ function mapImageVariants(value: unknown): ProjectImageVariantManifest {
   return { version: 1, images };
 }
 
+function mapProjectVideos(value: unknown, idPrefix: string): ProjectVideoItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item) => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    .map((item, index) => {
+      const row = item as Record<string, unknown>;
+      return {
+        id: String(row.id || `${idPrefix}-${index + 1}`),
+        desktopUrl: String(row.desktopUrl ?? row.desktop_url ?? ''),
+        mobileUrl: row.mobileUrl || row.mobile_url ? String(row.mobileUrl ?? row.mobile_url) : null,
+        posterUrl: row.posterUrl || row.poster_url ? String(row.posterUrl ?? row.poster_url) : null,
+      };
+    });
+}
+
+function mergeLegacyVideo(
+  videos: ProjectVideoItem[],
+  legacy: Omit<ProjectVideoItem, 'id'>,
+  fallbackId: string,
+) {
+  if (!legacy.desktopUrl) return videos;
+  const first = { id: videos[0]?.id || fallbackId, ...legacy };
+  return videos.length ? [first, ...videos.slice(1)] : [first];
+}
+
 export function mapProjectRow(row: ProjectRow): Project {
   const images = (row.project_images ?? []).map(mapImage).sort((a, b) => a.sortOrder - b.sortOrder);
   const rowBenefits = Array.isArray(row.benefits) ? row.benefits : [];
   const isLegacyKriopigi = String(row.slug) === 'kriopigi-villas' && row.hero_variant === undefined;
   const hasIncorrectArtemisData = String(row.slug) === 'artemis-residences'
     && rowBenefits.some((benefit) => String((benefit as Record<string, unknown>).title ?? '').includes('9-storey'));
+  const projectId = String(row.id);
+  const legacyHeroUrl = String(row.hero_url ?? '').replace(
+    '/img/kriopigi-detail/hero-video-optimized.mp4',
+    '/img/kriopigi-detail/hero-video-web.mp4',
+  );
+  const legacyHeroMobileUrl = row.hero_mobile_url ? String(row.hero_mobile_url) : null;
+  const legacyHeroPosterUrl = row.hero_poster_url ? String(row.hero_poster_url) : null;
+  const legacyWalkthroughDesktopUrl = String(row.walkthrough_video_desktop_url ?? '');
+  const legacyWalkthroughMobileUrl = row.walkthrough_video_mobile_url ? String(row.walkthrough_video_mobile_url) : null;
+  const legacyWalkthroughPosterUrl = row.walkthrough_video_poster_url ? String(row.walkthrough_video_poster_url) : null;
+  const mappedHeroVideos = mapProjectVideos(row.hero_videos, `${projectId}-hero`);
+  const heroVideos = row.hero_type === 'video'
+    ? legacyHeroUrl
+      ? mergeLegacyVideo(
+          mappedHeroVideos,
+          { desktopUrl: legacyHeroUrl, mobileUrl: legacyHeroMobileUrl, posterUrl: legacyHeroPosterUrl },
+          `${projectId}-hero-1`,
+        )
+      : []
+    : mappedHeroVideos;
+  const walkthroughVideos = legacyWalkthroughDesktopUrl
+    ? mergeLegacyVideo(
+        mapProjectVideos(row.walkthrough_videos, `${projectId}-walkthrough`),
+        { desktopUrl: legacyWalkthroughDesktopUrl, mobileUrl: legacyWalkthroughMobileUrl, posterUrl: legacyWalkthroughPosterUrl },
+        `${projectId}-walkthrough-1`,
+      )
+    : [];
 
   return {
-    id: String(row.id),
+    id: projectId,
     slug: String(row.slug),
     title: String(row.title),
     address: String(row.address ?? ''),
@@ -104,17 +156,16 @@ export function mapProjectRow(row: ProjectRow): Project {
     heroVariant: row.hero_variant === 'immersive' || isLegacyKriopigi ? 'immersive' : 'standard',
     heroSoundEnabled: row.hero_sound_enabled === undefined ? isLegacyKriopigi : Boolean(row.hero_sound_enabled),
     heroIdleUi: row.hero_idle_ui === undefined ? isLegacyKriopigi : Boolean(row.hero_idle_ui),
-    heroUrl: String(row.hero_url ?? '').replace(
-      '/img/kriopigi-detail/hero-video-optimized.mp4',
-      '/img/kriopigi-detail/hero-video-web.mp4',
-    ),
-    heroMobileUrl: row.hero_mobile_url ? String(row.hero_mobile_url) : null,
-    heroPosterUrl: row.hero_poster_url ? String(row.hero_poster_url) : null,
+    heroUrl: legacyHeroUrl,
+    heroMobileUrl: legacyHeroMobileUrl,
+    heroPosterUrl: legacyHeroPosterUrl,
+    heroVideos,
     walkthroughVideoEnabled: Boolean(row.walkthrough_video_enabled),
     walkthroughVideoTitle: String(row.walkthrough_video_title ?? 'Virtual walkthrough'),
     walkthroughVideoDesktopUrl: String(row.walkthrough_video_desktop_url ?? ''),
     walkthroughVideoMobileUrl: row.walkthrough_video_mobile_url ? String(row.walkthrough_video_mobile_url) : null,
     walkthroughVideoPosterUrl: row.walkthrough_video_poster_url ? String(row.walkthrough_video_poster_url) : null,
+    walkthroughVideos,
     heroFocalX: Number(row.hero_focal_x ?? 50),
     heroFocalY: Number(row.hero_focal_y ?? 50),
     introImageUrl: String(row.intro_image_url ?? ''),

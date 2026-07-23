@@ -69,6 +69,42 @@
   pointer-events: none;
 }
 
+.project-video-deck {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.project-video-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #07182c;
+  object-fit: cover;
+  object-position: var(--hero-focus-x, 50%) var(--hero-focus-y, 50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .68s ease;
+}
+
+.project-video-slot.is-active {
+  z-index: 1;
+  opacity: 1;
+}
+
+.project-video-slot.is-incoming {
+  z-index: 2;
+  opacity: 1;
+}
+
+.project-video-reduced-play {
+  display: none;
+}
+
 .project-hero-sound-button {
   position: absolute;
   right: max(40px, calc((100vw - min(var(--frame-width), calc(100vw - 200px))) / 2));
@@ -930,14 +966,11 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
 }
 
 .project-walkthrough-video {
-  display: block;
   width: 100%;
-  height: auto;
-  max-height: min(80vh, 970px);
+  aspect-ratio: 16 / 9;
   border-radius: 40px;
   background: #07182c;
   box-shadow: 0 30px 80px rgba(0, 48, 117, .14);
-  object-fit: contain;
 }
 
 .project-floor-plans {
@@ -1260,6 +1293,33 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
     transform: none;
     clip-path: none;
     transition: none;
+  }
+
+  .project-video-slot {
+    transition: none;
+  }
+
+  .project-video-reduced-play {
+    position: absolute;
+    left: 50%;
+    bottom: 32px;
+    z-index: 4;
+    display: flex;
+    min-height: 44px;
+    padding: 0 20px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 24px;
+    background: rgba(7,24,44,.76);
+    color: white;
+    font: 500 14px/1 'Plus Jakarta Sans', sans-serif;
+    transform: translateX(-50%);
+    pointer-events: auto;
+  }
+
+  .project-hero-sound-button {
+    display: none;
   }
 
   .project-amenity-card,
@@ -2449,8 +2509,11 @@ body.js-enabled .project-page .project-brochure-link {
   }
 
   .project-walkthrough-video {
-    max-height: none;
     border-radius: 20px;
+  }
+
+  .project-walkthrough-video[data-has-mobile="true"] {
+    aspect-ratio: 4 / 5;
   }
 
   .project-plan-tab,

@@ -35,6 +35,13 @@ export interface ProjectImage {
   focalY?: number;
 }
 
+export interface ProjectVideoItem {
+  id: string;
+  desktopUrl: string;
+  mobileUrl: string | null;
+  posterUrl: string | null;
+}
+
 export interface ProjectCharacteristic {
   id: string;
   label: string;
@@ -84,11 +91,13 @@ export interface Project {
   heroUrl: string;
   heroMobileUrl?: string | null;
   heroPosterUrl: string | null;
+  heroVideos: ProjectVideoItem[];
   walkthroughVideoEnabled: boolean;
   walkthroughVideoTitle: string;
   walkthroughVideoDesktopUrl: string;
   walkthroughVideoMobileUrl: string | null;
   walkthroughVideoPosterUrl: string | null;
+  walkthroughVideos: ProjectVideoItem[];
   heroFocalX: number;
   heroFocalY: number;
   introImageUrl: string;
