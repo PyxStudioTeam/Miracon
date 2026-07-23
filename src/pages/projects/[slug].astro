@@ -3,6 +3,7 @@ import ProjectPage from '../../components/ProjectPage.astro';
 import { getPublishedProjectBySlug } from '../../lib/projects';
 
 const project = await getPublishedProjectBySlug(Astro.params.slug ?? '');
+Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 
 if (!project) {
   return Astro.rewrite('/404');

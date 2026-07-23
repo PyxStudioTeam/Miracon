@@ -9,7 +9,9 @@
     "dev": "astro dev --host 127.0.0.1",
     "build": "astro check && astro build && node scripts/prune-vercel-output.mjs",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "worker:start": "npm --prefix worker start",
+    "worker:test": "npm --prefix worker test"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
@@ -27,5 +29,8 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "path-to-regexp": "6.3.0"
   }
 }

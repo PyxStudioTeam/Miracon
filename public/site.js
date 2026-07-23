@@ -545,6 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
     image.addEventListener('error', () => {
       const fallbackSrc = image.dataset.fallbackSrc;
       if (fallbackSrc && image.getAttribute('src') !== fallbackSrc) {
+        image.removeAttribute('srcset');
         image.src = fallbackSrc;
       }
     });
@@ -573,6 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gallerySlideKeys.add(key);
         gallerySlides.push({
           src,
+          srcset: image.getAttribute('data-srcset') || image.getAttribute('srcset') || '',
           fallbackSrc: image.getAttribute('data-fallback-src') || '',
           alt: image.getAttribute('data-alt') || image.getAttribute('alt') || '',
           focalX: Number(image.getAttribute('data-focal-x') || 50),
@@ -588,13 +590,9 @@ document.addEventListener('DOMContentLoaded', () => {
         new URL(slide.src, window.location.href).href === mainKey
       ));
       let currentGalleryIndex = initialMainIndex >= 0 ? initialMainIndex : 0;
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const galleryStrip = document.querySelector('.project-gallery-strip');
-      const galleryDragHint = galleryStrip?.querySelector('.project-gallery-drag-hint');
-      let galleryAutoplayId;
-      let galleryDragStartX = 0;
-      let galleryDragDeltaX = 0;
-      let isGalleryDragging = false;
+      const galleryPreviousButton = galleryStrip?.querySelector('.project-gallery-arrow--previous');
+      const galleryNextButton = galleryStrip?.querySelector('.project-gallery-arrow--next');
 
       function getGallerySlide(offset) {
         const slideIndex = (currentGalleryIndex + offset + gallerySlides.length) % gallerySlides.length;
@@ -610,13 +608,18 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               delete slot.element.dataset.fallbackSrc;
             }
+            if (slide.srcset) {
+              slot.element.srcset = slide.srcset;
+            } else {
+              slot.element.removeAttribute('srcset');
+            }
             slot.element.src = slide.src;
             slot.element.alt = slide.alt;
             slot.element.style.objectPosition = `${slide.focalX}% ${slide.focalY}%`;
           });
         };
 
-        if (!animate || prefersReducedMotion) {
+        if (!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
           updateImages();
           return;
         }
@@ -635,76 +638,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderGallerySlide(animate);
       }
 
-      function startGalleryAutoplay() {
-        window.clearInterval(galleryAutoplayId);
-        galleryAutoplayId = window.setInterval(() => moveGallery(1), 5000);
-      }
-
-      function resetGalleryAutoplay() {
-        if (!prefersReducedMotion) startGalleryAutoplay();
-      }
-
-      function isGalleryInteractiveTarget(target) {
-        return target instanceof Element && Boolean(target.closest('a, button'));
-      }
-
-      function updateGalleryCursor(event) {
-        if (!galleryDragHint) return;
-        const rect = galleryStrip.getBoundingClientRect();
-        galleryStrip.style.setProperty('--gallery-cursor-x', `${event.clientX - rect.left}px`);
-        galleryStrip.style.setProperty('--gallery-cursor-y', `${event.clientY - rect.top}px`);
-      }
-
-      if (!prefersReducedMotion) startGalleryAutoplay();
-
-      galleryStrip.addEventListener('pointerenter', event => {
-        if (isGalleryInteractiveTarget(event.target)) return;
-        updateGalleryCursor(event);
-        galleryStrip.classList.add('is-gallery-hovered');
+      galleryPreviousButton?.addEventListener('click', () => {
+        moveGallery(-1);
       });
-      galleryStrip.addEventListener('pointerleave', () => {
-        if (!isGalleryDragging) galleryStrip.classList.remove('is-gallery-hovered', 'is-over-control');
-      });
-      galleryStrip.addEventListener('pointerdown', event => {
-        if (isGalleryInteractiveTarget(event.target)) return;
-        updateGalleryCursor(event);
-        isGalleryDragging = true;
-        galleryDragStartX = event.clientX;
-        galleryDragDeltaX = 0;
-        galleryStrip.classList.add('is-gallery-hovered', 'is-dragging');
-        galleryStrip.setPointerCapture(event.pointerId);
-        window.clearInterval(galleryAutoplayId);
-      });
-      galleryStrip.addEventListener('pointermove', event => {
-        galleryStrip.classList.toggle('is-over-control', isGalleryInteractiveTarget(event.target));
-        if (isGalleryInteractiveTarget(event.target)) return;
-        updateGalleryCursor(event);
-        if (!isGalleryDragging) return;
-        galleryDragDeltaX = Math.max(-160, Math.min(160, event.clientX - galleryDragStartX));
-        galleryStrip.style.setProperty('--gallery-drag-x', `${galleryDragDeltaX}px`);
-      });
-
-      function finishGalleryDrag(event) {
-        if (!isGalleryDragging) return;
-        isGalleryDragging = false;
-        galleryStrip.classList.remove('is-dragging');
-        if (galleryStrip.hasPointerCapture(event.pointerId)) galleryStrip.releasePointerCapture(event.pointerId);
-        galleryStrip.style.setProperty('--gallery-drag-x', '0px');
-        if (Math.abs(galleryDragDeltaX) > 68) moveGallery(galleryDragDeltaX < 0 ? 1 : -1);
-        galleryDragDeltaX = 0;
-        resetGalleryAutoplay();
-      }
-
-      galleryStrip.addEventListener('pointerup', finishGalleryDrag);
-      galleryStrip.addEventListener('pointercancel', finishGalleryDrag);
-      galleryStrip.addEventListener('focusin', event => {
-        galleryStrip.classList.toggle('is-over-control', isGalleryInteractiveTarget(event.target));
-      });
-      galleryStrip.addEventListener('focusout', () => galleryStrip.classList.remove('is-over-control'));
-      galleryStrip.addEventListener('dblclick', event => {
-        if (isGalleryInteractiveTarget(event.target)) return;
+      galleryNextButton?.addEventListener('click', () => {
         moveGallery(1);
-        resetGalleryAutoplay();
       });
     }
   }

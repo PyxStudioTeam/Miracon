@@ -9,6 +9,7 @@ import { absoluteSiteUrl } from '../lib/seo';
 const projects = await getPublishedProjects();
 const homeHeroVideos = await getHomeHeroVideos();
 const firstHomeHeroVideo = homeHeroVideos[0];
+Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
   id: video.id,
   title: video.title,
@@ -184,8 +185,8 @@ const homeStructuredData = {
 
     <section id="projects" class="projects-section">
       <div class="container">
-        <h2 class="section-title">Projects</h2>
-        <p class="section-subtitle">Three exclusive developments. Two prime locations. One trusted developer</p>
+        <h2 class="section-title">Our projects</h2>
+        <p class="section-subtitle">Thessaloniki city center. Coastal residences. Premium sea view villas</p>
 
         <div class="filter-tabs" aria-label="Project filters">
           <button class="filter-tab active" type="button" data-filter="all" aria-pressed="true" aria-controls="projectsList"><span data-label="All">All</span></button>
@@ -520,10 +521,10 @@ const homeStructuredData = {
         </div>
       </div>
       <div class="footer-bottom">
-        <div class="footer-links">
-          <a href="#">Terms of Use</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Cookie Policy</a>
+        <div class="footer-links footer-contacts">
+          <a href="mailto:leads@miracon.gr">E-mail: leads@miracon.gr</a>
+          <a href="https://wa.me/306955340416" target="_blank" rel="noreferrer">WhatsApp +30 695 534 04 16</a>
+          <span>© 2026 Miracon Constructions, Thessaloniki, Greece</span>
         </div>
         <button class="lang-dropdown-btn">
           <span>English</span>

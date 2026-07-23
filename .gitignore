@@ -7,3 +7,6 @@ studio/
 .vscode/
 .vercel/
 .figma-cache/
+.env*
+!.env.example
+!worker/.env.example

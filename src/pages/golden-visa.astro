@@ -6,6 +6,7 @@ import { getPublishedProjects } from '../lib/projects';
 import { absoluteSiteUrl } from '../lib/seo';
 
 const goldenVisaProjects = (await getPublishedProjects()).filter((project) => project.categories.includes('golden-visa'));
+Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 const goldenVisaUrl = absoluteSiteUrl('/golden-visa', Astro.url);
 const goldenVisaStructuredData = {
   '@context': 'https://schema.org',
@@ -426,10 +427,10 @@ const goldenVisaStructuredData = {
         </div>
       </div>
       <div class="footer-bottom">
-        <div class="footer-links">
-          <a href="#">Terms of Use</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Cookie Policy</a>
+        <div class="footer-links footer-contacts">
+          <a href="mailto:leads@miracon.gr">E-mail: leads@miracon.gr</a>
+          <a href="https://wa.me/306955340416" target="_blank" rel="noreferrer">WhatsApp +30 695 534 04 16</a>
+          <span>© 2026 Miracon Constructions, Thessaloniki, Greece</span>
         </div>
         <button class="lang-dropdown-btn">
           <span>English</span>

@@ -4,6 +4,24 @@ export type ProjectCategory = (typeof PROJECT_CATEGORIES)[number];
 export type ProjectStatus = 'draft' | 'published';
 export type ProjectImageRole = 'card' | 'gallery';
 
+export interface ImageVariantCandidate {
+  src: string;
+  width: number;
+  height?: number;
+}
+
+export interface ImageVariantSet {
+  width?: number;
+  height?: number;
+  avif?: ImageVariantCandidate[];
+  webp?: ImageVariantCandidate[];
+}
+
+export interface ProjectImageVariantManifest {
+  version: 1;
+  images: Record<string, ImageVariantSet>;
+}
+
 export interface ProjectImage {
   id: string;
   url: string;
@@ -48,6 +66,7 @@ export interface Project {
   slug: string;
   title: string;
   address: string;
+  cardAddress: string;
   price: string;
   shortDescription: string;
   fullDescription: string;
@@ -63,14 +82,17 @@ export interface Project {
   heroSoundEnabled: boolean;
   heroIdleUi: boolean;
   heroUrl: string;
+  heroMobileUrl?: string | null;
   heroPosterUrl: string | null;
   heroFocalX: number;
   heroFocalY: number;
   introImageUrl: string;
   brochureUrl: string | null;
   mapQuery: string;
+  mapUrl: string;
   cardImages: ProjectImage[];
   gallery: ProjectImage[];
+  imageVariants?: ProjectImageVariantManifest;
   characteristics: ProjectCharacteristic[];
   benefits: ProjectBenefit[];
   floorPlanGroups: FloorPlanGroup[];

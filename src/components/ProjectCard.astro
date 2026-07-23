@@ -1,5 +1,5 @@
 ---
-import { getLocalAvifSource } from '../lib/media';
+import { getImageVariantSet, getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
 import { categoryLabels, type Project } from '../lib/project-types';
 
 interface Props {
@@ -20,7 +20,14 @@ const figmaMobileCovers: Record<string, string> = {
 };
 const mobileCoverUrl = figmaMobileCovers[project.slug] ?? mainImage.url;
 const mobileCoverAvifUrl = getLocalAvifSource(mobileCoverUrl);
-const mainImageAvifUrl = getLocalAvifSource(mainImage.url);
+const mainImageSources = getOptimizedImageSources(mainImage.url, getImageVariantSet(project.imageVariants, mainImage.url));
+const mainImageAvifUrl = mainImageSources.avif ?? getLocalAvifSource(mainImage.url);
+const mainImageSizes = '(max-width: 600px) calc(100vw - 74px), (max-width: 820px) 60vw, (max-width: 1919px) 32.5521vw, 625px';
+const sideImageSizes = '(max-width: 600px) 1px, (max-width: 820px) 32vw, (max-width: 1919px) 19.3229vw, 371px';
+const sideMedia = sideImages.map((image) => ({
+  image,
+  sources: getOptimizedImageSources(image.url, getImageVariantSet(project.imageVariants, image.url)),
+}));
 const cardDescription = project.shortDescription.replace(/\.+\s*$/, '');
 ---
 
@@ -28,7 +35,7 @@ const cardDescription = project.shortDescription.replace(/\.+\s*$/, '');
   <div class="project-info">
     <div>
       <h3 class="project-name">{project.title}</h3>
-      <p class="project-location"><span class="location-dot"></span>{project.address}</p>
+      <p class="project-location"><span class="location-dot"></span>{project.cardAddress || project.address}</p>
       <p class="project-description"><span>{cardDescription}</span></p>
     </div>
     <div class="project-bottom">
@@ -41,18 +48,21 @@ const cardDescription = project.shortDescription.replace(/\.+\s*$/, '');
       <picture>
         {mobileCoverAvifUrl && <source media="(max-width: 600px)" srcset={mobileCoverAvifUrl} type="image/avif">}
         <source media="(max-width: 600px)" srcset={mobileCoverUrl}>
-        {mainImageAvifUrl && <source srcset={mainImageAvifUrl} type="image/avif">}
-        <img src={mainImage.url} alt={mainImage.alt} loading="lazy" decoding="async" style={`object-position: ${project.coverFocalX}% ${project.coverFocalY}%;`}>
+        {mainImageAvifUrl && <source srcset={mainImageSources.avifSrcset ?? mainImageAvifUrl} sizes={mainImageSizes} type="image/avif">}
+        {mainImageSources.webp && <source srcset={mainImageSources.webpSrcset ?? mainImageSources.webp} sizes={mainImageSizes} type="image/webp">}
+        <img src={mainImage.url} alt={mainImage.alt} sizes={mainImageSizes} width={mainImageSources.width} height={mainImageSources.height} loading="lazy" decoding="async" style={`object-position: ${project.coverFocalX}% ${project.coverFocalY}%;`}>
       </picture>
       <div class="project-tags">
         {project.categories.map((category) => <span class={`tag tag--${category}`}>{categoryLabels[category]}</span>)}
       </div>
     </div>
     <div class="gallery-sides">
-      {sideImages.map((image) => (
+      {sideMedia.map(({ image, sources }) => (
         <picture class="project-card-side-picture">
-          {getLocalAvifSource(image.url) && <source srcset={getLocalAvifSource(image.url)!} type="image/avif">}
-          <img src={image.url} alt={image.alt} loading="lazy" decoding="async" style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}>
+          {sources.avif && <source srcset={sources.avifSrcset ?? sources.avif} sizes={sideImageSizes} type="image/avif">}
+          {sources.webp && <source srcset={sources.webpSrcset ?? sources.webp} sizes={sideImageSizes} type="image/webp">}
+          {!sources.avif && getLocalAvifSource(image.url) && <source srcset={getLocalAvifSource(image.url)!} type="image/avif">}
+          <img src={image.url} alt={image.alt} sizes={sideImageSizes} width={image.width ?? undefined} height={image.height ?? undefined} loading="lazy" decoding="async" style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}>
         </picture>
       ))}
     </div>

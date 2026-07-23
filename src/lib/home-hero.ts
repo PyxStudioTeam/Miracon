@@ -51,6 +51,7 @@ export async function getHomeHeroVideos(): Promise<HomeHeroVideo[]> {
     .neq('desktop_url', '')
     .order('sort_order');
 
-  if (error || !data?.length) return fallbackHomeHeroVideos;
+  if (error) throw new Error(`Unable to load homepage videos from Supabase: ${error.message}`);
+  if (!data?.length) return fallbackHomeHeroVideos;
   return data.map((row) => mapHomeHeroVideo(row));
 }

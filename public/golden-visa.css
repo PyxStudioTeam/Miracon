@@ -1145,9 +1145,13 @@
 
   .golden-visa-page .footer .logo,
   .golden-visa-page .footer-socials,
-  .golden-visa-page .footer-links,
-  .golden-visa-page .lang-dropdown-btn {
+  .golden-visa-page .footer-links {
     position: static;
+  }
+
+  .golden-visa-page .lang-dropdown-btn {
+    position: relative;
+    inset: auto;
   }
 
   .golden-visa-page .footer-top,

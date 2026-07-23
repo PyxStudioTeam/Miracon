@@ -1,6 +1,6 @@
 ---
 import type { Project } from '../lib/project-types';
-import { getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
+import { getImageVariantSet, getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
 import { absoluteSiteUrl } from '../lib/seo';
 import ContactSection from './ContactSection.astro';
 import OptimizedImage from './OptimizedImage.astro';
@@ -30,15 +30,33 @@ const gallerySource = project.gallery.length > 0
 const gallery = [...gallerySource];
 while (gallery.length > 0 && gallery.length < 4) gallery.push(gallery[gallery.length % gallerySource.length]);
 const galleryClasses = ['project-gallery-image--far-left', 'project-gallery-image--left', 'project-gallery-image--main', 'project-gallery-image--right-small'];
+const gallerySizes = [
+  '(max-width: 1180px) 1px, 1091px',
+  '(max-width: 1180px) 1px, 658px',
+  '(max-width: 760px) 100vw, (max-width: 1180px) calc(100vw - 48px), 1402px',
+  '(max-width: 1180px) 1px, 577px',
+];
+const galleryMedia = gallery.map((image) => {
+  const sources = getOptimizedImageSources(image.url, getImageVariantSet(project.imageVariants, image.url));
+  const src = sources.webp ?? sources.avif ?? getLocalAvifSource(image.url) ?? image.url;
+  return {
+    image,
+    src,
+    srcset: sources.webpSrcset ?? sources.avifSrcset,
+    fallbackSrc: src !== image.url ? image.url : undefined,
+  };
+});
 const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(project.mapQuery || project.address)}&output=embed`;
-const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(project.mapQuery || project.address)}`;
+const mapHref = project.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(project.mapQuery || project.address)}`;
 const primaryCategory = project.categories[0] ?? 'coastal';
 const publicPath = `/projects/${encodeURIComponent(project.slug)}`;
 const publicUrl = absoluteSiteUrl(publicPath, Astro.url);
 const heroImageUrl = project.heroUrl || project.coverUrl;
-const heroImageSources = getOptimizedImageSources(heroImageUrl);
+const heroImageVariants = getImageVariantSet(project.imageVariants, heroImageUrl);
+const heroImageSources = getOptimizedImageSources(heroImageUrl, heroImageVariants);
 const heroPosterUrl = project.heroPosterUrl || project.coverUrl;
-const heroPosterSources = getOptimizedImageSources(heroPosterUrl);
+const heroPosterVariants = getImageVariantSet(project.imageVariants, heroPosterUrl);
+const heroPosterSources = getOptimizedImageSources(heroPosterUrl, heroPosterVariants);
 const hideHeroPoster = project.slug === 'kriopigi-villas' && project.heroType === 'video';
 const optimizedHeroPosterUrl = hideHeroPoster ? '' : heroPosterSources.webp || heroPosterSources.avif || heroPosterUrl;
 const heroPreloadUrl = project.heroType === 'video'
@@ -47,8 +65,11 @@ const heroPreloadUrl = project.heroType === 'video'
 const heroPreloadType = heroPreloadUrl.endsWith('.avif')
   ? 'image/avif'
   : heroPreloadUrl.endsWith('.webp')
-    ? 'image/webp'
-    : undefined;
+      ? 'image/webp'
+      : undefined;
+const heroPreloadSrcset = project.heroType === 'image'
+  ? heroImageSources.avifSrcset || heroImageSources.webpSrcset
+  : null;
 const projectStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -91,7 +112,7 @@ const projectStructuredData = {
     noindex={preview}
     jsonLd={preview ? undefined : projectStructuredData}
   />
-  {heroPreloadUrl && <link rel="preload" as="image" href={heroPreloadUrl} type={heroPreloadType} fetchpriority="high">}
+  {heroPreloadUrl && <link rel="preload" as="image" href={heroPreloadUrl} type={heroPreloadType} imagesrcset={heroPreloadSrcset ?? undefined} imagesizes={heroPreloadSrcset ? '100vw' : undefined} fetchpriority="high">}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -112,9 +133,12 @@ const projectStructuredData = {
       style={`--hero-focus-x: ${project.heroFocalX}%; --hero-focus-y: ${project.heroFocalY}%;`}
     >
       {project.heroType === 'video' ? (
-        <video class="project-hero-image project-hero-video" src={project.heroUrl} poster={optimizedHeroPosterUrl || undefined} autoplay muted loop playsinline preload="metadata"></video>
+        <video class="project-hero-image project-hero-video" poster={optimizedHeroPosterUrl || undefined} autoplay muted loop playsinline preload="metadata">
+          {project.heroMobileUrl && <source media="(max-width: 760px)" src={project.heroMobileUrl} type="video/mp4">}
+          <source src={project.heroUrl} type="video/mp4">
+        </video>
       ) : (
-        <OptimizedImage src={heroImageUrl} alt={project.title} class="project-hero-image" fetchpriority="high" loading="eager" decoding="async" />
+        <OptimizedImage src={heroImageUrl} alt={project.title} variants={heroImageVariants} sizes="100vw" class="project-hero-image" fetchpriority="high" loading="eager" decoding="async" />
       )}
       {project.heroType === 'video' && project.heroSoundEnabled && (
         <button class="project-hero-sound-button" type="button" aria-label="Enable video sound" aria-pressed="false">
@@ -147,7 +171,7 @@ const projectStructuredData = {
       <div class="container project-intro-grid">
         <div class="project-intro-media">
           <h2 id="project-intro-title" class="project-section-title">{project.introTitle}</h2>
-          <OptimizedImage src={project.introImageUrl || project.coverUrl} alt={`${project.title} interior`} class="project-intro-image" loading="lazy" decoding="async" />
+          <OptimizedImage src={project.introImageUrl || project.coverUrl} alt={`${project.title} interior`} variants={getImageVariantSet(project.imageVariants, project.introImageUrl || project.coverUrl)} sizes="(max-width: 900px) calc(100vw - 48px), (max-width: 1450px) 51vw, 1002px" class="project-intro-image" loading="lazy" decoding="async" />
         </div>
         <div class="project-intro-copy">
           {project.characteristics.length > 0 && (
@@ -187,24 +211,27 @@ const projectStructuredData = {
     {gallery.length > 0 && (
       <section id="project-gallery" class="project-gallery-strip" aria-label={`${project.title} gallery`}>
         <div class="project-gallery-track">
-          {gallery.slice(0, 4).map((image, index) => (
+          {galleryMedia.slice(0, 4).map(({ image, src, srcset, fallbackSrc }, index) => (
             <img
-              src={getLocalAvifSource(image.url) ?? image.url}
+              src={src}
+              srcset={srcset ?? undefined}
+              sizes={gallerySizes[index]}
               alt={image.alt}
               loading="lazy"
               decoding="async"
               class={`project-gallery-image ${galleryClasses[index]}`}
-              data-fallback-src={getLocalAvifSource(image.url) ? image.url : undefined}
+              data-fallback-src={fallbackSrc}
               data-focal-x={image.focalX ?? 50}
               data-focal-y={image.focalY ?? 50}
               style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}
             >
           ))}
-          {gallery.slice(4).map((image) => (
+          {galleryMedia.slice(4).map(({ image, src, srcset, fallbackSrc }) => (
             <span
               class="project-gallery-source"
-              data-src={getLocalAvifSource(image.url) ?? image.url}
-              data-fallback-src={getLocalAvifSource(image.url) ? image.url : undefined}
+              data-src={src}
+              data-srcset={srcset ?? undefined}
+              data-fallback-src={fallbackSrc}
               data-alt={image.alt}
               data-focal-x={image.focalX ?? 50}
               data-focal-y={image.focalY ?? 50}
@@ -212,9 +239,12 @@ const projectStructuredData = {
             ></span>
           ))}
         </div>
-        <div class="project-gallery-drag-hint" aria-hidden="true">
-          <span>&lsaquo;</span><strong>Drag</strong><span>&rsaquo;</span>
-        </div>
+        {gallerySource.length > 1 && (
+          <div class="project-gallery-controls" role="group" aria-label="Gallery navigation">
+            <button class="project-gallery-arrow project-gallery-arrow--previous" type="button" aria-label="Previous image"><span aria-hidden="true">←</span></button>
+            <button class="project-gallery-arrow project-gallery-arrow--next" type="button" aria-label="Next image"><span aria-hidden="true">→</span></button>
+          </div>
+        )}
         {project.brochureUrl && (
           <a href={project.brochureUrl} class="project-floating-brochure" target="_blank" rel="noreferrer">
             <img src="/img/olympus-detail/icons/brochure-circle.svg" alt="" class="project-floating-icon" aria-hidden="true"><span>Brochure</span>
@@ -236,7 +266,7 @@ const projectStructuredData = {
           <div class="project-plan-list">
             {project.floorPlanGroups.flatMap((group, groupIndex) => group.plans.map((plan) => (
               <article class="project-plan-card" data-plan={group.id} hidden={groupIndex !== 0}>
-                <h3>{plan.title}</h3><img src={plan.imageUrl} alt={plan.alt} loading="lazy" decoding="async">
+                <h3>{plan.title}</h3><OptimizedImage src={plan.imageUrl} alt={plan.alt} variants={getImageVariantSet(project.imageVariants, plan.imageUrl)} sizes="(max-width: 760px) calc(100vw - 40px), (max-width: 1180px) calc(100vw - 48px), min(1720px, calc(100vw - 200px))" loading="lazy" decoding="async" />
               </article>
             )))}
           </div>

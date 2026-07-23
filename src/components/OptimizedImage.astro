@@ -1,23 +1,32 @@
 ---
 import { getOptimizedImageSources } from '../lib/media';
+import type { ImageVariantSet } from '../lib/project-types';
 
 interface Props extends astroHTML.JSX.ImgHTMLAttributes {
   src: string;
   alt: string;
   avifSrc?: string | null;
   webpSrc?: string | null;
+  variants?: ImageVariantSet | null;
 }
 
-const { src, alt, avifSrc, webpSrc, ...attributes } = Astro.props;
-const optimizedSources = getOptimizedImageSources(src);
+const { src, alt, avifSrc, webpSrc, variants, ...attributes } = Astro.props;
+const optimizedSources = getOptimizedImageSources(src, variants);
 const resolvedAvifSrc = avifSrc === undefined ? optimizedSources.avif : avifSrc;
 const resolvedWebpSrc = webpSrc === undefined ? optimizedSources.webp : webpSrc;
+const resolvedAvifSrcset = avifSrc === undefined ? optimizedSources.avifSrcset ?? resolvedAvifSrc : resolvedAvifSrc;
+const resolvedWebpSrcset = webpSrc === undefined ? optimizedSources.webpSrcset ?? resolvedWebpSrc : resolvedWebpSrc;
+const imageAttributes = {
+  ...attributes,
+  width: attributes.width ?? optimizedSources.width,
+  height: attributes.height ?? optimizedSources.height,
+};
 ---
 
 <picture class="optimized-image-picture">
-  {resolvedAvifSrc && <source srcset={resolvedAvifSrc} type="image/avif">}
-  {resolvedWebpSrc && <source srcset={resolvedWebpSrc} type="image/webp">}
-  <img src={src} alt={alt} decoding="async" {...attributes}>
+  {resolvedAvifSrcset && <source srcset={resolvedAvifSrcset} sizes={attributes.sizes} type="image/avif">}
+  {resolvedWebpSrcset && <source srcset={resolvedWebpSrcset} sizes={attributes.sizes} type="image/webp">}
+  <img src={src} alt={alt} decoding="async" {...imageAttributes}>
 </picture>
 
 <style>

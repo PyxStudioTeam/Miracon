@@ -1,0 +1,8 @@
+services:
+  media-worker:
+    build:
+      context: ./worker
+    env_file:
+      - path: ./worker/.env
+        required: false
+    restart: unless-stopped

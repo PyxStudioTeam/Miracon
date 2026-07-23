@@ -1054,3 +1054,83 @@
   .project-page .footer-links a,
   .golden-visa-page .footer-links a { font-size: 10px; }
 }
+
+@media (max-width: 600px) {
+  .project-page .footer,
+  .project-page .footer-container,
+  .golden-visa-page .footer,
+  .golden-visa-page .footer-container {
+    height: auto;
+    min-height: 0;
+  }
+
+  .project-page .footer,
+  .golden-visa-page .footer {
+    padding: 32px 0 30px;
+  }
+
+  .project-page .footer-container,
+  .golden-visa-page .footer-container {
+    position: static;
+    display: grid;
+    gap: 28px;
+  }
+
+  .project-page .footer-top,
+  .golden-visa-page .footer-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .project-page .footer-bottom,
+  .golden-visa-page .footer-bottom {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 22px;
+    padding-top: 22px;
+  }
+
+  .project-page .footer .logo,
+  .project-page .footer-socials,
+  .project-page .footer-links,
+  .project-page .lang-dropdown-btn,
+  .golden-visa-page .footer .logo,
+  .golden-visa-page .footer-socials,
+  .golden-visa-page .footer-links,
+  .golden-visa-page .lang-dropdown-btn {
+    position: static;
+  }
+
+  .project-page .footer .logo,
+  .golden-visa-page .footer .logo {
+    transform: scale(.62);
+    transform-origin: left center;
+  }
+
+  .project-page .footer-contacts,
+  .golden-visa-page .footer-contacts {
+    display: grid;
+    gap: 9px;
+  }
+
+  .project-page .footer-contacts a,
+  .project-page .footer-contacts span,
+  .golden-visa-page .footer-contacts a,
+  .golden-visa-page .footer-contacts span {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .project-page .lang-dropdown-btn,
+  .golden-visa-page .lang-dropdown-btn {
+    position: relative;
+    inset: auto;
+    width: 88px;
+    height: 28px;
+    padding: 0 27px 0 16px;
+    font-size: 11.25px;
+    transform: none;
+  }
+}

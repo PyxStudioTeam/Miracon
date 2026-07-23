@@ -1,5 +1,5 @@
 import { seedProjects } from '../data/projects';
-import type { Project, ProjectImage } from './project-types';
+import type { ImageVariantSet, Project, ProjectImage, ProjectImageVariantManifest } from './project-types';
 import { createPublicSupabaseClient } from './supabase';
 
 type ProjectRow = Record<string, unknown> & {
@@ -8,7 +8,7 @@ type ProjectRow = Record<string, unknown> & {
 
 const artemisBenefits: Project['benefits'] = [
   { id: 'shore', title: '400 metres from the sea', icon: '/img/olympus-detail/icons/amenity-shore.svg' },
-  { id: 'availability', title: 'Last 3 residences available', icon: '/img/olympus-detail/icons/amenity-apartments.svg' },
+  { id: 'availability', title: 'Last 2 duplexes available', icon: '/img/olympus-detail/icons/amenity-apartments.svg' },
   { id: 'ready', title: 'Ready to move in', icon: '/img/olympus-detail/icons/amenity-ready.svg' },
   { id: 'parking', title: 'Dedicated parking', icon: '/img/olympus-detail/icons/amenity-thessaloniki.svg' },
   { id: 'storage', title: 'Private storage', icon: '/img/olympus-detail/icons/amenity-finish.svg' },
@@ -34,6 +34,49 @@ function mapImage(row: Record<string, unknown>): ProjectImage {
   };
 }
 
+function mapFloorPlanGroups(row: ProjectRow): Project['floorPlanGroups'] {
+  const groups = (row.floor_plan_groups ?? []) as Project['floorPlanGroups'];
+  if (String(row.slug) !== 'artemis-residences') return groups;
+
+  const titles = ['D16 - 66m²', 'D17 - 74m²', 'D18 - 94m²'];
+  return groups.map((group, index) => ({
+    ...group,
+    title: titles[index] ?? group.title,
+  }));
+}
+
+function mapImageVariants(value: unknown): ProjectImageVariantManifest {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { version: 1, images: {} };
+  const manifest = value as Record<string, unknown>;
+  const rawImages = manifest.images;
+  if (!rawImages || typeof rawImages !== 'object' || Array.isArray(rawImages)) return { version: 1, images: {} };
+
+  const images: Record<string, ImageVariantSet> = {};
+  for (const [url, rawSet] of Object.entries(rawImages)) {
+    if (!rawSet || typeof rawSet !== 'object' || Array.isArray(rawSet)) continue;
+    const set = rawSet as Record<string, unknown>;
+    const candidates = (format: 'avif' | 'webp') => (Array.isArray(set[format]) ? set[format] : [])
+      .filter((candidate) => Boolean(candidate) && typeof candidate === 'object' && !Array.isArray(candidate))
+      .map((candidate) => candidate as Record<string, unknown>)
+      .filter((candidate) => typeof candidate.src === 'string' && Number(candidate.width) > 0)
+      .map((candidate) => ({
+        src: String(candidate.src),
+        width: Number(candidate.width),
+        ...(Number(candidate.height) > 0 ? { height: Number(candidate.height) } : {}),
+      }))
+      .sort((a, b) => a.width - b.width);
+    const avif = candidates('avif');
+    const webp = candidates('webp');
+    images[url] = {
+      ...(Number(set.width) > 0 ? { width: Number(set.width) } : {}),
+      ...(Number(set.height) > 0 ? { height: Number(set.height) } : {}),
+      ...(avif.length ? { avif } : {}),
+      ...(webp.length ? { webp } : {}),
+    };
+  }
+  return { version: 1, images };
+}
+
 export function mapProjectRow(row: ProjectRow): Project {
   const images = (row.project_images ?? []).map(mapImage).sort((a, b) => a.sortOrder - b.sortOrder);
   const rowBenefits = Array.isArray(row.benefits) ? row.benefits : [];
@@ -46,6 +89,7 @@ export function mapProjectRow(row: ProjectRow): Project {
     slug: String(row.slug),
     title: String(row.title),
     address: String(row.address ?? ''),
+    cardAddress: String(row.card_address ?? row.address ?? ''),
     price: String(row.price ?? ''),
     shortDescription: String(row.short_description ?? ''),
     fullDescription: String(row.full_description ?? ''),
@@ -64,17 +108,20 @@ export function mapProjectRow(row: ProjectRow): Project {
       '/img/kriopigi-detail/hero-video-optimized.mp4',
       '/img/kriopigi-detail/hero-video-web.mp4',
     ),
+    heroMobileUrl: row.hero_mobile_url ? String(row.hero_mobile_url) : null,
     heroPosterUrl: row.hero_poster_url ? String(row.hero_poster_url) : null,
     heroFocalX: Number(row.hero_focal_x ?? 50),
     heroFocalY: Number(row.hero_focal_y ?? 50),
     introImageUrl: String(row.intro_image_url ?? ''),
     brochureUrl: row.brochure_url ? String(row.brochure_url) : null,
     mapQuery: String(row.map_query ?? ''),
+    mapUrl: String(row.map_url ?? ''),
     cardImages: images.filter((image) => image.role === 'card'),
     gallery: images.filter((image) => image.role === 'gallery'),
+    imageVariants: mapImageVariants(row.image_variants),
     characteristics: hasIncorrectArtemisData ? [] : (row.characteristics ?? []) as Project['characteristics'],
     benefits: hasIncorrectArtemisData ? artemisBenefits : rowBenefits as Project['benefits'],
-    floorPlanGroups: (row.floor_plan_groups ?? []) as Project['floorPlanGroups'],
+    floorPlanGroups: mapFloorPlanGroups(row),
     nearbyPlaces: (row.nearby_places ?? []) as string[],
     seoTitle: String(row.seo_title ?? row.title),
     seoDescription: String(row.seo_description ?? row.short_description ?? ''),
@@ -97,16 +144,15 @@ export async function getPublishedProjects(): Promise<Project[]> {
       .order('sort_order');
 
     if (error) {
-      console.error('Unable to load projects from Supabase:', error.message);
-      return fallbackProjects;
+      throw new Error(`Unable to load projects from Supabase: ${error.message}`);
     }
 
-    if (!data?.length) return fallbackProjects;
+    if (!data?.length) return [];
 
     return (data as ProjectRow[]).map(mapProjectRow);
   } catch (error) {
     console.error('Unable to load projects from Supabase:', error);
-    return fallbackProjects;
+    throw error;
   }
 }
 
@@ -126,13 +172,12 @@ export async function getPublishedProjectBySlug(slug: string): Promise<Project |
       .maybeSingle();
 
     if (error) {
-      console.error(`Unable to load project "${slug}" from Supabase:`, error.message);
-      return fallbackProject;
+      throw new Error(`Unable to load project "${slug}" from Supabase: ${error.message}`);
     }
 
     return data ? mapProjectRow(data as ProjectRow) : null;
   } catch (error) {
     console.error(`Unable to load project "${slug}" from Supabase:`, error);
-    return fallbackProject;
+    throw error;
   }
 }

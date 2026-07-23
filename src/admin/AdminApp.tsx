@@ -41,12 +41,21 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type ChangeEvent, type MouseEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { seedProjects } from '../data/projects';
+import {
+  optimizePhotoForDirectUpload,
+  processMediaUpload,
+  readImageDimensions,
+  registerPublicMediaAsset,
+  toImageVariantSet,
+} from '../lib/admin-media';
 import { fallbackHomeHeroVideos, mapHomeHeroVideo, type HomeHeroVideo } from '../lib/home-hero';
+import { normalizeMediaUrl } from '../lib/media';
 import { mapProjectRow } from '../lib/projects';
 import {
   PROJECT_CATEGORIES,
   categoryLabels,
   type FloorPlanGroup,
+  type ImageVariantSet,
   type Project,
   type ProjectCategory,
   type ProjectImage,
@@ -58,6 +67,7 @@ type AdminView = 'projects' | 'home-hero';
 type Toast = { tone: 'success' | 'error'; message: string } | null;
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const mediaWorkerEnabled = import.meta.env.PUBLIC_MEDIA_WORKER_ENABLED === 'true';
 
 function normalizedSlug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -93,56 +103,6 @@ function withTimeout<T>(operation: PromiseLike<T>, timeoutMs = 10000): Promise<T
   ]);
 }
 
-function readImageSize(file: File): Promise<{ width: number; height: number }> {
-  return new Promise((resolve) => {
-    const image = new Image();
-    const url = URL.createObjectURL(file);
-    image.onload = () => {
-      resolve({ width: image.naturalWidth, height: image.naturalHeight });
-      URL.revokeObjectURL(url);
-    };
-    image.onerror = () => {
-      resolve({ width: 0, height: 0 });
-      URL.revokeObjectURL(url);
-    };
-    image.src = url;
-  });
-}
-
-const PHOTO_UPLOAD_MAX_DIMENSION = 2400;
-const PHOTO_UPLOAD_QUALITY = 0.86;
-const OPTIMIZABLE_PHOTO_TYPES = new Set(['image/jpeg', 'image/png']);
-
-async function optimizePhotoForUpload(file: File): Promise<File> {
-  if (!OPTIMIZABLE_PHOTO_TYPES.has(file.type)) return file;
-
-  let bitmap: ImageBitmap | null = null;
-  try {
-    bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, PHOTO_UPLOAD_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
-    const width = Math.max(1, Math.round(bitmap.width * scale));
-    const height = Math.max(1, Math.round(bitmap.height * scale));
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d');
-    if (!context) return file;
-    context.drawImage(bitmap, 0, 0, width, height);
-
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, 'image/webp', PHOTO_UPLOAD_QUALITY);
-    });
-    if (!blob || (scale === 1 && blob.size >= file.size)) return file;
-
-    const baseName = file.name.replace(/\.[^.]+$/, '') || 'image';
-    return new File([blob], `${baseName}.webp`, { type: 'image/webp', lastModified: file.lastModified });
-  } catch {
-    return file;
-  } finally {
-    bitmap?.close();
-  }
-}
-
 const emptyProject = (sortOrder: number): Project => ({
   id: crypto.randomUUID(),
   slug: 'new-project',
@@ -163,14 +123,18 @@ const emptyProject = (sortOrder: number): Project => ({
   heroSoundEnabled: false,
   heroIdleUi: false,
   heroUrl: '',
+  heroMobileUrl: null,
   heroPosterUrl: null,
   heroFocalX: 50,
   heroFocalY: 50,
   introImageUrl: '',
   brochureUrl: null,
   mapQuery: '',
+  mapUrl: '',
+  cardAddress: '',
   cardImages: [],
   gallery: [],
+  imageVariants: { version: 1, images: {} },
   characteristics: [
     { id: crypto.randomUUID(), label: 'Bedrooms', value: '', icon: 'bed' },
     { id: crypto.randomUUID(), label: 'Bathrooms', value: '', icon: 'bath' },
@@ -191,6 +155,7 @@ function projectToRow(project: Project) {
     slug: project.slug,
     title: project.title,
     address: project.address,
+    card_address: project.cardAddress,
     price: project.price,
     short_description: project.shortDescription,
     full_description: project.fullDescription,
@@ -206,15 +171,18 @@ function projectToRow(project: Project) {
     hero_sound_enabled: project.heroSoundEnabled,
     hero_idle_ui: project.heroIdleUi,
     hero_url: project.heroUrl,
+    hero_mobile_url: project.heroMobileUrl ?? null,
     hero_poster_url: project.heroPosterUrl,
     hero_focal_x: project.heroFocalX,
     hero_focal_y: project.heroFocalY,
     intro_image_url: project.introImageUrl,
     brochure_url: project.brochureUrl,
     map_query: project.mapQuery,
+    map_url: project.mapUrl,
     characteristics: project.characteristics,
     benefits: project.benefits,
     floor_plan_groups: project.floorPlanGroups,
+    image_variants: project.imageVariants ?? { version: 1, images: {} },
     nearby_places: project.nearbyPlaces,
     seo_title: project.seoTitle || `${project.title} — MIRACON`,
     seo_description: project.seoDescription || project.shortDescription,
@@ -261,6 +229,34 @@ function emptyHomeHeroVideo(sortOrder: number): HomeHeroVideo {
     mobileStoragePath: null,
     sortOrder,
     isActive: false,
+  };
+}
+
+function addImageVariant(
+  images: Record<string, ImageVariantSet>,
+  url: string,
+  variants: ImageVariantSet,
+) {
+  return { ...images, [normalizeMediaUrl(url)]: variants };
+}
+
+function pruneImageVariants(project: Project): Project {
+  const referenced = new Set([
+    project.coverUrl,
+    project.heroType === 'image' ? project.heroUrl : '',
+    project.heroPosterUrl ?? '',
+    project.introImageUrl,
+    ...project.cardImages.map((image) => image.url),
+    ...project.gallery.map((image) => image.url),
+    ...project.floorPlanGroups.flatMap((group) => group.plans.map((plan) => plan.imageUrl)),
+  ].filter(Boolean).map(normalizeMediaUrl));
+  const currentImages = project.imageVariants?.images ?? {};
+  return {
+    ...project,
+    imageVariants: {
+      version: 1,
+      images: Object.fromEntries(Object.entries(currentImages).filter(([url]) => referenced.has(normalizeMediaUrl(url)))),
+    },
   };
 }
 
@@ -487,19 +483,37 @@ function HomeHeroManager({
         return;
       }
 
-      const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
-      const path = `home-hero/${id}/${kind}-${crypto.randomUUID()}-${safeName}`;
-      const { error } = await supabase.storage.from('site-media').upload(path, file, {
-        cacheControl: '31536000',
-        contentType: 'video/mp4',
-      });
-      if (error) throw error;
-
-      const publicUrl = supabase.storage.from('site-media').getPublicUrl(path).data.publicUrl;
+      let publicUrl: string;
+      let storagePath: string;
+      if (mediaWorkerEnabled) {
+        const media = await processMediaUpload(supabase, file, {
+          kind: 'video',
+          outputBucket: 'site-media',
+          context: { target: 'home-hero', videoId: id, rendition: kind },
+          profile: {
+            video: kind === 'mobile'
+              ? { max_width: 1080, max_height: 1920, crf: 25, preset: 'medium', audio_bitrate: '96k' }
+              : { max_width: 1920, max_height: 1080, crf: 23, preset: 'medium', audio_bitrate: '128k' },
+            poster: { width: kind === 'mobile' ? 720 : 1280, quality: 82, at_seconds: 1 },
+          },
+        });
+        publicUrl = media.primaryUrl;
+        storagePath = media.primaryPath;
+      } else {
+        const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
+        storagePath = `home-hero/${id}/${kind}-${crypto.randomUUID()}-${safeName}`;
+        const { error } = await supabase.storage.from('site-media').upload(storagePath, file, {
+          cacheControl: '31536000',
+          contentType: 'video/mp4',
+          upsert: false,
+        });
+        if (error) throw error;
+        publicUrl = supabase.storage.from('site-media').getPublicUrl(storagePath).data.publicUrl;
+      }
       updateVideo(id, kind === 'desktop'
-        ? { desktopUrl: publicUrl, desktopStoragePath: path }
-        : { mobileUrl: publicUrl, mobileStoragePath: path });
-      onToast({ tone: 'success', message: `${kind === 'desktop' ? 'Desktop' : 'Mobile'} video uploaded` });
+        ? { desktopUrl: publicUrl, desktopStoragePath: storagePath }
+        : { mobileUrl: publicUrl, mobileStoragePath: storagePath });
+      onToast({ tone: 'success', message: `${kind === 'desktop' ? 'Desktop' : 'Mobile'} video ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload video' });
     } finally {
@@ -528,7 +542,11 @@ function HomeHeroManager({
           .flatMap((video) => [video.desktopStoragePath, video.mobileStoragePath])
           .filter((path): path is string => typeof path === 'string' && path.length > 0)
           .filter((path) => !nextPaths.has(path));
-        if (stalePaths.length) await supabase.storage.from('site-media').remove(stalePaths);
+        const legacyPaths = stalePaths.filter((path) => !path.startsWith('processed/'));
+        if (legacyPaths.length) {
+          const { error: cleanupError } = await supabase.storage.from('site-media').remove(legacyPaths);
+          if (cleanupError) throw cleanupError;
+        }
       } else {
         await new Promise((resolve) => window.setTimeout(resolve, 250));
       }
@@ -666,7 +684,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       return false;
     }
 
-    const nextProject = { ...project, slug, status, updatedAt: new Date().toISOString(), seoTitle: project.seoTitle || `${project.title} — MIRACON`, seoDescription: project.seoDescription || project.shortDescription };
+    const nextProject = pruneImageVariants({ ...project, slug, status, updatedAt: new Date().toISOString(), seoTitle: project.seoTitle || `${project.title} — MIRACON`, seoDescription: project.seoDescription || project.shortDescription });
     setSaving(true);
     try {
       if (demo || !supabase) {
@@ -726,77 +744,187 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       return;
     }
     setUploading(role);
-    const uploaded: ProjectImage[] = [];
-    for (const file of Array.from(files)) {
-      const uploadFile = await optimizePhotoForUpload(file);
-      const dimensions = await readImageSize(uploadFile);
-      const safeName = uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
-      const path = `${project.id}/${crypto.randomUUID()}-${safeName}`;
-      const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
-        upsert: false,
-        cacheControl: '31536000',
-        contentType: uploadFile.type || undefined,
-      });
-      if (error) {
-        showToast({ tone: 'error', message: error.message });
-        continue;
+    const uploaded: { image: ProjectImage; variants?: ImageVariantSet }[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        try {
+          if (mediaWorkerEnabled) {
+            const media = await processMediaUpload(supabase, file, {
+              kind: 'image',
+              outputBucket: 'project-media',
+              context: { target: 'project-image', projectId: project.id, role },
+              profile: { image: { widths: [480, 768, 1280, 1920, 2400], avif_quality: 52, webp_quality: 82, primary_format: 'webp' } },
+            });
+            uploaded.push({
+              image: {
+                id: crypto.randomUUID(), url: media.primaryUrl, storagePath: media.primaryPath,
+                alt: file.name.replace(/\.[^.]+$/, ''), role, sortOrder: 0,
+                width: media.width, height: media.height, focalX: 50, focalY: 50,
+              },
+              variants: toImageVariantSet(media),
+            });
+          } else {
+            const uploadFile = await optimizePhotoForDirectUpload(file);
+            const dimensions = await readImageDimensions(uploadFile);
+            const safeName = uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
+            const path = `${project.id}/${crypto.randomUUID()}-${safeName}`;
+            const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
+              upsert: false,
+              cacheControl: '31536000',
+              contentType: uploadFile.type || undefined,
+            });
+            if (error) throw error;
+            uploaded.push({ image: {
+              id: crypto.randomUUID(),
+              url: supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl,
+              storagePath: path,
+              alt: file.name.replace(/\.[^.]+$/, ''),
+              role,
+              sortOrder: 0,
+              width: dimensions.width || null,
+              height: dimensions.height || null,
+              focalX: 50,
+              focalY: 50,
+            } });
+          }
+        } catch (error) {
+          showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process image' });
+        }
       }
-      const { data } = supabase.storage.from('project-media').getPublicUrl(path);
-      uploaded.push({ id: crypto.randomUUID(), url: data.publicUrl, storagePath: path, alt: file.name.replace(/\.[^.]+$/, ''), role, sortOrder: 0, width: dimensions.width || null, height: dimensions.height || null, focalX: 50, focalY: 50 });
+      const key = role === 'card' ? 'cardImages' : 'gallery';
+      setProject((current) => ({
+        ...current,
+        [key]: [...current[key], ...uploaded.map((item) => item.image)].map((image, index) => ({ ...image, sortOrder: index })),
+        imageVariants: {
+          version: 1,
+          images: uploaded.reduce(
+            (images, item) => item.variants ? addImageVariant(images, item.image.url, item.variants) : images,
+            current.imageVariants?.images ?? {},
+          ),
+        },
+      }));
+      if (uploaded.length) showToast({ tone: 'success', message: `${uploaded.length} image${uploaded.length === 1 ? '' : 's'} ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
+    } finally {
+      setUploading('');
     }
-    const key = role === 'card' ? 'cardImages' : 'gallery';
-    setProject((current) => ({
-      ...current,
-      [key]: [...current[key], ...uploaded].map((image, index) => ({ ...image, sortOrder: index })),
-    }));
-    setUploading('');
   }
 
-  async function uploadSingle(event: ChangeEvent<HTMLInputElement>, field: 'coverUrl' | 'heroUrl' | 'heroPosterUrl' | 'introImageUrl') {
+  async function uploadSingle(event: ChangeEvent<HTMLInputElement>, field: 'coverUrl' | 'heroUrl' | 'heroMobileUrl' | 'heroPosterUrl' | 'introImageUrl') {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file || !supabase) {
       showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
       return;
     }
     setUploading(field);
-    const uploadFile = await optimizePhotoForUpload(file);
-    const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-    const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
-      upsert: false,
-      cacheControl: '31536000',
-      contentType: uploadFile.type || undefined,
-    });
-    if (error) showToast({ tone: 'error', message: error.message });
-    else {
-      update(field, supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl);
-      if (field === 'heroUrl') {
-        const heroType = file.type.startsWith('video/') ? 'video' : 'image';
-        update('heroType', heroType);
-        if (heroType === 'image') {
-          update('heroSoundEnabled', false);
-          update('heroIdleUi', false);
+    try {
+      const kind = file.type.startsWith('video/') ? 'video' : 'image';
+      if (field !== 'heroUrl' && field !== 'heroMobileUrl' && kind !== 'image') throw new Error('This slot accepts images only');
+      if (field === 'heroMobileUrl' && kind !== 'video') throw new Error('Mobile hero must be an MP4 video');
+      const mobileVideo = field === 'heroMobileUrl';
+      let primaryUrl: string;
+      let posterUrl: string | null = null;
+      let variants: ImageVariantSet | null = null;
+      if (mediaWorkerEnabled) {
+        const media = await processMediaUpload(supabase, file, {
+          kind,
+          outputBucket: 'project-media',
+          context: { target: field, projectId: project.id },
+          profile: kind === 'image'
+            ? { image: { widths: [480, 768, 1280, 1920, 2400], avif_quality: 52, webp_quality: 82, primary_format: 'webp' } }
+            : {
+                video: mobileVideo
+                  ? { max_width: 1080, max_height: 1920, crf: 25, preset: 'medium', audio_bitrate: '96k' }
+                  : { max_width: 1920, max_height: 1080, crf: 23, preset: 'medium', audio_bitrate: '128k' },
+                poster: { width: mobileVideo ? 720 : 1280, quality: 82, at_seconds: 1 },
+              },
+        });
+        primaryUrl = media.primaryUrl;
+        posterUrl = media.posterUrl;
+        if (kind === 'image') variants = toImageVariantSet(media);
+      } else {
+        if (kind === 'video' && (file.type !== 'video/mp4' || file.size > 50 * 1024 * 1024)) {
+          throw new Error('Video must be an MP4 file smaller than 50 MB');
         }
+        const uploadFile = kind === 'image' ? await optimizePhotoForDirectUpload(file) : file;
+        const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
+        const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
+          upsert: false,
+          cacheControl: '31536000',
+          contentType: uploadFile.type || undefined,
+        });
+        if (error) throw error;
+        primaryUrl = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
       }
+      setProject((current) => {
+        const next = { ...current, [field]: primaryUrl } as Project;
+        if (kind === 'image' && variants) {
+          next.imageVariants = {
+            version: 1,
+            images: addImageVariant(current.imageVariants?.images ?? {}, primaryUrl, variants),
+          };
+        }
+        if (field === 'heroUrl') {
+          next.heroType = kind;
+          if (kind === 'image') {
+            next.heroMobileUrl = null;
+            next.heroSoundEnabled = false;
+            next.heroIdleUi = false;
+          } else if (!next.heroPosterUrl && posterUrl) {
+            next.heroPosterUrl = posterUrl;
+          }
+        }
+        return next;
+      });
+      showToast({ tone: 'success', message: `${kind === 'video' ? 'Video' : 'Image'} ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
+    } catch (error) {
+      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process media' });
+    } finally {
+      setUploading('');
     }
-    setUploading('');
   }
 
   async function uploadBrochure(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file || !supabase) {
       showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
       return;
     }
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      showToast({ tone: 'error', message: 'Brochure must be a PDF file' });
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      showToast({ tone: 'error', message: 'PDF brochure must be smaller than 25 MB' });
+      return;
+    }
     setUploading('brochure');
-    const path = `${project.id}/${crypto.randomUUID()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-    const { error } = await supabase.storage.from('project-documents').upload(path, file, {
-      upsert: false,
-      cacheControl: '31536000',
-      contentType: file.type || undefined,
-    });
-    if (error) showToast({ tone: 'error', message: error.message });
-    else update('brochureUrl', supabase.storage.from('project-documents').getPublicUrl(path).data.publicUrl);
-    setUploading('');
+    try {
+      const path = `${project.id}/${crypto.randomUUID()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
+      const { error } = await supabase.storage.from('project-documents').upload(path, file, {
+        upsert: false,
+        cacheControl: '31536000',
+        contentType: 'application/pdf',
+      });
+      if (error) throw error;
+      const publicUrl = supabase.storage.from('project-documents').getPublicUrl(path).data.publicUrl;
+      if (mediaWorkerEnabled) {
+        await registerPublicMediaAsset(supabase, {
+          bucketId: 'project-documents',
+          objectPath: path,
+          publicUrl,
+          mimeType: 'application/pdf',
+          sizeBytes: file.size,
+        });
+      }
+      update('brochureUrl', publicUrl);
+      showToast({ tone: 'success', message: 'Brochure uploaded' });
+    } catch (error) {
+      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload brochure' });
+    } finally {
+      setUploading('');
+    }
   }
 
   async function uploadBenefitIcon(benefitId: string, event: ChangeEvent<HTMLInputElement>) {
@@ -818,48 +946,80 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     setUploading(uploadKey);
     const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
     const path = `${project.id}/${crypto.randomUUID()}-${safeName}`;
-    const { error } = await supabase.storage.from('project-media').upload(path, file, {
-      contentType: 'image/svg+xml',
-      cacheControl: '31536000',
-      upsert: false,
-    });
-
-    if (error) {
-      showToast({ tone: 'error', message: error.message });
-    } else {
+    try {
+      const { error } = await supabase.storage.from('project-media').upload(path, file, {
+        contentType: 'image/svg+xml',
+        cacheControl: '31536000',
+        upsert: false,
+      });
+      if (error) throw error;
       const icon = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
+      if (mediaWorkerEnabled) {
+        await registerPublicMediaAsset(supabase, {
+          bucketId: 'project-media',
+          objectPath: path,
+          publicUrl: icon,
+          mimeType: 'image/svg+xml',
+          sizeBytes: file.size,
+        });
+      }
       setProject((current) => ({ ...current, benefits: current.benefits.map((benefit) => benefit.id === benefitId ? { ...benefit, icon } : benefit) }));
       showToast({ tone: 'success', message: 'Benefit icon uploaded' });
+    } catch (error) {
+      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload benefit icon' });
+    } finally {
+      setUploading('');
+      event.target.value = '';
     }
-    setUploading('');
-    event.target.value = '';
   }
 
   async function uploadPlanImage(groupId: string, planId: string, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file || !supabase) {
       showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
       return;
     }
     setUploading(planId);
-    const path = `${project.id}/${crypto.randomUUID()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-    const { error } = await supabase.storage.from('project-media').upload(path, file, {
-      upsert: false,
-      cacheControl: '31536000',
-      contentType: file.type || undefined,
-    });
-    if (error) {
-      showToast({ tone: 'error', message: error.message });
-    } else {
-      const imageUrl = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
+    try {
+      let imageUrl: string;
+      let variants: ImageVariantSet | null = null;
+      if (mediaWorkerEnabled) {
+        const media = await processMediaUpload(supabase, file, {
+          kind: 'image',
+          outputBucket: 'project-media',
+          context: { target: 'floor-plan', projectId: project.id, groupId, planId },
+          profile: { image: { widths: [768, 1280, 1920, 2400, 3000], avif_quality: 60, webp_quality: 88, primary_format: 'webp' } },
+        });
+        imageUrl = media.primaryUrl;
+        variants = toImageVariantSet(media);
+      } else {
+        const uploadFile = await optimizePhotoForDirectUpload(file);
+        const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
+        const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
+          upsert: false,
+          cacheControl: '31536000',
+          contentType: uploadFile.type || undefined,
+        });
+        if (error) throw error;
+        imageUrl = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
+      }
       setProject((current) => ({
         ...current,
         floorPlanGroups: current.floorPlanGroups.map((group) => group.id === groupId
           ? { ...group, plans: group.plans.map((plan) => plan.id === planId ? { ...plan, imageUrl } : plan) }
           : group),
+        ...(variants ? { imageVariants: {
+          version: 1,
+          images: addImageVariant(current.imageVariants?.images ?? {}, imageUrl, variants),
+        } } : {}),
       }));
+      showToast({ tone: 'success', message: `Floor plan ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
+    } catch (error) {
+      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process floor plan' });
+    } finally {
+      setUploading('');
     }
-    setUploading('');
   }
 
   async function removeProject() {
@@ -867,7 +1027,10 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       onDeleted(project.id);
       return;
     }
-    const { error } = await supabase.from('projects').delete().eq('id', project.id);
+    let { error } = await supabase.rpc('delete_project', { p_project_id: project.id });
+    if (error && (error.code === 'PGRST202' || /delete_project|schema cache/i.test(error.message))) {
+      ({ error } = await supabase.from('projects').delete().eq('id', project.id));
+    }
     if (error) {
       showToast({ tone: 'error', message: error.message });
       return;
@@ -918,9 +1081,11 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
             <div className="section-heading"><span>01 / Content</span><h2>Project identity</h2><p>The information used in the catalog card and the project page.</p></div>
             <div className="editor-form-grid">
               <Field label="Project name"><input value={project.title} onChange={(event) => update('title', event.target.value)} /></Field>
-              <Field label="Address"><input value={project.address} onChange={(event) => update('address', event.target.value)} /></Field>
+              <Field label="Project page address"><input value={project.address} onChange={(event) => update('address', event.target.value)} /></Field>
+              <Field label="Homepage card location"><input value={project.cardAddress} onChange={(event) => update('cardAddress', event.target.value)} /></Field>
               <Field label="Price label"><input value={project.price} onChange={(event) => update('price', event.target.value)} placeholder="from 250 000 €" /></Field>
-              <Field label="Map search query"><input value={project.mapQuery} onChange={(event) => update('mapQuery', event.target.value)} /></Field>
+              <Field label="Map coordinates or search query"><input value={project.mapQuery} onChange={(event) => update('mapQuery', event.target.value)} /></Field>
+              <Field label="Google Maps link"><input value={project.mapUrl} onChange={(event) => update('mapUrl', event.target.value)} /></Field>
               <Field label="Categories" wide><div className="category-select">{PROJECT_CATEGORIES.map((category) => <button type="button" key={category} className={project.categories.includes(category) ? 'active' : ''} onClick={() => toggleCategory(category)}>{project.categories.includes(category) && <Check size={14} />}{categoryLabels[category]}</button>)}</div></Field>
               <Field label="Short card description" wide hint={`${project.shortDescription.length}/420`}><textarea rows={4} maxLength={420} value={project.shortDescription} onChange={(event) => update('shortDescription', event.target.value)} /></Field>
               <Field label="Page intro heading" wide><input value={project.introTitle} onChange={(event) => update('introTitle', event.target.value)} /></Field>
@@ -943,7 +1108,8 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
               </div>
             </div>
             <div className="media-slots">
-              {([['coverUrl', 'Catalog cover'], ['heroUrl', 'Page hero'], ['introImageUrl', 'Intro image']] as const).map(([field, label]) => <div className="media-slot" key={field}>{project[field] && !(field === 'heroUrl' && project.heroType === 'video') ? <img src={project[field]} alt="" /> : field === 'heroUrl' && project.heroType === 'video' ? <FileText size={24} /> : <ImagePlus size={24} />}<div><strong>{label}</strong><span>{project[field] ? field === 'heroUrl' ? `${project.heroType} selected` : 'Image selected' : 'No media'}</span></div><label><input type="file" accept={field === 'heroUrl' ? 'image/*,video/mp4' : 'image/*'} onChange={(event) => uploadSingle(event, field)} />{uploading === field ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Replace</label></div>)}
+              {([['coverUrl', 'Catalog cover'], ['heroUrl', 'Page hero / desktop'], ['introImageUrl', 'Intro image']] as const).map(([field, label]) => <div className="media-slot" key={field}>{project[field] && !(field === 'heroUrl' && project.heroType === 'video') ? <img src={project[field]} alt="" /> : field === 'heroUrl' && project.heroType === 'video' ? <Film size={24} /> : <ImagePlus size={24} />}<div><strong>{label}</strong><span>{project[field] ? field === 'heroUrl' ? `${project.heroType} selected` : 'Image selected' : 'No media'}</span></div><label><input type="file" accept={field === 'heroUrl' ? 'image/*,video/mp4' : 'image/*'} onChange={(event) => uploadSingle(event, field)} />{uploading === field ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Replace</label></div>)}
+              {mediaWorkerEnabled && project.heroType === 'video' && <div className="media-slot"><Film size={24} /><div><strong>Page hero / mobile</strong><span>{project.heroMobileUrl ? 'Mobile video selected' : 'Desktop video will be used'}</span></div><label><input type="file" accept="video/mp4" onChange={(event) => uploadSingle(event, 'heroMobileUrl')} />{uploading === 'heroMobileUrl' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{project.heroMobileUrl ? 'Replace' : 'Upload'}</label></div>}
               <div className="media-slot"><>{project.heroPosterUrl ? <img src={project.heroPosterUrl} alt="" /> : <ImagePlus size={24} />}</><div><strong>Video poster</strong><span>{project.heroPosterUrl ? 'Poster selected' : 'Shown before video loads'}</span></div><label><input type="file" accept="image/*" onChange={(event) => uploadSingle(event, 'heroPosterUrl')} />{uploading === 'heroPosterUrl' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Replace</label></div>
               <div className="media-slot document-slot"><FileText size={26} /><div><strong>PDF brochure</strong><span>{project.brochureUrl ? 'Document attached' : 'No document'}</span></div><label><input type="file" accept="application/pdf" onChange={uploadBrochure} />{uploading === 'brochure' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Upload</label></div>
             </div>
