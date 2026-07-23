@@ -1389,7 +1389,7 @@
   /* Consultation — Figma: y5903..6497. */
   .contacts-section {
     position: relative;
-    height: 630px;
+    height: 760px;
     padding: 0;
     background: var(--mobile-card);
   }
@@ -1398,7 +1398,7 @@
   .form-container {
     position: relative;
     width: calc(100% - 40px);
-    height: 630px;
+    height: 760px;
     margin-inline: auto;
   }
 
@@ -1435,7 +1435,7 @@
     left: 0;
     display: block;
     width: calc(100% - 3px);
-    height: 463px;
+    height: 590px;
   }
 
   .form-row,
@@ -1535,9 +1535,17 @@
     white-space: normal;
   }
 
+  .form-captcha {
+    position: absolute;
+    top: 392px;
+    left: 0;
+    width: 303px;
+    min-height: 78px;
+  }
+
   .btn-submit {
     position: absolute;
-    top: 402px;
+    top: 490px;
     left: 50%;
     display: inline-flex;
     align-items: center;
@@ -1588,7 +1596,7 @@
   }
 
   .form-status {
-    top: 456px;
+    top: 544px;
     width: 100%;
     font-size: 14px;
     line-height: 1.2;
@@ -1681,6 +1689,13 @@
     right: 6px;
     width: 16px;
     height: 15px;
+  }
+}
+
+@media (max-width: 360px) {
+  .form-captcha {
+    transform: scale(.88);
+    transform-origin: left top;
   }
 }
 

@@ -890,6 +890,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn = consultationForm.querySelector('.btn-submit');
     const status = consultationForm.querySelector('.form-status');
     const web3FormsKey = consultationForm.dataset.web3formsKey;
+    const formStartedAt = Date.now();
+    const attemptStorageKey = 'miracon-contact-last-attempt';
+    const successStorageKey = 'miracon-contact-last-success';
+
+    const storedTimestamp = (storage, key) => {
+      try {
+        return Number(storage.getItem(key) || 0);
+      } catch {
+        return 0;
+      }
+    };
+
+    const storeTimestamp = (storage, key, value) => {
+      try {
+        storage.setItem(key, String(value));
+      } catch {
+        // Storage can be unavailable in strict privacy modes.
+      }
+    };
 
     const setStatus = (message, type) => {
       if (!status) return;
@@ -911,7 +930,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = String(formData.get('name') || '').trim();
       const phone = String(formData.get('phone') || '').trim();
       const email = String(formData.get('email') || '').trim();
+      const captchaResponse = String(formData.get('h-captcha-response') || '').trim();
       const emailInput = consultationForm.querySelector('[name="email"]');
+      const now = Date.now();
 
       if (!name || (!phone && !email)) {
         setStatus('Please enter your name and at least one contact detail.', 'error');
@@ -923,8 +944,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      if (formData.get('botcheck')) {
+        setStatus('Unable to send your request. Please try again.', 'error');
+        return;
+      }
+
+      if (!captchaResponse) {
+        setStatus('Please complete the security check.', 'error');
+        return;
+      }
+
+      if (now - formStartedAt < 1500) {
+        setStatus('Please wait a moment and try again.', 'error');
+        return;
+      }
+
+      const lastAttempt = storedTimestamp(sessionStorage, attemptStorageKey);
+      const lastSuccess = storedTimestamp(localStorage, successStorageKey);
+      if (now - lastAttempt < 15000 || now - lastSuccess < 60000) {
+        setStatus('Please wait before sending another request.', 'error');
+        return;
+      }
+
       submitBtn.disabled = true;
       setStatus('Sending your request...', 'pending');
+      storeTimestamp(sessionStorage, attemptStorageKey, now);
 
       try {
         if (!web3FormsKey) throw new Error('The form is temporarily unavailable. Please try again later.');
@@ -947,10 +991,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!response.ok || !result.success) throw new Error(result.message || 'Unable to send your request.');
 
         consultationForm.reset();
+        storeTimestamp(localStorage, successStorageKey, Date.now());
         setStatus('Thank you. Your request has been sent.', 'success');
       } catch (error) {
         setStatus(error instanceof Error ? error.message : 'Unable to send your request. Please try again later.', 'error');
       } finally {
+        window.hcaptcha?.reset();
         updateSubmitState();
       }
     });

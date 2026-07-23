@@ -2186,6 +2186,14 @@ body.js-enabled .about-reveal.visible {
   color: #003075;
 }
 
+.form-captcha {
+  position: absolute;
+  top: 414px;
+  left: 250px;
+  width: 303px;
+  min-height: 78px;
+}
+
 .btn-submit {
   position: absolute;
   top: 424px;
@@ -2744,6 +2752,7 @@ body.js-enabled .about-reveal.visible {
   .consultation-form,
   .form-textarea,
   .form-consent,
+  .form-captcha,
   .btn-submit {
     position: static;
     width: auto;
@@ -2787,6 +2796,11 @@ body.js-enabled .about-reveal.visible {
     width: auto;
     min-height: 0;
     white-space: normal;
+  }
+
+  .form-captcha {
+    justify-self: start;
+    min-height: 78px;
   }
 
   .btn-submit {

@@ -8,19 +8,20 @@
       </p>
       <form class="consultation-form" data-consultation-form data-web3forms-key="bcf7cde0-e5e8-4908-8b89-02ebe78bcd0d" novalidate>
         <div class="form-row">
-          <label class="form-group"><span>Name</span><input type="text" name="name" class="form-input" placeholder="Name" required></label>
-          <label class="form-group"><span>Phone</span><input type="tel" name="phone" class="form-input" placeholder="Phone"></label>
-          <label class="form-group"><span>Email</span><input type="email" name="email" class="form-input" placeholder="Email"></label>
+          <label class="form-group"><span>Name</span><input type="text" name="name" class="form-input" placeholder="Name" maxlength="120" required></label>
+          <label class="form-group"><span>Phone</span><input type="tel" name="phone" class="form-input" placeholder="Phone" maxlength="40"></label>
+          <label class="form-group"><span>Email</span><input type="email" name="email" class="form-input" placeholder="Email" maxlength="254"></label>
         </div>
         <label class="form-group form-message">
           <span>What info are you interested in?</span>
-          <textarea name="message" class="form-input form-textarea" placeholder="What info are you interested in?"></textarea>
+          <textarea name="message" class="form-input form-textarea" placeholder="What info are you interested in?" maxlength="3000"></textarea>
         </label>
         <label class="form-consent">
           <input type="checkbox" name="consent" class="form-consent-input" required>
           <span class="form-consent-box" aria-hidden="true"></span>
           <span class="form-consent-text">I agree to the processing of my personal data in accordance with the <a href="#">Privacy Policy</a> and consent to being contacted using the details provided</span>
         </label>
+        <div class="form-captcha"><div class="h-captcha" data-sitekey="50b2fe65-b00b-4b9e-ad62-3ba471098be2" data-theme="light"></div></div>
         <button type="submit" class="btn-submit" disabled>
           <span>Request a consultation</span><span class="btn-submit-arrow"></span>
         </button>
