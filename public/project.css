@@ -924,6 +924,22 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   transform: rotate(-5deg) scale(1.05);
 }
 
+.project-walkthrough-inner {
+  display: grid;
+  gap: 48px;
+}
+
+.project-walkthrough-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(80vh, 970px);
+  border-radius: 40px;
+  background: #07182c;
+  box-shadow: 0 30px 80px rgba(0, 48, 117, .14);
+  object-fit: contain;
+}
+
 .project-floor-plans {
   overflow: hidden;
 }
@@ -2210,6 +2226,10 @@ body.js-enabled .project-page .project-brochure-link {
     border-radius: 32px;
   }
 
+  .project-walkthrough-video {
+    border-radius: 32px;
+  }
+
   .project-page .contacts-section {
     height: auto;
     padding: 80px 0 88px;
@@ -2422,6 +2442,15 @@ body.js-enabled .project-page .project-brochure-link {
 
   .project-amenities-heading {
     grid-column: auto;
+  }
+
+  .project-walkthrough-inner {
+    gap: 28px;
+  }
+
+  .project-walkthrough-video {
+    max-height: none;
+    border-radius: 20px;
   }
 
   .project-plan-tab,

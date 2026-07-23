@@ -40,7 +40,7 @@ PUBLIC_SUPABASE_ANON_KEY=PUBLIC_ANON_KEY
 
 The service-role key is not required by the website and must never use the `PUBLIC_` prefix.
 
-The media worker is optional and disabled by default. The website and admin deploy normally without its migration or container. Set `PUBLIC_MEDIA_WORKER_ENABLED=true` only after applying the media migration and deploying the worker.
+The media worker is optional and disabled by default. Its database migration may be applied while the worker remains off; the walkthrough fields depend on the latest migrations, but direct media uploads do not require the worker container. Set `PUBLIC_MEDIA_WORKER_ENABLED=true` only after applying the media migration and deploying the worker.
 
 On the first authenticated visit, an empty database shows an **Import current website projects** action. It imports the five projects bundled in `src/data/projects.ts`.
 
@@ -52,6 +52,7 @@ On the first authenticated visit, an empty database shows an **Import current we
 - Preview is rendered at `/preview/[slug]`, requires the administrator session, has `noindex`, and is sent with `Cache-Control: private, no-store`.
 - Project and gallery ordering are stored explicitly and can be changed by drag and drop.
 - By default, JPEG/PNG images are resized to at most 2400px and converted to WebP in the administrator browser before direct Storage upload. Videos are uploaded directly.
+- Projects can optionally show a desktop/mobile walkthrough video after the gallery and before floor plans.
 - With `PUBLIC_MEDIA_WORKER_ENABLED=true`, originals use the private `media-sources` bucket and responsive AVIF/WebP images plus optimized MP4 videos are generated asynchronously.
 - PDF brochures and SVG benefit icons use their public project buckets. They join automatic cleanup only when worker mode is enabled.
 - Uploaded image sources are limited to 20 MB, 40 megapixels, and 10,000 px per side. Video sources are MP4 up to 50 MB and are validated again by the worker.

@@ -74,7 +74,7 @@ function normalizedSlug(value: string) {
 }
 
 function getPublishRequirements(project: Project) {
-  return [
+  const requirements = [
     { label: 'Project name', complete: Boolean(project.title.trim()), section: 'content' as AdminSection },
     { label: 'Valid public URL', complete: slugPattern.test(normalizedSlug(project.slug)), section: 'seo' as AdminSection },
     { label: 'Address', complete: Boolean(project.address.trim()), section: 'content' as AdminSection },
@@ -87,6 +87,10 @@ function getPublishRequirements(project: Project) {
     { label: 'Intro image', complete: Boolean(project.introImageUrl), section: 'media' as AdminSection },
     { label: 'Video poster', complete: project.heroType !== 'video' || Boolean(project.heroPosterUrl), section: 'media' as AdminSection },
   ];
+  if (project.walkthroughVideoEnabled) {
+    requirements.push({ label: 'Walkthrough video', complete: Boolean(project.walkthroughVideoDesktopUrl), section: 'media' });
+  }
+  return requirements;
 }
 
 function projectReadiness(project: Project) {
@@ -125,6 +129,11 @@ const emptyProject = (sortOrder: number): Project => ({
   heroUrl: '',
   heroMobileUrl: null,
   heroPosterUrl: null,
+  walkthroughVideoEnabled: false,
+  walkthroughVideoTitle: 'Virtual walkthrough',
+  walkthroughVideoDesktopUrl: '',
+  walkthroughVideoMobileUrl: null,
+  walkthroughVideoPosterUrl: null,
   heroFocalX: 50,
   heroFocalY: 50,
   introImageUrl: '',
@@ -173,6 +182,11 @@ function projectToRow(project: Project) {
     hero_url: project.heroUrl,
     hero_mobile_url: project.heroMobileUrl ?? null,
     hero_poster_url: project.heroPosterUrl,
+    walkthrough_video_enabled: project.walkthroughVideoEnabled,
+    walkthrough_video_title: project.walkthroughVideoTitle,
+    walkthrough_video_desktop_url: project.walkthroughVideoDesktopUrl,
+    walkthrough_video_mobile_url: project.walkthroughVideoMobileUrl,
+    walkthrough_video_poster_url: project.walkthroughVideoPosterUrl,
     hero_focal_x: project.heroFocalX,
     hero_focal_y: project.heroFocalY,
     intro_image_url: project.introImageUrl,
@@ -245,6 +259,7 @@ function pruneImageVariants(project: Project): Project {
     project.coverUrl,
     project.heroType === 'image' ? project.heroUrl : '',
     project.heroPosterUrl ?? '',
+    project.walkthroughVideoPosterUrl ?? '',
     project.introImageUrl,
     ...project.cardImages.map((image) => image.url),
     ...project.gallery.map((image) => image.url),
@@ -809,7 +824,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     }
   }
 
-  async function uploadSingle(event: ChangeEvent<HTMLInputElement>, field: 'coverUrl' | 'heroUrl' | 'heroMobileUrl' | 'heroPosterUrl' | 'introImageUrl') {
+  async function uploadSingle(event: ChangeEvent<HTMLInputElement>, field: 'coverUrl' | 'heroUrl' | 'heroMobileUrl' | 'heroPosterUrl' | 'introImageUrl' | 'walkthroughVideoDesktopUrl' | 'walkthroughVideoMobileUrl' | 'walkthroughVideoPosterUrl') {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || !supabase) {
@@ -819,9 +834,10 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     setUploading(field);
     try {
       const kind = file.type.startsWith('video/') ? 'video' : 'image';
-      if (field !== 'heroUrl' && field !== 'heroMobileUrl' && kind !== 'image') throw new Error('This slot accepts images only');
-      if (field === 'heroMobileUrl' && kind !== 'video') throw new Error('Mobile hero must be an MP4 video');
-      const mobileVideo = field === 'heroMobileUrl';
+      const videoOnly = field === 'heroMobileUrl' || field === 'walkthroughVideoDesktopUrl' || field === 'walkthroughVideoMobileUrl';
+      if (field !== 'heroUrl' && !videoOnly && kind !== 'image') throw new Error('This slot accepts images only');
+      if (videoOnly && kind !== 'video') throw new Error('This slot accepts MP4 video only');
+      const mobileVideo = field === 'heroMobileUrl' || field === 'walkthroughVideoMobileUrl';
       let primaryUrl: string;
       let posterUrl: string | null = null;
       let variants: ImageVariantSet | null = null;
@@ -873,6 +889,9 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
           } else if (!next.heroPosterUrl && posterUrl) {
             next.heroPosterUrl = posterUrl;
           }
+        }
+        if (field === 'walkthroughVideoDesktopUrl' && posterUrl) {
+          next.walkthroughVideoPosterUrl = posterUrl;
         }
         return next;
       });
@@ -1099,7 +1118,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
             <div className="repeat-section"><div className="repeat-heading"><h3>Benefits</h3><button onClick={() => update('benefits', [...project.benefits, { id: crypto.randomUUID(), title: 'New benefit', icon: '/img/olympus-detail/icons/amenity-finish.svg' }])}><Plus size={16} />Add</button></div>{project.benefits.map((item) => <div className="repeat-row benefit-row" key={item.id}><div className="benefit-icon-preview"><img src={item.icon} alt="" /></div><input value={item.title} onChange={(event) => update('benefits', project.benefits.map((current) => current.id === item.id ? { ...current, title: event.target.value } : current))} /><label className="benefit-icon-upload"><input type="file" accept="image/svg+xml,.svg" onChange={(event) => uploadBenefitIcon(item.id, event)} />{uploading === `benefit-${item.id}` ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Replace SVG</label><button onClick={() => update('benefits', project.benefits.filter((current) => current.id !== item.id))}><Trash2 size={16} /></button></div>)}</div>
           </>}
           {section === 'media' && <>
-            <div className="section-heading"><span>03 / Media</span><h2>Visual materials</h2><p>Cover, page imagery, gallery and brochure.</p></div>
+            <div className="section-heading"><span>03 / Media</span><h2>Visual materials</h2><p>Cover, page imagery, gallery, walkthrough and brochure.</p></div>
             <div className="hero-presentation-panel">
               <div className="presentation-heading"><div><span>Hero presentation</span><strong>{project.heroVariant === 'immersive' ? 'Immersive viewport' : 'Standard editorial'}</strong></div><div className="presentation-switch"><button type="button" className={project.heroVariant === 'standard' ? 'active' : ''} onClick={() => setProject((current) => ({ ...current, heroVariant: 'standard', heroIdleUi: false }))}>Standard</button><button type="button" className={project.heroVariant === 'immersive' ? 'active' : ''} onClick={() => update('heroVariant', 'immersive')}>Immersive</button></div></div>
               <div className="presentation-options">
@@ -1119,6 +1138,18 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
             </div>
             <ImageCollection title="Catalog card images" images={project.cardImages} onChange={(images) => update('cardImages', images)} onUpload={(files) => uploadFiles(files, 'card')} uploading={uploading === 'card'} />
             <ImageCollection title="Project gallery · original proportions" images={project.gallery} onChange={(images) => update('gallery', images)} onUpload={(files) => uploadFiles(files, 'gallery')} uploading={uploading === 'gallery'} />
+            <div className="walkthrough-admin-panel">
+              <div className="walkthrough-admin-heading">
+                <div><span>Optional page section</span><strong>Virtual walkthrough</strong><small>Displayed after the gallery and before floor plans.</small></div>
+                <label className="walkthrough-toggle"><input type="checkbox" checked={project.walkthroughVideoEnabled} onChange={(event) => update('walkthroughVideoEnabled', event.target.checked)} /><span></span><em>{project.walkthroughVideoEnabled ? 'Visible' : 'Hidden'}</em></label>
+              </div>
+              <label className="walkthrough-title-field"><span>Section heading</span><input value={project.walkthroughVideoTitle} placeholder="Virtual walkthrough" onChange={(event) => update('walkthroughVideoTitle', event.target.value)} /></label>
+              {project.walkthroughVideoDesktopUrl && <video className="walkthrough-admin-preview" controls playsInline preload="metadata" poster={project.walkthroughVideoPosterUrl ?? undefined}><source src={project.walkthroughVideoDesktopUrl} type="video/mp4" /></video>}
+              <div className="media-slots walkthrough-media-slots">
+                {([['walkthroughVideoDesktopUrl', 'Desktop MP4'], ['walkthroughVideoMobileUrl', 'Mobile MP4 · optional']] as const).map(([field, label]) => <div className="media-slot" key={field}><Film size={24} /><div><strong>{label}</strong><span>{project[field] ? 'Video selected' : field === 'walkthroughVideoMobileUrl' ? 'Desktop video will be used' : 'Required when section is visible'}</span></div><div className="media-slot-actions"><label><input type="file" accept="video/mp4" onChange={(event) => uploadSingle(event, field)} />{uploading === field ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{project[field] ? 'Replace' : 'Upload'}</label>{project[field] && <button type="button" onClick={() => setProject((current) => field === 'walkthroughVideoDesktopUrl' ? { ...current, walkthroughVideoEnabled: false, walkthroughVideoDesktopUrl: '', walkthroughVideoMobileUrl: null, walkthroughVideoPosterUrl: null } : { ...current, walkthroughVideoMobileUrl: null })}><X size={14} />Clear</button>}</div></div>)}
+                <div className="media-slot">{project.walkthroughVideoPosterUrl ? <img src={project.walkthroughVideoPosterUrl} alt="" /> : <ImagePlus size={24} />}<div><strong>Video poster · optional</strong><span>{project.walkthroughVideoPosterUrl ? 'Poster selected' : 'Shown before playback starts'}</span></div><div className="media-slot-actions"><label><input type="file" accept="image/*" onChange={(event) => uploadSingle(event, 'walkthroughVideoPosterUrl')} />{uploading === 'walkthroughVideoPosterUrl' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{project.walkthroughVideoPosterUrl ? 'Replace' : 'Upload'}</label>{project.walkthroughVideoPosterUrl && <button type="button" onClick={() => update('walkthroughVideoPosterUrl', null)}><X size={14} />Clear</button>}</div></div>
+              </div>
+            </div>
           </>}
           {section === 'plans' && <>
             <div className="section-heading"><span>04 / Floor plans</span><h2>Plan collections</h2><p>Group plan images by apartment or villa type.</p></div>

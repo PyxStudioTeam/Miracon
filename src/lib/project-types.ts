@@ -84,6 +84,11 @@ export interface Project {
   heroUrl: string;
   heroMobileUrl?: string | null;
   heroPosterUrl: string | null;
+  walkthroughVideoEnabled: boolean;
+  walkthroughVideoTitle: string;
+  walkthroughVideoDesktopUrl: string;
+  walkthroughVideoMobileUrl: string | null;
+  walkthroughVideoPosterUrl: string | null;
   heroFocalX: number;
   heroFocalY: number;
   introImageUrl: string;

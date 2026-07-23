@@ -59,6 +59,11 @@ const heroPosterVariants = getImageVariantSet(project.imageVariants, heroPosterU
 const heroPosterSources = getOptimizedImageSources(heroPosterUrl, heroPosterVariants);
 const hideHeroPoster = project.slug === 'kriopigi-villas' && project.heroType === 'video';
 const optimizedHeroPosterUrl = hideHeroPoster ? '' : heroPosterSources.webp || heroPosterSources.avif || heroPosterUrl;
+const walkthroughPosterUrl = project.walkthroughVideoPosterUrl ?? '';
+const walkthroughPosterSources = getOptimizedImageSources(walkthroughPosterUrl, getImageVariantSet(project.imageVariants, walkthroughPosterUrl));
+const optimizedWalkthroughPosterUrl = walkthroughPosterSources.webp || walkthroughPosterSources.avif || walkthroughPosterUrl;
+const showWalkthroughVideo = project.walkthroughVideoEnabled && Boolean(project.walkthroughVideoDesktopUrl.trim());
+const walkthroughVideoTitle = project.walkthroughVideoTitle.trim() || 'Virtual walkthrough';
 const heroPreloadUrl = project.heroType === 'video'
   ? optimizedHeroPosterUrl
   : heroImageSources.avif || heroImageSources.webp || heroImageUrl;
@@ -250,6 +255,18 @@ const projectStructuredData = {
             <img src="/img/olympus-detail/icons/brochure-circle.svg" alt="" class="project-floating-icon" aria-hidden="true"><span>Brochure</span>
           </a>
         )}
+      </section>
+    )}
+
+    {showWalkthroughVideo && (
+      <section class="project-walkthrough" aria-labelledby="project-walkthrough-title">
+        <div class="container project-walkthrough-inner">
+          <h2 id="project-walkthrough-title" class="project-section-title">{walkthroughVideoTitle}</h2>
+          <video class="project-walkthrough-video" controls playsinline preload="metadata" poster={optimizedWalkthroughPosterUrl || undefined}>
+            {project.walkthroughVideoMobileUrl && <source media="(max-width: 760px)" src={project.walkthroughVideoMobileUrl} type="video/mp4">}
+            <source src={project.walkthroughVideoDesktopUrl} type="video/mp4">
+          </video>
+        </div>
       </section>
     )}
 
