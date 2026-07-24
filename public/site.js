@@ -935,43 +935,43 @@ document.addEventListener('DOMContentLoaded', () => {
       const now = Date.now();
 
       if (!name || (!phone && !email)) {
-        setStatus('Please enter your name and at least one contact detail.', 'error');
+        setStatus('Please enter your name and at least one contact detail', 'error');
         return;
       }
 
       if (email && emailInput && !emailInput.checkValidity()) {
-        setStatus('Please enter a valid email address.', 'error');
+        setStatus('Please enter a valid email address', 'error');
         return;
       }
 
       if (formData.get('botcheck')) {
-        setStatus('Unable to send your request. Please try again.', 'error');
+        setStatus('Unable to send your request. Please try again', 'error');
         return;
       }
 
       if (!captchaResponse) {
-        setStatus('Please complete the security check.', 'error');
+        setStatus('Please complete the security check', 'error');
         return;
       }
 
       if (now - formStartedAt < 1500) {
-        setStatus('Please wait a moment and try again.', 'error');
+        setStatus('Please wait a moment and try again', 'error');
         return;
       }
 
       const lastAttempt = storedTimestamp(sessionStorage, attemptStorageKey);
       const lastSuccess = storedTimestamp(localStorage, successStorageKey);
       if (now - lastAttempt < 15000 || now - lastSuccess < 60000) {
-        setStatus('Please wait before sending another request.', 'error');
+        setStatus('Please wait before sending another request', 'error');
         return;
       }
 
       submitBtn.disabled = true;
-      setStatus('Sending your request...', 'pending');
+      setStatus('Sending your request', 'pending');
       storeTimestamp(sessionStorage, attemptStorageKey, now);
 
       try {
-        if (!web3FormsKey) throw new Error('The form is temporarily unavailable. Please try again later.');
+        if (!web3FormsKey) throw new Error('The form is temporarily unavailable. Please try again later');
 
         const web3FormsPayload = new FormData(consultationForm);
         web3FormsPayload.append('access_key', web3FormsKey);
@@ -988,13 +988,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const result = await response.json();
 
-        if (!response.ok || !result.success) throw new Error(result.message || 'Unable to send your request.');
+        if (!response.ok || !result.success) throw new Error(result.message || 'Unable to send your request');
 
         consultationForm.reset();
         storeTimestamp(localStorage, successStorageKey, Date.now());
-        setStatus('Thank you. Your request has been sent.', 'success');
+        setStatus('Thank you. Your request has been sent', 'success');
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : 'Unable to send your request. Please try again later.', 'error');
+        setStatus(error instanceof Error ? error.message.replace(/[.]+$/, '') : 'Unable to send your request. Please try again later', 'error');
       } finally {
         window.hcaptcha?.reset();
         updateSubmitState();

@@ -216,7 +216,7 @@ export async function processMediaUpload(
       const { error: rollbackError } = await supabase.storage.from(SOURCE_BUCKET).remove([sourcePath]);
       if (rollbackError) console.error('Unable to roll back media source upload:', rollbackError.message);
     }
-    throw queueError instanceof Error ? queueError : new Error('Unable to confirm the media processing job. Retry this upload later.');
+    throw queueError instanceof Error ? queueError : new Error('Unable to confirm the media processing job. Retry this upload later');
   }
 
   const timeoutMs = options.timeoutMs ?? (options.kind === 'video' ? 20 * 60_000 : 4 * 60_000);
@@ -234,7 +234,7 @@ export async function processMediaUpload(
     if (row?.status === 'failed') throw new Error(row.last_error || 'Media processing failed');
     await delay(1500);
   }
-  if (row?.status !== 'completed') throw new Error('Media processing is taking too long. The job will continue in the background.');
+  if (row?.status !== 'completed') throw new Error('Media processing is taking too long. The job will continue in the background');
 
   const result = object(row.result);
   const variants = (Array.isArray(result.variants) ? result.variants : []).map(parseVariant).filter((item): item is ProcessedMediaVariant => Boolean(item));

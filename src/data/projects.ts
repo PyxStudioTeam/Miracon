@@ -307,7 +307,7 @@ export const seedProjects: Project[] = [
     cardAddress: 'Central Thessaloniki',
     price: 'from 130 000 €',
     shortDescription: 'A 9-storey residential landmark featuring 32 modern apartments and exclusive duplex penthouses. Enjoy clean lines, premium finishes, and abundant natural light in a highly connected city location',
-    fullDescription: 'A nine-storey residential landmark featuring 32 modern apartments and exclusive duplex penthouses in a highly connected city location.',
+    fullDescription: 'A nine-storey residential landmark featuring 32 modern apartments and exclusive duplex penthouses in a highly connected city location',
     introTitle: 'A New Urban Landmark',
     categories: ['city'],
     status: 'published',

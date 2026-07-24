@@ -2292,12 +2292,17 @@ body.js-enabled .about-reveal.visible {
 .form-status {
   position: absolute;
   top: 610px;
-  left: 0;
+  left: 50%;
+  display: block;
+  width: min(100%, 560px);
   margin: 0;
   color: #003075;
   font-family: 'Gilroy', sans-serif;
   font-size: 18px;
   font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  transform: translateX(-50%);
 }
 
 .form-status[data-status="success"] { color: #276749; }
@@ -2810,6 +2815,7 @@ body.js-enabled .about-reveal.visible {
     justify-self: center;
     margin: 0;
     text-align: center;
+    transform: none;
   }
 
   .footer {
@@ -3511,7 +3517,10 @@ body.js-enabled .about-reveal.visible {
   }
 
   .form-status {
+    position: absolute;
     top: calc(25.625vw + 114px);
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .btn-submit > span:first-child {

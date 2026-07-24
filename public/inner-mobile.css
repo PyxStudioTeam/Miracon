@@ -490,8 +490,11 @@
   .project-page .form-status,
   .golden-visa-page .form-status {
     position: static;
+    justify-self: start;
+    width: min(100%, 360px);
     margin: 12px 0 0;
     font-size: 14px;
+    transform: none;
   }
 
   .project-page .btn-submit-arrow::before,

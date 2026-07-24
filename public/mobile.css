@@ -1597,11 +1597,14 @@
   }
 
   .form-status {
+    position: absolute;
     top: 544px;
-    width: 100%;
+    left: 50%;
+    width: min(100%, 320px);
     font-size: 14px;
     line-height: 1.2;
     text-align: center;
+    transform: translateX(-50%);
   }
 
   /* Footer — Figma: y6497..6661. */

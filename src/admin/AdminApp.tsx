@@ -338,15 +338,15 @@ function LoginScreen({ onLogin, error, loading }: { onLogin: (email: string, pas
         <div className="login-wordmark"><BrandLockup /></div>
         <div className="login-statement">
           <span className="eyebrow">Project Desk / 2026</span>
-          <h1>Architecture<br />deserves an<br /><em>editorial</em> workspace.</h1>
+          <h1>Architecture<br />deserves an<br /><em>editorial</em> workspace</h1>
         </div>
-        <p>Private content system for MIRACON Constructions.</p>
+        <p>Private content system for MIRACON Constructions</p>
       </section>
       <section className="login-panel">
         <form onSubmit={submit}>
           <span className="login-index">01 / SECURE ACCESS</span>
           <h2>Welcome back</h2>
-          <p>Sign in with the administrator account.</p>
+          <p>Sign in with the administrator account</p>
           <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" /></label>
           <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" /></label>
           {error && <div className="login-error"><CircleAlert size={16} />{error}</div>}
@@ -404,7 +404,7 @@ function ProjectList({ projects, onOpen, onCreate, onReorder, onImport, canImpor
           <div className="segmented-control">{(['all', 'published', 'draft'] as const).map((value) => <button key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div>
           <label className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects" aria-label="Search projects" /></label>
         </div>
-        {!reorderEnabled && <p className="reorder-note">Clear search and select All to reorder the portfolio.</p>}
+        {!reorderEnabled && <p className="reorder-note">Clear search and select All to reorder the portfolio</p>}
         <div className="table-head"><span></span><span>Project</span><span>Categories</span><span>Status</span><span>Updated</span><span></span></div>
         {filtered.length > 0 ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onReorder}>
@@ -413,7 +413,7 @@ function ProjectList({ projects, onOpen, onCreate, onReorder, onImport, canImpor
             </SortableContext>
           </DndContext>
         ) : (
-          <div className="empty-projects"><LayoutGrid size={28} /><h3>No projects here</h3><p>Create a project or change the current filter.</p>{canImport && <button className="secondary-button" onClick={onImport}>Import current website projects</button>}</div>
+          <div className="empty-projects"><LayoutGrid size={28} /><h3>No projects here</h3><p>Create a project or change the current filter</p>{canImport && <button className="secondary-button" onClick={onImport}>Import current website projects</button>}</div>
         )}
       </section>
     </main>
@@ -616,13 +616,13 @@ function HomeHeroManager({
   return (
     <main className="admin-main home-hero-manager">
       <header className="list-header">
-        <div><span className="eyebrow">Homepage / Hero playlist</span><h1>Hero videos <sup>{videos.length.toString().padStart(2, '0')}</sup></h1><p>Videos play from top to bottom and repeat after the last item.</p></div>
+        <div><span className="eyebrow">Homepage / Hero playlist</span><h1>Hero videos <sup>{videos.length.toString().padStart(2, '0')}</sup></h1><p>Videos play from top to bottom and repeat after the last item</p></div>
         <div className="home-hero-actions"><button className="secondary-button" onClick={() => setVideos((current) => [...current, emptyHomeHeroVideo(current.length)])}><Plus size={18} />Add video</button><button className="primary-button" onClick={savePlaylist} disabled={saving || !isDirty}>{saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Save playlist</button></div>
       </header>
 
-      <section className="home-hero-help"><Film size={22} /><div><strong>Playback rules</strong><p>Desktop is required. Mobile is optional and automatically replaces desktop below 600 px. Only the current and next videos are loaded.</p></div></section>
+      <section className="home-hero-help"><Film size={22} /><div><strong>Playback rules</strong><p>Desktop is required. Mobile is optional and automatically replaces desktop below 600 px. Only the current and next videos are loaded</p></div></section>
 
-      {videos.length ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorderVideos}><SortableContext items={videos.map((video) => video.id)} strategy={verticalListSortingStrategy}><section className="home-hero-list">{videos.map((video, index) => <SortableHomeHeroVideo key={video.id} video={video} index={index} projects={projects} uploading={uploading} onChange={(patch) => updateVideo(video.id, patch)} onRemove={() => setVideos((current) => current.filter((item) => item.id !== video.id).map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })))} onUpload={(kind, event) => uploadVideo(video.id, kind, event)} />)}</section></SortableContext></DndContext> : <section className="home-hero-empty"><Film size={30} /><h2>No hero videos</h2><p>Add a video to create the homepage playlist. Until then the built-in fallback remains visible.</p><button className="primary-button" onClick={() => setVideos([emptyHomeHeroVideo(0)])}><Plus size={18} />Add first video</button></section>}
+      {videos.length ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorderVideos}><SortableContext items={videos.map((video) => video.id)} strategy={verticalListSortingStrategy}><section className="home-hero-list">{videos.map((video, index) => <SortableHomeHeroVideo key={video.id} video={video} index={index} projects={projects} uploading={uploading} onChange={(patch) => updateVideo(video.id, patch)} onRemove={() => setVideos((current) => current.filter((item) => item.id !== video.id).map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })))} onUpload={(kind, event) => uploadVideo(video.id, kind, event)} />)}</section></SortableContext></DndContext> : <section className="home-hero-empty"><Film size={30} /><h2>No hero videos</h2><p>Add a video to create the homepage playlist. Until then the built-in fallback remains visible</p><button className="primary-button" onClick={() => setVideos([emptyHomeHeroVideo(0)])}><Plus size={18} />Add first video</button></section>}
     </main>
   );
 }
@@ -720,7 +720,7 @@ function SiteSettingsManager({
   return (
     <main className="admin-main site-settings-manager">
       <header className="list-header">
-        <div><span className="eyebrow">Website / Legal documents</span><h1>Site settings</h1><p>Control optional legal links displayed in the public footer.</p></div>
+        <div><span className="eyebrow">Website / Legal documents</span><h1>Site settings</h1><p>Control optional legal links displayed in the public footer</p></div>
         <button className="primary-button" onClick={saveSettings} disabled={saving || !isDirty || hasInvalidDocument}>{saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Save settings</button>
       </header>
 
@@ -735,14 +735,14 @@ function SiteSettingsManager({
             <label className="site-settings-url">
               <span>PDF link</span>
               <input type="url" value={settings[document.urlKey]} placeholder="https://example.com/document.pdf" aria-invalid={document.invalid} onChange={(event) => setSettings((current) => ({ ...current, [document.urlKey]: event.target.value }))} />
-              <small>Use a public HTTPS link. The saved URL is kept when the footer link is hidden.</small>
+              <small>Use a public HTTPS link. The saved URL is kept when the footer link is hidden</small>
             </label>
             <div className={`site-settings-state ${document.invalid ? 'error' : ''}`}>
               {document.invalid
-                ? <><CircleAlert size={17} /><span>A valid HTTPS PDF link is required before this document can be shown.</span></>
+                ? <><CircleAlert size={17} /><span>A valid HTTPS PDF link is required before this document can be shown</span></>
                 : document.validUrl
-                  ? <><Check size={17} /><span>PDF link is ready.</span><a href={document.normalizedUrl} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a></>
-                  : <><Eye size={17} /><span>This document is hidden by default.</span></>}
+                  ? <><Check size={17} /><span>PDF link is ready</span><a href={document.normalizedUrl} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a></>
+                  : <><Eye size={17} /><span>This document is hidden by default</span></>}
             </div>
           </section>
         ))}
@@ -1403,7 +1403,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
         </aside>
         <section className="editor-canvas">
           {section === 'content' && <>
-            <div className="section-heading"><span>01 / Content</span><h2>Project identity</h2><p>The information used in the catalog card and the project page.</p></div>
+            <div className="section-heading"><span>01 / Content</span><h2>Project identity</h2><p>The information used in the catalog card and the project page</p></div>
             <div className="editor-form-grid">
               <Field label="Project name"><input value={project.title} onChange={(event) => update('title', event.target.value)} /></Field>
               <Field label="Project page address"><input value={project.address} onChange={(event) => update('address', event.target.value)} /></Field>
@@ -1419,12 +1419,12 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
             </div>
           </>}
           {section === 'specs' && <>
-            <div className="section-heading"><span>02 / Features</span><h2>Characteristics & benefits</h2><p>Structured facts used in the page highlights.</p></div>
+            <div className="section-heading"><span>02 / Features</span><h2>Characteristics & benefits</h2><p>Structured facts used in the page highlights</p></div>
             <div className="repeat-section"><div className="repeat-heading"><h3>Characteristics</h3><button onClick={() => update('characteristics', [...project.characteristics, { id: crypto.randomUUID(), label: 'Characteristic', value: '', icon: 'area' }])}><Plus size={16} />Add</button></div>{project.characteristics.map((item) => <div className="repeat-row" key={item.id}><select value={item.icon} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, icon: event.target.value as typeof item.icon } : current))}><option value="bed">Bed</option><option value="bath">Bath</option><option value="area">Area</option><option value="levels">Levels</option></select><input value={item.label} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, label: event.target.value } : current))} /><input value={item.value} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, value: event.target.value } : current))} /><button onClick={() => update('characteristics', project.characteristics.filter((current) => current.id !== item.id))}><Trash2 size={16} /></button></div>)}</div>
             <div className="repeat-section"><div className="repeat-heading"><h3>Benefits</h3><button onClick={() => update('benefits', [...project.benefits, { id: crypto.randomUUID(), title: 'New benefit', icon: '/img/olympus-detail/icons/amenity-finish.svg' }])}><Plus size={16} />Add</button></div>{project.benefits.map((item) => <div className="repeat-row benefit-row" key={item.id}><div className="benefit-icon-preview"><img src={item.icon} alt="" /></div><input value={item.title} onChange={(event) => update('benefits', project.benefits.map((current) => current.id === item.id ? { ...current, title: event.target.value } : current))} /><label className="benefit-icon-upload"><input type="file" accept="image/svg+xml,.svg" onChange={(event) => uploadBenefitIcon(item.id, event)} />{uploading === `benefit-${item.id}` ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Replace SVG</label><button onClick={() => update('benefits', project.benefits.filter((current) => current.id !== item.id))}><Trash2 size={16} /></button></div>)}</div>
           </>}
           {section === 'media' && <>
-            <div className="section-heading"><span>03 / Media</span><h2>Visual materials</h2><p>Cover, page imagery, gallery, walkthrough and brochure.</p></div>
+            <div className="section-heading"><span>03 / Media</span><h2>Visual materials</h2><p>Cover, page imagery, gallery, walkthrough and brochure</p></div>
             <div className="hero-presentation-panel">
               <div className="presentation-heading"><div><span>Hero presentation</span><strong>{project.heroVariant === 'immersive' ? 'Immersive viewport' : 'Standard editorial'}</strong></div><div className="presentation-switch"><button type="button" className={project.heroVariant === 'standard' ? 'active' : ''} onClick={() => setProject((current) => ({ ...current, heroVariant: 'standard', heroIdleUi: false }))}>Standard</button><button type="button" className={project.heroVariant === 'immersive' ? 'active' : ''} onClick={() => update('heroVariant', 'immersive')}>Immersive</button></div></div>
               <div className="hero-media-mode"><span>Hero media</span><div className="presentation-switch"><button type="button" className={project.heroType === 'image' ? 'active' : ''} onClick={() => setHeroMediaType('image')}>Image</button><button type="button" className={project.heroType === 'video' ? 'active' : ''} onClick={() => setHeroMediaType('video')}>Video playlist</button></div></div>
@@ -1446,7 +1446,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
             <ImageCollection title="Project gallery · original proportions" images={project.gallery} onChange={(images) => update('gallery', images)} onUpload={(files) => uploadFiles(files, 'gallery')} uploading={uploading === 'gallery'} />
             <div className="walkthrough-admin-panel">
               <div className="walkthrough-admin-heading">
-                <div><span>Optional page section</span><strong>Virtual walkthrough</strong><small>Displayed after the gallery and before floor plans.</small></div>
+                <div><span>Optional page section</span><strong>Virtual walkthrough</strong><small>Displayed after the gallery and before floor plans</small></div>
                 <label className="walkthrough-toggle"><input type="checkbox" checked={project.walkthroughVideoEnabled} onChange={(event) => update('walkthroughVideoEnabled', event.target.checked)} /><span></span><em>{project.walkthroughVideoEnabled ? 'Visible' : 'Hidden'}</em></label>
               </div>
               <label className="walkthrough-title-field"><span>Section heading</span><input value={project.walkthroughVideoTitle} placeholder="Virtual walkthrough" onChange={(event) => update('walkthroughVideoTitle', event.target.value)} /></label>
@@ -1454,21 +1454,21 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
             </div>
           </>}
           {section === 'plans' && <>
-            <div className="section-heading"><span>04 / Floor plans</span><h2>Plan collections</h2><p>Group plan images by apartment or villa type.</p></div>
+            <div className="section-heading"><span>04 / Floor plans</span><h2>Plan collections</h2><p>Group plan images by apartment or villa type</p></div>
             <div className="plan-groups">{project.floorPlanGroups.map((group) => <article className="plan-group-editor" key={group.id}><div className="plan-group-head"><input value={group.title} onChange={(event) => updatePlanGroup(group.id, { title: event.target.value })} /><button onClick={() => update('floorPlanGroups', project.floorPlanGroups.filter((item) => item.id !== group.id))}><Trash2 size={16} /></button></div>{group.plans.map((plan) => <div className="plan-row" key={plan.id}>{plan.imageUrl ? <img src={plan.imageUrl} alt="" /> : <ImagePlus size={20} />}<input value={plan.title} onChange={(event) => updatePlanGroup(group.id, { plans: group.plans.map((item) => item.id === plan.id ? { ...item, title: event.target.value } : item) })} /><label className="plan-upload"><input type="file" accept="image/*" onChange={(event) => uploadPlanImage(group.id, plan.id, event)} />{uploading === plan.id ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Upload plan</label><button onClick={() => updatePlanGroup(group.id, { plans: group.plans.filter((item) => item.id !== plan.id) })}><X size={15} /></button></div>)}<button className="add-plan" onClick={() => updatePlanGroup(group.id, { plans: [...group.plans, { id: crypto.randomUUID(), title: 'Floor plan', imageUrl: '', alt: `${project.title} floor plan` }] })}><Plus size={16} />Add plan</button></article>)}</div>
             <button className="secondary-button" onClick={addPlanGroup}><Plus size={17} />Add plan collection</button>
           </>}
           {section === 'seo' && <>
-            <div className="section-heading"><span>05 / SEO & URL</span><h2>Search appearance</h2><p>Control the public URL and search engine snippet.</p></div>
+            <div className="section-heading"><span>05 / SEO & URL</span><h2>Search appearance</h2><p>Control the public URL and search engine snippet</p></div>
             <div className="editor-form-grid"><Field label="Page slug" wide hint={`Public URL: /projects/${normalizedSlug(project.slug)}`}><div className="slug-input"><span>/projects/</span><input value={project.slug} onBlur={() => update('slug', normalizedSlug(project.slug))} onChange={(event) => update('slug', event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'))} /></div></Field><Field label="SEO title" wide hint={`${project.seoTitle.length}/60`}><input value={project.seoTitle} maxLength={60} onChange={(event) => update('seoTitle', event.target.value)} /></Field><Field label="SEO description" wide hint={`${project.seoDescription.length}/160`}><textarea rows={5} value={project.seoDescription} maxLength={160} onChange={(event) => update('seoDescription', event.target.value)} /></Field></div>
-            <div className="search-preview"><span>miracon.gr › projects › {project.slug}</span><h3>{project.seoTitle || `${project.title} — MIRACON`}</h3><p>{project.seoDescription || project.shortDescription || 'Add a description to preview the search result.'}</p></div>
+            <div className="search-preview"><span>miracon.gr › projects › {project.slug}</span><h3>{project.seoTitle || `${project.title} — MIRACON`}</h3><p>{project.seoDescription || project.shortDescription || 'Add a description to preview the search result'}</p></div>
           </>}
         </section>
       </div>
       {toast && <div className={`admin-toast ${toast.tone}`} role="status" aria-live="polite">{toast.tone === 'success' ? <Check size={17} /> : <CircleAlert size={17} />}{toast.message}</div>}
-      {confirmDelete && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title"><span><Trash2 size={20} /></span><h3 id="delete-title">Delete “{project.title}”?</h3><p>The project and its uploaded files will be permanently removed.</p><div><button className="secondary-button" onClick={() => setConfirmDelete(false)}>Cancel</button><button className="danger-button" onClick={removeProject}>Delete permanently</button></div></div></div>}
-      {confirmLeave && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="leave-title"><span><CircleAlert size={20} /></span><h3 id="leave-title">Discard unsaved changes?</h3><p>Your latest edits have not been saved and cannot be restored.</p><div><button className="secondary-button" onClick={() => setConfirmLeave(false)}>Continue editing</button><button className="danger-button" onClick={onBack}>Discard changes</button></div></div></div>}
-      {confirmStatus && <div className="modal-backdrop"><div className="confirm-modal status-confirm" role="dialog" aria-modal="true" aria-labelledby="status-title"><span><Check size={20} /></span><h3 id="status-title">{confirmStatus === 'published' ? 'Publish this project?' : 'Remove project from the website?'}</h3><p>{confirmStatus === 'published' ? 'The saved project will become visible to every website visitor.' : 'The project will remain in the desk as a draft and its public page will be unavailable.'}</p><div><button className="secondary-button" onClick={() => setConfirmStatus(null)}>Cancel</button><button className="primary-button" disabled={saving} onClick={async () => { if (await save(confirmStatus)) setConfirmStatus(null); }}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{confirmStatus === 'published' ? 'Publish project' : 'Unpublish'}</button></div></div></div>}
+      {confirmDelete && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title"><span><Trash2 size={20} /></span><h3 id="delete-title">Delete “{project.title}”?</h3><p>The project and its uploaded files will be permanently removed</p><div><button className="secondary-button" onClick={() => setConfirmDelete(false)}>Cancel</button><button className="danger-button" onClick={removeProject}>Delete permanently</button></div></div></div>}
+      {confirmLeave && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="leave-title"><span><CircleAlert size={20} /></span><h3 id="leave-title">Discard unsaved changes?</h3><p>Your latest edits have not been saved and cannot be restored</p><div><button className="secondary-button" onClick={() => setConfirmLeave(false)}>Continue editing</button><button className="danger-button" onClick={onBack}>Discard changes</button></div></div></div>}
+      {confirmStatus && <div className="modal-backdrop"><div className="confirm-modal status-confirm" role="dialog" aria-modal="true" aria-labelledby="status-title"><span><Check size={20} /></span><h3 id="status-title">{confirmStatus === 'published' ? 'Publish this project?' : 'Remove project from the website?'}</h3><p>{confirmStatus === 'published' ? 'The saved project will become visible to every website visitor' : 'The project will remain in the desk as a draft and its public page will be unavailable'}</p><div><button className="secondary-button" onClick={() => setConfirmStatus(null)}>Cancel</button><button className="primary-button" disabled={saving} onClick={async () => { if (await save(confirmStatus)) setConfirmStatus(null); }}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{confirmStatus === 'published' ? 'Publish project' : 'Unpublish'}</button></div></div></div>}
       {previewOpen && <div className="responsive-preview"><header><div><strong>Responsive preview</strong><span>Save changes to refresh database content</span></div><div className="preview-sizes"><button className={previewWidth === 1440 ? 'active' : ''} onClick={() => setPreviewWidth(1440)}>Desktop</button><button className={previewWidth === 768 ? 'active' : ''} onClick={() => setPreviewWidth(768)}>Tablet</button><button className={previewWidth === 390 ? 'active' : ''} onClick={() => setPreviewWidth(390)}>Mobile</button><button className={previewWidth === '100%' ? 'active' : ''} onClick={() => setPreviewWidth('100%')}>Full</button></div><button className="preview-close" onClick={() => setPreviewOpen(false)}><X size={19} /></button></header><div className="preview-stage"><iframe title={`${project.title} responsive preview`} src={`/preview/${project.slug}`} style={{ width: previewWidth === '100%' ? '100%' : `${previewWidth}px` }} /></div></div>}
     </main>
   );
@@ -1634,9 +1634,9 @@ export default function AdminApp() {
   }
 
   if (!ready) return <LoadingScreen />;
-  if (configurationMissing) return <main className="access-denied"><BrandLockup /><CircleAlert size={28} /><h1>Admin is not configured</h1><p>Set the public Supabase URL and key before deploying the project desk.</p></main>;
+  if (configurationMissing) return <main className="access-denied"><BrandLockup /><CircleAlert size={28} /><h1>Admin is not configured</h1><p>Set the public Supabase URL and key before deploying the project desk</p></main>;
   if (!authenticated) return <LoginScreen onLogin={login} error={loginError} loading={loginLoading} />;
-  if (!authorized) return <main className="access-denied"><BrandMark /><CircleAlert size={28} /><h1>Access not granted</h1><p>This account is authenticated but is not listed in <code>admin_users</code>.</p><button className="secondary-button" onClick={logout}><LogOut size={16} />Sign out</button></main>;
+  if (!authorized) return <main className="access-denied"><BrandMark /><CircleAlert size={28} /><h1>Access not granted</h1><p>This account is authenticated but is not listed in <code>admin_users</code></p><button className="secondary-button" onClick={logout}><LogOut size={16} />Sign out</button></main>;
 
   return (
     <div className="admin-app">
