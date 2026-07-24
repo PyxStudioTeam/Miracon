@@ -1,3 +1,9 @@
+---
+import { getSiteSettings } from '../lib/site-settings';
+
+const siteSettings = await getSiteSettings();
+---
+
 <footer class="footer">
   <div class="container footer-container">
     <div class="footer-top">
@@ -9,19 +15,20 @@
           ))}
         </div>
       </a>
-      <div class="footer-socials">
-        <a href="#" aria-label="LinkedIn"><img src="/img/links/Link → Img.svg" alt=""></a>
-        <a href="#" aria-label="Facebook"><img src="/img/links/Link → Img-1.svg" alt=""></a>
-        <a href="#" aria-label="Instagram"><img src="/img/links/Link → Img-2.svg" alt=""></a>
-      </div>
+      <nav class="footer-socials" aria-label="Contact links">
+        <a href="mailto:info@miracon.gr" aria-label="Email info@miracon.gr" title="info@miracon.gr"><img src="/img/contact_header/Group 37313 (1).svg" alt=""></a>
+        <a href="tel:+306955340416" aria-label="Call +30 695 534 0416" title="+30 695 534 0416"><img src="/img/contact_header/Vector (1).svg" alt=""></a>
+        <a href="https://wa.me/306955340416" target="_blank" rel="noreferrer" aria-label="WhatsApp +30 695 534 0416" title="WhatsApp"><img src="/img/footer-whatsapp.svg" alt=""></a>
+      </nav>
     </div>
     <div class="footer-bottom">
-      <div class="footer-links footer-contacts">
-        <a href="mailto:leads@miracon.gr">E-mail: leads@miracon.gr</a>
-        <a href="https://wa.me/306955340416" target="_blank" rel="noreferrer">WhatsApp +30 695 534 04 16</a>
-        <span>© 2026 Miracon Constructions, Thessaloniki, Greece</span>
+      <div class:list={['footer-links', { 'footer-links--empty': !siteSettings.footerTermsVisible && !siteSettings.footerPrivacyVisible && !siteSettings.footerCookieVisible }]}>
+        <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>Terms of Use</a>
+        <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>Privacy Policy</a>
+        <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>Cookie Policy</a>
       </div>
       <button class="lang-dropdown-btn"><span>English</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></button>
     </div>
+    <p class="footer-copyright">© 2026 Miracon Constructions, Thessaloniki, Greece</p>
   </div>
 </footer>

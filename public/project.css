@@ -1583,6 +1583,7 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   .project-page .consultation-form,
   .project-page .form-textarea,
   .project-page .form-consent,
+  .project-page .form-captcha,
   .project-page .btn-submit {
     position: static;
     width: 100%;
@@ -2391,6 +2392,13 @@ body.js-enabled .project-page .project-brochure-link {
     min-height: 0;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .project-page .form-captcha {
+    justify-self: center;
+    width: 303px;
+    min-height: 78px;
+    transform: none;
   }
 
   .project-page .btn-submit {

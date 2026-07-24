@@ -832,6 +832,7 @@
   .golden-visa-page .consultation-form,
   .golden-visa-page .form-textarea,
   .golden-visa-page .form-consent,
+  .golden-visa-page .form-captcha,
   .golden-visa-page .btn-submit {
     position: static;
   }
@@ -1125,6 +1126,13 @@
     font-size: 18px;
     line-height: 1.25;
     white-space: normal;
+  }
+
+  .golden-visa-page .form-captcha {
+    width: 303px;
+    min-height: 78px;
+    margin: 24px auto 0;
+    transform: none;
   }
 
   .golden-visa-page .btn-submit {

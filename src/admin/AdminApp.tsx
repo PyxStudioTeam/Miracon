@@ -62,9 +62,15 @@ import {
   type ProjectVideoItem,
 } from '../lib/project-types';
 import { getBrowserSupabaseClient } from '../lib/supabase-browser';
+import {
+  defaultSiteSettings,
+  isValidTermsPdfUrl,
+  mapSiteSettings,
+  type SiteSettings,
+} from '../lib/site-settings';
 
 type AdminSection = 'content' | 'specs' | 'media' | 'plans' | 'seo';
-type AdminView = 'projects' | 'home-hero';
+type AdminView = 'projects' | 'home-hero' | 'site-settings';
 type Toast = { tone: 'success' | 'error'; message: string } | null;
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -617,6 +623,130 @@ function HomeHeroManager({
       <section className="home-hero-help"><Film size={22} /><div><strong>Playback rules</strong><p>Desktop is required. Mobile is optional and automatically replaces desktop below 600 px. Only the current and next videos are loaded.</p></div></section>
 
       {videos.length ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorderVideos}><SortableContext items={videos.map((video) => video.id)} strategy={verticalListSortingStrategy}><section className="home-hero-list">{videos.map((video, index) => <SortableHomeHeroVideo key={video.id} video={video} index={index} projects={projects} uploading={uploading} onChange={(patch) => updateVideo(video.id, patch)} onRemove={() => setVideos((current) => current.filter((item) => item.id !== video.id).map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })))} onUpload={(kind, event) => uploadVideo(video.id, kind, event)} />)}</section></SortableContext></DndContext> : <section className="home-hero-empty"><Film size={30} /><h2>No hero videos</h2><p>Add a video to create the homepage playlist. Until then the built-in fallback remains visible.</p><button className="primary-button" onClick={() => setVideos([emptyHomeHeroVideo(0)])}><Plus size={18} />Add first video</button></section>}
+    </main>
+  );
+}
+
+type LegalVisibilityKey = 'footerTermsVisible' | 'footerPrivacyVisible' | 'footerCookieVisible';
+type LegalUrlKey = 'footerTermsPdfUrl' | 'footerPrivacyPdfUrl' | 'footerCookiePdfUrl';
+
+const legalDocumentFields: Array<{
+  label: string;
+  description: string;
+  visibilityKey: LegalVisibilityKey;
+  urlKey: LegalUrlKey;
+}> = [
+  { label: 'Terms of Use', description: 'User agreement PDF in the website footer', visibilityKey: 'footerTermsVisible', urlKey: 'footerTermsPdfUrl' },
+  { label: 'Privacy Policy', description: 'Privacy policy PDF in the website footer', visibilityKey: 'footerPrivacyVisible', urlKey: 'footerPrivacyPdfUrl' },
+  { label: 'Cookie Policy', description: 'Cookie policy PDF in the website footer', visibilityKey: 'footerCookieVisible', urlKey: 'footerCookiePdfUrl' },
+];
+
+function SiteSettingsManager({
+  initialSettings,
+  demo,
+  onSaved,
+  onToast,
+}: {
+  initialSettings: SiteSettings;
+  demo: boolean;
+  onSaved: (settings: SiteSettings) => void;
+  onToast: (toast: Toast) => void;
+}) {
+  const [settings, setSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
+  const [savedSettings, setSavedSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
+  const [saving, setSaving] = useState(false);
+  const supabase = getBrowserSupabaseClient();
+  const documents = legalDocumentFields.map((document) => {
+    const normalizedUrl = settings[document.urlKey].trim();
+    const validUrl = isValidTermsPdfUrl(normalizedUrl);
+    const visible = settings[document.visibilityKey];
+    return {
+      ...document,
+      normalizedUrl,
+      validUrl,
+      visible,
+      invalid: (Boolean(normalizedUrl) && !validUrl) || (visible && !validUrl),
+    };
+  });
+  const hasInvalidDocument = documents.some((document) => document.invalid);
+  const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings);
+
+  async function saveSettings() {
+    if (hasInvalidDocument) {
+      onToast({ tone: 'error', message: 'Add a valid HTTPS PDF link before showing a legal document' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const nextSettings: SiteSettings = {
+        ...settings,
+        footerTermsPdfUrl: settings.footerTermsPdfUrl.trim(),
+        footerPrivacyPdfUrl: settings.footerPrivacyPdfUrl.trim(),
+        footerCookiePdfUrl: settings.footerCookiePdfUrl.trim(),
+      };
+      if (!demo && supabase) {
+        const { data, error } = await supabase
+          .from('site_settings')
+          .update({
+            footer_terms_visible: nextSettings.footerTermsVisible,
+            footer_terms_pdf_url: nextSettings.footerTermsPdfUrl,
+            footer_privacy_visible: nextSettings.footerPrivacyVisible,
+            footer_privacy_pdf_url: nextSettings.footerPrivacyPdfUrl,
+            footer_cookie_visible: nextSettings.footerCookieVisible,
+            footer_cookie_pdf_url: nextSettings.footerCookiePdfUrl,
+          })
+          .eq('id', 1)
+          .select('footer_terms_visible, footer_terms_pdf_url, footer_privacy_visible, footer_privacy_pdf_url, footer_cookie_visible, footer_cookie_pdf_url')
+          .single();
+        if (error) throw error;
+        Object.assign(nextSettings, mapSiteSettings(data));
+      } else {
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+      }
+
+      setSettings(nextSettings);
+      setSavedSettings({ ...nextSettings });
+      onSaved(nextSettings);
+      const visibleCount = documents.filter((document) => nextSettings[document.visibilityKey]).length;
+      onToast({ tone: 'success', message: visibleCount ? `${visibleCount} legal ${visibleCount === 1 ? 'link is' : 'links are'} visible in the footer` : 'All legal links are hidden' });
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to save site settings' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <main className="admin-main site-settings-manager">
+      <header className="list-header">
+        <div><span className="eyebrow">Website / Legal documents</span><h1>Site settings</h1><p>Control optional legal links displayed in the public footer.</p></div>
+        <button className="primary-button" onClick={saveSettings} disabled={saving || !isDirty || hasInvalidDocument}>{saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Save settings</button>
+      </header>
+
+      <div className="site-settings-list">
+        {documents.map((document) => (
+          <section className="site-settings-card" key={document.urlKey}>
+            <header>
+              <span className="site-settings-icon"><FileText size={22} /></span>
+              <div><strong>{document.label}</strong><small>{document.description}</small></div>
+              <label className="home-hero-toggle site-settings-toggle"><input type="checkbox" checked={document.visible} onChange={(event) => setSettings((current) => ({ ...current, [document.visibilityKey]: event.target.checked }))} /><span></span>{document.visible ? 'Visible' : 'Hidden'}</label>
+            </header>
+            <label className="site-settings-url">
+              <span>PDF link</span>
+              <input type="url" value={settings[document.urlKey]} placeholder="https://example.com/document.pdf" aria-invalid={document.invalid} onChange={(event) => setSettings((current) => ({ ...current, [document.urlKey]: event.target.value }))} />
+              <small>Use a public HTTPS link. The saved URL is kept when the footer link is hidden.</small>
+            </label>
+            <div className={`site-settings-state ${document.invalid ? 'error' : ''}`}>
+              {document.invalid
+                ? <><CircleAlert size={17} /><span>A valid HTTPS PDF link is required before this document can be shown.</span></>
+                : document.validUrl
+                  ? <><Check size={17} /><span>PDF link is ready.</span><a href={document.normalizedUrl} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a></>
+                  : <><Eye size={17} /><span>This document is hidden by default.</span></>}
+            </div>
+          </section>
+        ))}
+      </div>
     </main>
   );
 }
@@ -1355,6 +1485,7 @@ export default function AdminApp() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>(demo ? structuredClone(seedProjects) : []);
   const [homeHeroVideos, setHomeHeroVideos] = useState<HomeHeroVideo[]>(demo ? structuredClone(fallbackHomeHeroVideos) : []);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>({ ...defaultSiteSettings });
   const [view, setView] = useState<AdminView>('projects');
   const [selected, setSelected] = useState<Project | null>(null);
   const [globalToast, setGlobalToast] = useState<Toast>(null);
@@ -1384,7 +1515,7 @@ export default function AdminApp() {
 
         setAuthenticated(true);
         setAuthorized(Boolean(membership));
-        if (membership) await Promise.all([loadProjects(), loadHomeHeroVideos()]);
+        if (membership) await Promise.all([loadProjects(), loadHomeHeroVideos(), loadSiteSettings()]);
       } catch (error) {
         if (!active) return;
         setAuthenticated(false);
@@ -1419,6 +1550,15 @@ export default function AdminApp() {
     else setHomeHeroVideos((data ?? []).map((row) => mapHomeHeroVideo(row)));
   }
 
+  async function loadSiteSettings() {
+    if (!supabase) return;
+    const { data, error } = await withTimeout(
+      supabase.from('site_settings').select('footer_terms_visible, footer_terms_pdf_url, footer_privacy_visible, footer_privacy_pdf_url, footer_cookie_visible, footer_cookie_pdf_url').eq('id', 1).maybeSingle(),
+    );
+    if (error) setGlobalToast({ tone: 'error', message: `Site settings: ${error.message}` });
+    else setSiteSettings(mapSiteSettings(data));
+  }
+
   async function login(email: string, password: string) {
     if (!supabase) return;
     setLoginLoading(true);
@@ -1435,7 +1575,7 @@ export default function AdminApp() {
       if (membershipError) throw membershipError;
       setAuthenticated(true);
       setAuthorized(Boolean(membership));
-      if (membership) await Promise.all([loadProjects(), loadHomeHeroVideos()]);
+      if (membership) await Promise.all([loadProjects(), loadHomeHeroVideos(), loadSiteSettings()]);
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Unable to connect to Supabase');
     } finally {
@@ -1450,6 +1590,7 @@ export default function AdminApp() {
     setAuthorized(false);
     setProjects([]);
     setHomeHeroVideos([]);
+    setSiteSettings({ ...defaultSiteSettings });
   }
 
   async function reorder(event: DragEndEvent) {
@@ -1499,13 +1640,15 @@ export default function AdminApp() {
 
   return (
     <div className="admin-app">
-      {!selected && <aside className="admin-rail"><BrandLockup /><nav><button className={view === 'projects' ? 'active' : ''} title="Projects" onClick={() => setView('projects')}><LayoutGrid size={19} /><span>Projects</span></button><button className={view === 'home-hero' ? 'active' : ''} title="Homepage hero" onClick={() => setView('home-hero')}><Film size={19} /><span>Home hero</span></button><a href="/" target="_blank" rel="noreferrer"><ExternalLink size={19} /><span>View website</span></a></nav><div><span className="rail-env">{demo ? 'LOCAL MODE' : 'LIVE WORKSPACE'}</span>{!demo && <button onClick={logout} title="Sign out"><LogOut size={18} /><span>Sign out</span></button>}</div></aside>}
+      {!selected && <aside className="admin-rail"><BrandLockup /><nav><button className={view === 'projects' ? 'active' : ''} title="Projects" onClick={() => setView('projects')}><LayoutGrid size={19} /><span>Projects</span></button><button className={view === 'home-hero' ? 'active' : ''} title="Homepage hero" onClick={() => setView('home-hero')}><Film size={19} /><span>Home hero</span></button><button className={view === 'site-settings' ? 'active' : ''} title="Site settings" onClick={() => setView('site-settings')}><FileText size={19} /><span>Site settings</span></button><a href="/" target="_blank" rel="noreferrer"><ExternalLink size={19} /><span>View website</span></a></nav><div><span className="rail-env">{demo ? 'LOCAL MODE' : 'LIVE WORKSPACE'}</span>{!demo && <button onClick={logout} title="Sign out"><LogOut size={18} /><span>Sign out</span></button>}</div></aside>}
       {demo && !selected && <div className="demo-banner">Local demo mode · connect Supabase to persist changes and upload media</div>}
       {selected
         ? <ProjectEditor initialProject={selected} onBack={() => setSelected(null)} onSaved={saveToState} onDeleted={deleteFromState} demo={demo} />
         : view === 'home-hero'
           ? <HomeHeroManager initialVideos={homeHeroVideos} projects={projects} demo={demo} onSaved={setHomeHeroVideos} onToast={setGlobalToast} />
-          : <ProjectList projects={projects} onOpen={setSelected} onCreate={() => setSelected(emptyProject(projects.length))} onReorder={reorder} onImport={importSeed} canImport={!demo && projects.length === 0} />}
+          : view === 'site-settings'
+            ? <SiteSettingsManager initialSettings={siteSettings} demo={demo} onSaved={setSiteSettings} onToast={setGlobalToast} />
+            : <ProjectList projects={projects} onOpen={setSelected} onCreate={() => setSelected(emptyProject(projects.length))} onReorder={reorder} onImport={importSeed} canImport={!demo && projects.length === 0} />}
       {globalToast && <div className={`admin-toast ${globalToast.tone}`} role="status" aria-live="polite">{globalToast.tone === 'success' ? <Check size={17} /> : <CircleAlert size={17} />}{globalToast.message}</div>}
     </div>
   );

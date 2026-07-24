@@ -1538,9 +1538,10 @@
   .form-captcha {
     position: absolute;
     top: 392px;
-    left: 0;
+    left: 50%;
     width: 303px;
     min-height: 78px;
+    transform: translateX(-50%);
   }
 
   .btn-submit {
@@ -1660,7 +1661,8 @@
     transform: none;
   }
 
-  .footer-links a {
+  .footer-links a,
+  .footer-copyright {
     font-size: 10.9px;
     line-height: 10.461px;
   }
@@ -1694,8 +1696,8 @@
 
 @media (max-width: 360px) {
   .form-captcha {
-    transform: scale(.88);
-    transform-origin: left top;
+    transform: translateX(-50%) scale(.88);
+    transform-origin: center top;
   }
 }
 
@@ -1776,17 +1778,6 @@
 
   .footer-socials {
     gap: 12px;
-  }
-
-  .footer-contacts {
-    display: grid;
-    gap: 9px;
-  }
-
-  .footer-contacts a,
-  .footer-contacts span {
-    font-size: 12px;
-    line-height: 1.3;
   }
 
   .lang-dropdown-btn {
