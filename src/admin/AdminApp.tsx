@@ -633,12 +633,13 @@ type LegalUrlKey = 'footerTermsPdfUrl' | 'footerPrivacyPdfUrl' | 'footerCookiePd
 const legalDocumentFields: Array<{
   label: string;
   description: string;
+  storageDirectory: string;
   visibilityKey: LegalVisibilityKey;
   urlKey: LegalUrlKey;
 }> = [
-  { label: 'Terms of Use', description: 'User agreement PDF in the website footer', visibilityKey: 'footerTermsVisible', urlKey: 'footerTermsPdfUrl' },
-  { label: 'Privacy Policy', description: 'Privacy policy PDF in the website footer', visibilityKey: 'footerPrivacyVisible', urlKey: 'footerPrivacyPdfUrl' },
-  { label: 'Cookie Policy', description: 'Cookie policy PDF in the website footer', visibilityKey: 'footerCookieVisible', urlKey: 'footerCookiePdfUrl' },
+  { label: 'Terms of Use', description: 'User agreement PDF in the website footer', storageDirectory: 'terms-of-use', visibilityKey: 'footerTermsVisible', urlKey: 'footerTermsPdfUrl' },
+  { label: 'Privacy Policy', description: 'Privacy policy PDF in the website footer', storageDirectory: 'privacy-policy', visibilityKey: 'footerPrivacyVisible', urlKey: 'footerPrivacyPdfUrl' },
+  { label: 'Cookie Policy', description: 'Cookie policy PDF in the website footer', storageDirectory: 'cookie-policy', visibilityKey: 'footerCookieVisible', urlKey: 'footerCookiePdfUrl' },
 ];
 
 function SiteSettingsManager({
@@ -655,6 +656,7 @@ function SiteSettingsManager({
   const [settings, setSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
   const [savedSettings, setSavedSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
   const [saving, setSaving] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState<LegalUrlKey | null>(null);
   const supabase = getBrowserSupabaseClient();
   const documents = legalDocumentFields.map((document) => {
     const normalizedUrl = settings[document.urlKey].trim();
@@ -671,9 +673,60 @@ function SiteSettingsManager({
   const hasInvalidDocument = documents.some((document) => document.invalid);
   const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings);
 
+  async function uploadLegalDocument(document: typeof documents[number], event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      onToast({ tone: 'error', message: 'Legal documents must be PDF files' });
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      onToast({ tone: 'error', message: 'PDF document must be smaller than 25 MB' });
+      return;
+    }
+
+    setUploadingDocument(document.urlKey);
+    let uploadedPath = '';
+    try {
+      let publicUrl: string;
+      if (demo || !supabase) {
+        publicUrl = `https://demo.miracon.local/${document.storageDirectory}/${encodeURIComponent(file.name)}`;
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+      } else {
+        const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '') || 'document.pdf';
+        uploadedPath = `legal-documents/${document.storageDirectory}/${crypto.randomUUID()}-${safeName}`;
+        const { error } = await supabase.storage.from('project-documents').upload(uploadedPath, file, {
+          upsert: false,
+          cacheControl: '31536000',
+          contentType: 'application/pdf',
+        });
+        if (error) throw error;
+        publicUrl = supabase.storage.from('project-documents').getPublicUrl(uploadedPath).data.publicUrl;
+        if (mediaWorkerEnabled) {
+          await registerPublicMediaAsset(supabase, {
+            bucketId: 'project-documents',
+            objectPath: uploadedPath,
+            publicUrl,
+            mimeType: 'application/pdf',
+            sizeBytes: file.size,
+          });
+        }
+      }
+
+      setSettings((current) => ({ ...current, [document.urlKey]: publicUrl }));
+      onToast({ tone: 'success', message: `${document.label} PDF uploaded, save settings to apply it` });
+    } catch (error) {
+      if (uploadedPath && supabase) await supabase.storage.from('project-documents').remove([uploadedPath]);
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload PDF document' });
+    } finally {
+      setUploadingDocument(null);
+    }
+  }
+
   async function saveSettings() {
     if (hasInvalidDocument) {
-      onToast({ tone: 'error', message: 'Add a valid HTTPS PDF link before showing a legal document' });
+      onToast({ tone: 'error', message: 'Upload a PDF before showing a legal document' });
       return;
     }
 
@@ -721,7 +774,7 @@ function SiteSettingsManager({
     <main className="admin-main site-settings-manager">
       <header className="list-header">
         <div><span className="eyebrow">Website / Legal documents</span><h1>Site settings</h1><p>Control optional legal links displayed in the public footer</p></div>
-        <button className="primary-button" onClick={saveSettings} disabled={saving || !isDirty || hasInvalidDocument}>{saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Save settings</button>
+        <button className="primary-button" onClick={saveSettings} disabled={saving || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument}>{saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Save settings</button>
       </header>
 
       <div className="site-settings-list">
@@ -732,16 +785,18 @@ function SiteSettingsManager({
               <div><strong>{document.label}</strong><small>{document.description}</small></div>
               <label className="home-hero-toggle site-settings-toggle"><input type="checkbox" checked={document.visible} onChange={(event) => setSettings((current) => ({ ...current, [document.visibilityKey]: event.target.checked }))} /><span></span>{document.visible ? 'Visible' : 'Hidden'}</label>
             </header>
-            <label className="site-settings-url">
-              <span>PDF link</span>
-              <input type="url" value={settings[document.urlKey]} placeholder="https://example.com/document.pdf" aria-invalid={document.invalid} onChange={(event) => setSettings((current) => ({ ...current, [document.urlKey]: event.target.value }))} />
-              <small>Use a public HTTPS link. The saved URL is kept when the footer link is hidden</small>
-            </label>
+            <div className="site-settings-document">
+              <div><strong>{document.validUrl ? 'PDF uploaded' : 'No PDF uploaded'}</strong><small>Choose a PDF file up to 25 MB from your computer</small></div>
+              <div className="site-settings-document-actions">
+                {document.validUrl && <a href={document.normalizedUrl} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a>}
+                <label><input type="file" accept="application/pdf,.pdf" onChange={(event) => uploadLegalDocument(document, event)} />{uploadingDocument === document.urlKey ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{document.validUrl ? 'Replace PDF' : 'Upload PDF'}</label>
+              </div>
+            </div>
             <div className={`site-settings-state ${document.invalid ? 'error' : ''}`}>
               {document.invalid
-                ? <><CircleAlert size={17} /><span>A valid HTTPS PDF link is required before this document can be shown</span></>
+                ? <><CircleAlert size={17} /><span>Upload a PDF before this document can be shown</span></>
                 : document.validUrl
-                  ? <><Check size={17} /><span>PDF link is ready</span><a href={document.normalizedUrl} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a></>
+                  ? <><Check size={17} /><span>PDF is ready to use</span></>
                   : <><Eye size={17} /><span>This document is hidden by default</span></>}
             </div>
           </section>

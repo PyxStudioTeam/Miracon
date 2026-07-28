@@ -491,12 +491,15 @@ button:disabled { cursor: wait; opacity: .55; }
 .site-settings-card > header > div { display: grid; gap: 4px; }
 .site-settings-card > header strong { font-family: Georgia, serif; font-size: 21px; font-weight: 400; }
 .site-settings-card > header small { color: var(--admin-muted); font-size: 10px; }
-.site-settings-url { display: grid; padding: 26px 24px 22px; gap: 9px; }
-.site-settings-url > span { color: #4e5a63; font: 10px 'DM Mono', monospace; letter-spacing: .05em; text-transform: uppercase; }
-.site-settings-url input { width: 100%; height: 52px; padding: 0 15px; border: 1px solid #d8d3ca; border-radius: 10px; outline: 0; background: white; color: var(--admin-navy); box-shadow: 0 5px 16px rgba(5,42,80,.025); }
-.site-settings-url input:focus { border-color: var(--admin-gold); box-shadow: 0 0 0 2px rgba(182,134,61,.08); }
-.site-settings-url input[aria-invalid="true"] { border-color: var(--admin-red); }
-.site-settings-url small { color: var(--admin-muted); font-size: 10px; line-height: 1.5; }
+.site-settings-document { display: flex; min-height: 104px; padding: 24px; align-items: center; justify-content: space-between; gap: 20px; }
+.site-settings-document > div:first-child { display: grid; gap: 6px; }
+.site-settings-document strong { font-family: Georgia, serif; font-size: 18px; font-weight: 400; }
+.site-settings-document small { color: var(--admin-muted); font-size: 10px; line-height: 1.5; }
+.site-settings-document-actions { display: flex; align-items: center; gap: 9px; }
+.site-settings-document-actions a,
+.site-settings-document-actions label { display: inline-flex; min-height: 40px; padding: 0 13px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--admin-line); border-radius: 9px; background: white; color: var(--admin-navy); cursor: pointer; font-size: 10px; font-weight: 700; }
+.site-settings-document-actions label { background: var(--admin-navy); color: white; }
+.site-settings-document-actions input { display: none; }
 .site-settings-state { display: flex; min-height: 54px; padding: 14px 24px; align-items: center; gap: 9px; border-top: 1px solid rgba(8,47,93,.08); background: rgba(244,241,234,.72); color: var(--admin-green); font-size: 11px; }
 .site-settings-state.error { color: var(--admin-red); }
 .site-settings-state a { display: inline-flex; margin-left: auto; align-items: center; gap: 5px; color: var(--admin-navy); font-weight: 700; }
@@ -507,7 +510,8 @@ button:disabled { cursor: wait; opacity: .55; }
   .site-settings-list { margin-top: 28px; }
   .site-settings-card > header { grid-template-columns: 42px minmax(0, 1fr); }
   .site-settings-toggle { grid-column: 2; justify-self: start; }
-  .site-settings-url { padding-inline: 16px; }
+  .site-settings-document { padding-inline: 16px; align-items: stretch; flex-direction: column; }
+  .site-settings-document-actions { align-items: stretch; flex-direction: column; }
   .site-settings-state { padding-inline: 16px; flex-wrap: wrap; }
   .site-settings-state a { width: 100%; margin: 4px 0 0 26px; }
 }
