@@ -30,9 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       function loadSlot(video, item, preload = 'metadata') {
         const nextUrl = videoUrl(item);
-        if (!nextUrl || video.dataset.playlistSrc === nextUrl) return;
-        video.pause();
+        if (!nextUrl) return;
+        video.autoplay = false;
+        const preloadChanged = video.preload !== preload;
         video.preload = preload;
+        if (video.dataset.playlistSrc === nextUrl) {
+          if (preloadChanged && preload === 'auto') video.load();
+          return;
+        }
+        video.pause();
         video.src = nextUrl;
         video.dataset.playlistSrc = nextUrl;
         video.load();
@@ -64,15 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const playPromise = incomingVideo.play();
         Promise.resolve(playPromise).then(() => {
           failedAdvances = 0;
+          outgoingVideo.pause();
           incomingVideo.classList.add('is-active');
           outgoingVideo.classList.remove('is-active');
 
           window.setTimeout(() => {
-            outgoingVideo.pause();
             activeSlotIndex = incomingSlotIndex;
             currentIndex = nextIndex;
             switching = false;
             primeNextSlot();
+            outgoingVideo.pause();
           }, 680);
         }).catch(() => {
           switching = false;
@@ -105,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const initialVideo = homeHeroVideoSlots[activeSlotIndex];
+      initialVideo.autoplay = false;
       initialVideo.dataset.playlistSrc = initialVideo.currentSrc || videoUrl(playlist[0]);
       initialVideo.loop = playlist.length === 1;
       initialVideo.muted = true;
@@ -135,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const progress = Math.min(Math.max(-rect.top / heroDistance, 0), 1);
 
       if (!prefersReducedMotion) {
-        heroPin.style.setProperty('--hero-video-scale', (1.035 - progress * 0.025).toFixed(4));
         heroPin.style.setProperty('--hero-content-y', `${Math.round(progress * -92)}px`);
         heroPin.style.setProperty('--hero-content-opacity', Math.max(1 - progress * 0.72, 0.28).toFixed(3));
       }
@@ -201,9 +208,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadSlot(video, item, preload = 'metadata') {
       const nextUrl = videoUrl(item);
-      if (!nextUrl || video.dataset.playlistSrc === nextUrl) return;
-      video.pause();
+      if (!nextUrl) return;
+      video.autoplay = false;
+      video.loop = playlist.length === 1;
+      const preloadChanged = video.preload !== preload;
       video.preload = preload;
+      if (video.dataset.playlistSrc === nextUrl) {
+        if (preloadChanged && preload === 'auto') video.load();
+        return;
+      }
+      video.pause();
       video.poster = item.posterUrl || '';
       video.src = nextUrl;
       video.dataset.playlistSrc = nextUrl;
@@ -246,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const standby = slots[1 - activeSlotIndex];
       standby.loop = false;
       standby.muted = true;
-      loadSlot(standby, playlist[nextIndex], 'metadata');
+      loadSlot(standby, playlist[nextIndex], 'auto');
     }
 
     function resumeActive() {
@@ -281,6 +295,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       Promise.resolve(incoming.play()).then(() => {
         if (token !== operation) return;
+        outgoing.pause();
+        incoming.muted = !soundOn;
         incoming.classList.add('is-incoming');
         window.setTimeout(() => {
           if (token !== operation) return;
@@ -351,6 +367,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       video.addEventListener('ended', () => {
         if (video !== activeVideo()) return;
+        if (playlist.length === 1) {
+          video.currentTime = 0;
+          resumeActive();
+          return;
+        }
         if (reducedMotion.matches) {
           advanceReducedPlaylist();
         } else {
@@ -377,6 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const initialVideo = activeVideo();
+    initialVideo.autoplay = false;
     initialVideo.dataset.playlistSrc = initialVideo.currentSrc || videoUrl(playlist[0]);
     initialVideo.loop = playlist.length === 1;
     initialVideo.muted = true;
@@ -450,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (projectHeroDeck) {
-    projectHeroController = createProjectVideoDeck(projectHeroDeck, { onSoundChange: syncHeroSoundButton });
+    projectHeroController = createProjectVideoDeck(projectHeroDeck, { lazy: true, onSoundChange: syncHeroSoundButton });
   }
 
   if (projectHero && projectHeroDeck) {
@@ -458,13 +480,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const shouldIdleUi = projectHero.dataset.idleUi === 'true';
     let heroIdleTimeout;
 
+    function showHeroUi() {
+      projectHero.classList.remove('is-hero-idle');
+      document.body.classList.remove('is-project-hero-idle');
+      window.clearTimeout(heroIdleTimeout);
+    }
+
     function setHeroIdle() {
-      if (shouldIdleUi) projectHero.classList.add('is-hero-idle');
+      if (!shouldIdleUi) return;
+      const activeVideo = projectHeroDeck.querySelector('.project-video-slot.is-active');
+      if (!(activeVideo instanceof HTMLVideoElement) || activeVideo.paused || activeVideo.ended || activeVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || document.hidden) {
+        showHeroUi();
+        return;
+      }
+      if (pageHeader?.contains(document.activeElement) || document.querySelector('.mobile-nav.active')) {
+        heroIdleTimeout = window.setTimeout(setHeroIdle, heroIdleDelay);
+        return;
+      }
+      projectHero.classList.add('is-hero-idle');
+      document.body.classList.add('is-project-hero-idle');
     }
 
     function wakeHero() {
-      projectHero.classList.remove('is-hero-idle');
-      window.clearTimeout(heroIdleTimeout);
+      showHeroUi();
       heroIdleTimeout = window.setTimeout(setHeroIdle, heroIdleDelay);
     }
 
@@ -473,6 +511,17 @@ document.addEventListener('DOMContentLoaded', () => {
       projectHero.addEventListener('pointermove', wakeHero);
       projectHero.addEventListener('focusin', wakeHero);
       projectHero.addEventListener('touchstart', wakeHero, { passive: true });
+      pageHeader?.addEventListener('pointerenter', wakeHero);
+      pageHeader?.addEventListener('pointermove', wakeHero);
+      pageHeader?.addEventListener('focusin', wakeHero);
+      pageHeader?.addEventListener('touchstart', wakeHero, { passive: true });
+      document.addEventListener('keydown', wakeHero);
+      projectHeroDeck.querySelectorAll('.project-video-slot').forEach((video) => {
+        video.addEventListener('playing', wakeHero);
+        video.addEventListener('waiting', showHeroUi);
+        video.addEventListener('stalled', showHeroUi);
+        video.addEventListener('error', showHeroUi);
+      });
       projectHero.addEventListener('pointerleave', () => {
         window.clearTimeout(heroIdleTimeout);
         heroIdleTimeout = window.setTimeout(setHeroIdle, heroIdleDelay);

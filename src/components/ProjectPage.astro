@@ -71,6 +71,8 @@ const optimizedHeroPosterUrl = heroVideoPlaylist[0]?.posterUrl || project.heroPo
 const showWalkthroughVideo = project.walkthroughVideoEnabled && walkthroughVideoPlaylist.length > 0;
 const walkthroughVideoTitle = project.walkthroughVideoTitle.trim() || 'Virtual walkthrough';
 const showHeroVideo = project.heroType === 'video' && heroVideoPlaylist.length > 0;
+const heroVariant = showHeroVideo ? 'immersive' : project.heroVariant;
+const hideHeroUiOnIdle = showHeroVideo;
 const heroPreloadUrl = showHeroVideo
   ? optimizedHeroPosterUrl
   : heroImageSources.avif || heroImageSources.webp || heroImageUrl;
@@ -133,15 +135,15 @@ const projectStructuredData = {
   <link rel="stylesheet" href="/project.css">
   <link rel="stylesheet" href="/inner-mobile.css">
 </head>
-<body class:list={['project-page', `project-page--${project.heroVariant}`, { 'project-page--idle-hero': project.heroIdleUi && project.heroVariant === 'immersive' }]}>
+<body class:list={['project-page', `project-page--${heroVariant}`, { 'project-page--idle-hero': hideHeroUiOnIdle }]}>
   {preview && <div class="project-preview-banner">Draft preview <span>Only visible to the administrator</span></div>}
   <SiteHeader projectCategory={primaryCategory} />
   <main>
     <section
-      class:list={['project-hero', `project-hero--${project.heroVariant}`]}
+      class:list={['project-hero', `project-hero--${heroVariant}`]}
       aria-labelledby="project-title"
       data-project-hero
-      data-idle-ui={String(project.heroIdleUi && project.heroVariant === 'immersive')}
+      data-idle-ui={String(hideHeroUiOnIdle)}
       style={`--hero-focus-x: ${project.heroFocalX}%; --hero-focus-y: ${project.heroFocalY}%;`}
     >
       {showHeroVideo ? (

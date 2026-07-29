@@ -166,6 +166,17 @@ body.js-enabled .project-page .project-hero-image {
   animation: project-hero-image-in 14s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
+.project-hero-video,
+body.js-enabled .project-page .project-hero-video {
+  transform: none;
+  animation: none;
+}
+
+.project-hero-video .project-video-slot {
+  object-fit: cover;
+  object-position: var(--hero-focus-x, 50%) var(--hero-focus-y, 50%);
+}
+
 .project-hero-content {
   position: absolute;
   z-index: 1;
@@ -1912,8 +1923,9 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
 }
 
 .project-hero--immersive {
-  height: max(953px, 100svh);
-  min-height: 953px;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
 }
 
 .project-hero-image,
@@ -2027,6 +2039,19 @@ body.js-enabled .project-page .project-brochure-link {
 .project-page--idle-hero .project-hero-content,
 .project-page--idle-hero .project-hero-sound-button {
   transition: opacity 0.32s ease, visibility 0.32s ease;
+}
+
+.project-page--idle-hero .header {
+  visibility: visible;
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0s linear 0s;
+}
+
+.project-page--idle-hero.is-project-hero-idle .header {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-24px);
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0s linear 0.32s;
 }
 
 .project-page--idle-hero .project-hero.is-hero-idle .project-hero-content {

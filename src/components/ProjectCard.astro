@@ -40,7 +40,7 @@ const cardDescription = project.shortDescription.replace(/\.+\s*$/, '');
     </div>
     <div class="project-bottom">
       <div class="project-price">{project.price}</div>
-      <a href={`/projects/${project.slug}`} class="learn-more">Learn more <span></span></a>
+      <a href={`/projects/${project.slug}`} class="learn-more" aria-label={`View ${project.title}`}>Learn more <span></span></a>
     </div>
   </div>
   <div class="project-gallery">

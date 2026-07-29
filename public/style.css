@@ -559,8 +559,8 @@ main>section+section {
 .hero-pin {
   position: relative;
   z-index: 1;
-  height: max(953px, 100vh);
-  --hero-video-scale: 1.035;
+  height: 100vh;
+  height: 100dvh;
   --hero-content-y: 0px;
   --hero-content-opacity: 1;
   --hero-scroll-opacity: 1;
@@ -580,7 +580,8 @@ main>section+section {
   left: 0;
   z-index: 0;
   width: 100%;
-  height: max(953px, 100vh);
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   color: var(--white);
   opacity: var(--hero-layer-opacity);
@@ -606,10 +607,8 @@ main>section+section {
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transform: scale(var(--hero-video-scale));
-  transform-origin: center;
   transition: opacity 0.65s ease;
-  will-change: transform, opacity;
+  will-change: opacity;
 }
 
 .hero-video.is-active {
@@ -4628,6 +4627,19 @@ body.js-enabled .about-reveal.visible {
 /* Content-driven cards and footer replace the fixed Figma scene geometry. */
 .project-card {
   height: auto;
+}
+
+@media (max-width: 760px) {
+  .project-card {
+    position: relative;
+  }
+
+  .project-card .learn-more::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+  }
 }
 
 .project-gallery,

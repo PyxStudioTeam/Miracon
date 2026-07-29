@@ -121,11 +121,19 @@ function emptyProjectVideo(): ProjectVideoItem {
   return { id: crypto.randomUUID(), desktopUrl: '', mobileUrl: null, posterUrl: null };
 }
 
+function pauseOtherAdminVideos(event: SyntheticEvent<HTMLVideoElement>) {
+  document.querySelectorAll<HTMLVideoElement>('.admin-app video').forEach((video) => {
+    if (video !== event.currentTarget) video.pause();
+  });
+}
+
 function syncLegacyVideoFields(project: Project): Project {
   const firstHero = project.heroVideos[0];
   const firstWalkthrough = project.walkthroughVideos[0];
   return {
     ...project,
+    heroVariant: project.heroType === 'video' ? 'immersive' : project.heroVariant,
+    heroIdleUi: project.heroType === 'video',
     ...(project.heroType === 'video' ? {
       heroUrl: firstHero?.desktopUrl ?? '',
       heroMobileUrl: firstHero?.mobileUrl ?? null,
@@ -453,7 +461,7 @@ function SortableHomeHeroVideo({
 
       <div className="home-hero-card-body">
         <div className="home-hero-preview">
-          {video.desktopUrl ? <video src={video.desktopUrl} muted playsInline controls preload="metadata" /> : <div><Film size={28} /><span>Upload a desktop video</span></div>}
+          {video.desktopUrl ? <video key={video.desktopUrl} src={video.desktopUrl} muted loop playsInline controls preload="metadata" onPlay={pauseOtherAdminVideos} /> : <div><Film size={28} /><span>Upload a desktop video</span></div>}
         </div>
 
         <div className="home-hero-fields">
@@ -894,7 +902,7 @@ function SortableProjectVideo({
       <header><button type="button" className="project-video-drag" {...attributes} {...listeners}><GripVertical size={17} /></button><span>{String(index + 1).padStart(2, '0')}</span><strong>Video {index + 1}</strong><button type="button" className="project-video-remove" onClick={onRemove}><Trash2 size={16} /></button></header>
       <div className="project-video-card-body">
         <div className="project-video-preview">
-          {video.desktopUrl ? <video key={video.desktopUrl} src={video.desktopUrl} poster={video.posterUrl ?? undefined} autoPlay muted loop playsInline preload="metadata" /> : <div><Film size={28} /><span>Upload desktop MP4</span></div>}
+          {video.desktopUrl ? <video key={video.desktopUrl} src={video.desktopUrl} poster={video.posterUrl ?? undefined} muted loop playsInline controls preload="metadata" onPlay={pauseOtherAdminVideos} /> : <div><Film size={28} /><span>Upload desktop MP4</span></div>}
         </div>
         <div className="project-video-assets">
           {assets.map(({ field, label, hint, accept }) => {
@@ -981,10 +989,10 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
   function setHeroMediaType(heroType: Project['heroType']) {
     setProject((current) => {
       if (heroType === 'video') {
-        return { ...current, heroType, heroVideos: current.heroVideos.length ? current.heroVideos : [emptyProjectVideo()] };
+        return { ...current, heroType, heroVariant: 'immersive', heroIdleUi: true, heroVideos: current.heroVideos.length ? current.heroVideos : [emptyProjectVideo()] };
       }
       const heroUrl = current.heroUrl.toLowerCase().includes('.mp4') ? current.coverUrl : current.heroUrl;
-      return { ...current, heroType, heroUrl, heroMobileUrl: null, heroSoundEnabled: false, heroIdleUi: false };
+      return { ...current, heroType, heroVariant: 'standard', heroUrl, heroMobileUrl: null, heroSoundEnabled: false, heroIdleUi: false };
     });
   }
 
@@ -1173,6 +1181,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
         }
         if (field === 'heroUrl') {
           next.heroType = 'image';
+          next.heroVariant = 'standard';
           next.heroMobileUrl = null;
           next.heroSoundEnabled = false;
           next.heroIdleUi = false;
@@ -1481,11 +1490,10 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
           {section === 'media' && <>
             <div className="section-heading"><span>03 / Media</span><h2>Visual materials</h2><p>Cover, page imagery, gallery, walkthrough and brochure</p></div>
             <div className="hero-presentation-panel">
-              <div className="presentation-heading"><div><span>Hero presentation</span><strong>{project.heroVariant === 'immersive' ? 'Immersive viewport' : 'Standard editorial'}</strong></div><div className="presentation-switch"><button type="button" className={project.heroVariant === 'standard' ? 'active' : ''} onClick={() => setProject((current) => ({ ...current, heroVariant: 'standard', heroIdleUi: false }))}>Standard</button><button type="button" className={project.heroVariant === 'immersive' ? 'active' : ''} onClick={() => update('heroVariant', 'immersive')}>Immersive</button></div></div>
+              <div className="presentation-heading"><div><span>Hero presentation</span><strong>{project.heroType === 'video' || project.heroVariant === 'immersive' ? 'Immersive viewport' : 'Standard editorial'}</strong></div><div className="presentation-switch">{project.heroType !== 'video' && <button type="button" className={project.heroVariant === 'standard' ? 'active' : ''} onClick={() => setProject((current) => ({ ...current, heroVariant: 'standard', heroIdleUi: false }))}>Standard</button>}<button type="button" className={project.heroType === 'video' || project.heroVariant === 'immersive' ? 'active' : ''} onClick={() => update('heroVariant', 'immersive')}>Immersive</button></div></div>
               <div className="hero-media-mode"><span>Hero media</span><div className="presentation-switch"><button type="button" className={project.heroType === 'image' ? 'active' : ''} onClick={() => setHeroMediaType('image')}>Image</button><button type="button" className={project.heroType === 'video' ? 'active' : ''} onClick={() => setHeroMediaType('video')}>Video playlist</button></div></div>
               <div className="presentation-options">
                 <label className={project.heroType !== 'video' ? 'disabled' : ''}><input type="checkbox" checked={project.heroSoundEnabled} disabled={project.heroType !== 'video'} onChange={(event) => update('heroSoundEnabled', event.target.checked)} /><span></span><div><strong>Sound control</strong><small>Allow visitors to enable video sound</small></div></label>
-                <label className={project.heroType !== 'video' || project.heroVariant !== 'immersive' ? 'disabled' : ''}><input type="checkbox" checked={project.heroIdleUi} disabled={project.heroType !== 'video' || project.heroVariant !== 'immersive'} onChange={(event) => update('heroIdleUi', event.target.checked)} /><span></span><div><strong>Hide idle interface</strong><small>Let the video take over after inactivity</small></div></label>
               </div>
             </div>
             <div className="media-slots">
