@@ -290,6 +290,7 @@
   .project-price {
     position: static;
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
     width: auto;
     height: auto;
@@ -298,6 +299,7 @@
     font-size: 22px;
     font-weight: 500;
     line-height: 21.343px;
+    white-space: nowrap;
   }
 
   .learn-more {
