@@ -1,15 +1,24 @@
 ---
+import { getLocale, getMessages, localizePath, oppositeLocale, type SiteLocale } from '../lib/i18n';
+
 interface Props {
   projectCategory?: string;
+  locale?: SiteLocale;
 }
 
-const { projectCategory } = Astro.props;
-const projectsHref = projectCategory ? `/?filter=${projectCategory}#projects` : '/#projects';
+const { projectCategory, locale = getLocale(Astro.originPathname) } = Astro.props;
+const m = getMessages(locale);
+const projectsHref = localizePath(projectCategory ? `/?filter=${projectCategory}#projects` : '/#projects', locale);
+const homeHref = localizePath('/', locale);
+const goldenVisaHref = localizePath('/golden-visa', locale);
+const aboutHref = localizePath('/#about', locale);
+const contactsHref = localizePath(`${Astro.originPathname}#contacts`, locale);
+const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 ---
 
 <header class="header">
   <div class="header-container">
-    <a href="/" class="logo" aria-label="MIRACON home">
+    <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
       <img src="/img/logo_mark.svg" alt="" class="logo-img">
       <div class="logo-letters" aria-hidden="true">
         {['M', 'I', 'R', 'A', 'C', 'O', 'N'].map((letter) => (
@@ -18,24 +27,24 @@ const projectsHref = projectCategory ? `/?filter=${projectCategory}#projects` : 
       </div>
     </a>
 
-    <nav class="nav-menu glass-gradient" aria-label="Main navigation">
-      <a href={projectsHref} class="nav-link">Projects</a>
-      <a href="/golden-visa" class="nav-link">Golden Visa</a>
-      <a href="/#about" class="nav-link">About us</a>
-      <a href="#contacts" class="nav-link">Contacts</a>
+    <nav class="nav-menu glass-gradient" aria-label={m['common.mainNavigation']}>
+      <a href={projectsHref} class="nav-link">{m['common.projects']}</a>
+      <a href={goldenVisaHref} class="nav-link">{m['common.goldenVisa']}</a>
+      <a href={aboutHref} class="nav-link">{m['common.aboutUs']}</a>
+      <a href={contactsHref} class="nav-link">{m['common.contacts']}</a>
     </nav>
 
     <div class="header-actions">
-      <div class="lang-selector glass-gradient"><span class="lang-current">EN</span></div>
+      <a class="lang-selector glass-gradient" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span class="lang-current">{m['common.languageCode']}</span></a>
       <div class="contact-menu">
-        <a href="#contacts" class="contact-btn" aria-haspopup="true">
+        <a href={contactsHref} class="contact-btn" aria-haspopup="true">
           <span class="contact-btn-icon"></span>
-          <span>Contact</span>
+          <span>{m['common.contact']}</span>
           <span class="contact-btn-arrow" aria-hidden="true">
             <img src="/img/contact_header/Vector 12.svg" alt="">
           </span>
         </a>
-        <div class="contact-dropdown" aria-label="Quick contact links">
+        <div class="contact-dropdown" aria-label={m['common.quickContacts']}>
           <a href="tel:+306955340416" class="contact-dropdown-link contact-dropdown-link--phone">
             <span class="contact-dropdown-text">+306955340416</span>
             <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Vector (1).svg" alt=""></span>
@@ -49,29 +58,29 @@ const projectsHref = projectCategory ? `/?filter=${projectCategory}#projects` : 
             class="contact-dropdown-link contact-dropdown-link--geo"
             target="_blank"
             rel="noreferrer"
-            aria-label="Open Egnatia 84, 54623 Thessaloniki, Greece in Google Maps"
+            aria-label={m['common.openAddress']}
           >
-            <span class="contact-dropdown-text">Egnatia 84, 54623 Thessaloniki, Greece</span>
+            <span class="contact-dropdown-text">{m['common.address']}</span>
             <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Vector (2).svg" alt=""></span>
           </a>
         </div>
       </div>
     </div>
 
-    <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Open menu" aria-controls="mobileNav" aria-expanded="false">
+    <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label={m['common.openMenu']} aria-controls="mobileNav" aria-expanded="false">
       <span aria-hidden="true"></span>
     </button>
-    <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
-      <a href={projectsHref} class="mobile-nav-link">Projects</a>
-      <a href="/golden-visa" class="mobile-nav-link">Golden Visa</a>
-      <a href="/#about" class="mobile-nav-link">About us</a>
+    <nav class="mobile-nav" id="mobileNav" aria-label={m['common.mobileNavigation']}>
+      <a href={projectsHref} class="mobile-nav-link">{m['common.projects']}</a>
+      <a href={goldenVisaHref} class="mobile-nav-link">{m['common.goldenVisa']}</a>
+      <a href={aboutHref} class="mobile-nav-link">{m['common.aboutUs']}</a>
       <button class="mobile-nav-contact" type="button" aria-expanded="false" aria-controls="mobileContactDetails">
-        <span>Contacts</span><span aria-hidden="true">+</span>
+        <span>{m['common.contacts']}</span><span aria-hidden="true">+</span>
       </button>
       <div class="mobile-nav-contacts" id="mobileContactDetails">
         <a href="tel:+306955340416">+30 695 534 0416</a>
         <a href="mailto:info@miracon.gr">info@miracon.gr</a>
-        <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">Egnatia 84, Thessaloniki</a>
+        <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">{m['common.addressShort']}</a>
       </div>
     </nav>
   </div>

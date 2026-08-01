@@ -1,7 +1,8 @@
 ---
 import type { Project } from '../lib/project-types';
+import { formatMessage, getMessages, type SiteLocale } from '../lib/i18n';
 import { getImageVariantSet, getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
-import { absoluteSiteUrl } from '../lib/seo';
+import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
 import ContactSection from './ContactSection.astro';
 import OptimizedImage from './OptimizedImage.astro';
 import SeoHead from './SeoHead.astro';
@@ -11,9 +12,11 @@ import SiteHeader from './SiteHeader.astro';
 interface Props {
   project: Project;
   preview?: boolean;
+  locale?: SiteLocale;
 }
 
-const { project, preview = false } = Astro.props;
+const { project, preview = false, locale = 'en' } = Astro.props;
+const m = getMessages(locale);
 const iconUrls = {
   bed: '/img/olympus-detail/icons/spec-bed.svg',
   bath: '/img/olympus-detail/icons/spec-bath.svg',
@@ -50,7 +53,7 @@ const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(project.mapQu
 const mapHref = project.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(project.mapQuery || project.address)}`;
 const primaryCategory = project.categories[0] ?? 'coastal';
 const publicPath = `/projects/${encodeURIComponent(project.slug)}`;
-const publicUrl = absoluteSiteUrl(publicPath, Astro.url);
+const publicUrl = absoluteLocalizedUrl(publicPath, locale, Astro.url);
 const heroImageUrl = project.heroUrl || project.coverUrl;
 const heroImageVariants = getImageVariantSet(project.imageVariants, heroImageUrl);
 const heroImageSources = getOptimizedImageSources(heroImageUrl, heroImageVariants);
@@ -69,7 +72,7 @@ const heroVideoPlaylist = resolveVideoPlaylist(project.heroVideos);
 const walkthroughVideoPlaylist = resolveVideoPlaylist(project.walkthroughVideos);
 const optimizedHeroPosterUrl = heroVideoPlaylist[0]?.posterUrl || project.heroPosterUrl || project.coverUrl;
 const showWalkthroughVideo = project.walkthroughVideoEnabled && walkthroughVideoPlaylist.length > 0;
-const walkthroughVideoTitle = project.walkthroughVideoTitle.trim() || 'Virtual walkthrough';
+const walkthroughVideoTitle = project.walkthroughVideoTitle.trim() || m['project.walkthrough'];
 const showHeroVideo = project.heroType === 'video' && heroVideoPlaylist.length > 0;
 const heroVariant = showHeroVideo ? 'immersive' : project.heroVariant;
 const hideHeroUiOnIdle = showHeroVideo;
@@ -95,13 +98,13 @@ const projectStructuredData = {
       description: project.seoDescription,
       image: absoluteSiteUrl(project.coverUrl, Astro.url),
       dateModified: project.updatedAt,
-      inLanguage: 'en',
+      inLanguage: locale,
     },
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteSiteUrl('/', Astro.url) },
-        { '@type': 'ListItem', position: 2, name: 'Projects', item: absoluteSiteUrl('/#projects', Astro.url) },
+        { '@type': 'ListItem', position: 1, name: m['common.home'], item: absoluteLocalizedUrl('/', locale, Astro.url) },
+        { '@type': 'ListItem', position: 2, name: m['common.projects'], item: absoluteLocalizedUrl('/#projects', locale, Astro.url) },
         { '@type': 'ListItem', position: 3, name: project.title, item: publicUrl },
       ],
     },
@@ -110,14 +113,14 @@ const projectStructuredData = {
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 <head>
   <meta charset="UTF-8">
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
-    title={preview ? `[Preview] ${project.seoTitle}` : project.seoTitle}
+    title={preview ? `${m['project.previewPrefix']} ${project.seoTitle}` : project.seoTitle}
     description={project.seoDescription}
     path={publicPath}
     image={project.coverUrl}
@@ -125,6 +128,7 @@ const projectStructuredData = {
     type="article"
     noindex={preview}
     jsonLd={preview ? undefined : projectStructuredData}
+    locale={locale}
   />
   {heroPreloadUrl && <link rel="preload" as="image" href={heroPreloadUrl} type={heroPreloadType} imagesrcset={heroPreloadSrcset ?? undefined} imagesizes={heroPreloadSrcset ? '100vw' : undefined} fetchpriority="high">}
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -136,8 +140,8 @@ const projectStructuredData = {
   <link rel="stylesheet" href="/inner-mobile.css">
 </head>
 <body class:list={['project-page', `project-page--${heroVariant}`, { 'project-page--idle-hero': hideHeroUiOnIdle }]}>
-  {preview && <div class="project-preview-banner">Draft preview <span>Only visible to the administrator</span></div>}
-  <SiteHeader projectCategory={primaryCategory} />
+  {preview && <div class="project-preview-banner">{m['project.preview']} <span>{m['project.previewOnly']}</span></div>}
+  <SiteHeader projectCategory={primaryCategory} locale={locale} />
   <main>
     <section
       class:list={['project-hero', `project-hero--${heroVariant}`]}
@@ -157,11 +161,11 @@ const projectStructuredData = {
       ) : (
         <OptimizedImage src={heroImageUrl} alt={project.title} variants={heroImageVariants} sizes="100vw" class="project-hero-image" fetchpriority="high" loading="eager" decoding="async" />
       )}
-      {showHeroVideo && <button class="project-video-reduced-play" type="button" data-video-control-for="hero" aria-label="Play hero video">Play video</button>}
+      {showHeroVideo && <button class="project-video-reduced-play" type="button" data-video-control-for="hero" aria-label={m['project.playHero']}>{m['project.playVideo']}</button>}
       {showHeroVideo && project.heroSoundEnabled && (
-        <button class="project-hero-sound-button" type="button" aria-label="Enable video sound" aria-pressed="false">
+        <button class="project-hero-sound-button" type="button" aria-label={m['project.enableSound']} aria-pressed="false">
           <img class="project-hero-sound-icon" src="/img/kriopigi-detail/sound.svg" alt="" aria-hidden="true">
-          <span class="project-hero-sound-text">Sound</span>
+          <span class="project-hero-sound-text">{m['project.sound']}</span>
         </button>
       )}
       <div class="container project-hero-content">
@@ -178,7 +182,7 @@ const projectStructuredData = {
                 <img src="/img/olympus-detail/icons/hero-brochure-2.svg" alt="" class="project-brochure-icon-part project-brochure-icon-part--chevron">
                 <img src="/img/olympus-detail/icons/hero-brochure-3.svg" alt="" class="project-brochure-icon-part project-brochure-icon-part--stem">
               </span>
-              <span>Brochure</span>
+              <span>{m['project.brochure']}</span>
             </a>
           )}
         </div>
@@ -189,11 +193,11 @@ const projectStructuredData = {
       <div class="container project-intro-grid">
         <div class="project-intro-media">
           <h2 id="project-intro-title" class="project-section-title">{project.introTitle}</h2>
-          <OptimizedImage src={project.introImageUrl || project.coverUrl} alt={`${project.title} interior`} variants={getImageVariantSet(project.imageVariants, project.introImageUrl || project.coverUrl)} sizes="(max-width: 900px) calc(100vw - 48px), (max-width: 1450px) 51vw, 1002px" class="project-intro-image" loading="lazy" decoding="async" />
+          <OptimizedImage src={project.introImageUrl || project.coverUrl} alt={formatMessage(m['project.interiorAlt'], { title: project.title })} variants={getImageVariantSet(project.imageVariants, project.introImageUrl || project.coverUrl)} sizes="(max-width: 900px) calc(100vw - 48px), (max-width: 1450px) 51vw, 1002px" class="project-intro-image" loading="lazy" decoding="async" />
         </div>
         <div class="project-intro-copy">
           {project.characteristics.length > 0 && (
-            <div class="project-specs" aria-label="Project specifications">
+            <div class="project-specs" aria-label={m['project.specifications']}>
               {project.characteristics.map((item) => (
                 <div class="project-spec">
                   <img src={iconUrls[item.icon]} alt="" class="project-spec-icon" aria-hidden="true">
@@ -211,8 +215,8 @@ const projectStructuredData = {
       <section class="project-amenities" aria-labelledby="project-amenities-title">
         <div class="container project-amenities-grid">
           <div class="project-amenities-heading">
-            <h2 id="project-amenities-title" class="project-section-title">Amenities</h2>
-            <p>Every residence designed for comfort, views, and lasting quality</p>
+            <h2 id="project-amenities-title" class="project-section-title">{m['project.amenities']}</h2>
+            <p>{m['project.amenitiesText']}</p>
           </div>
           <div class="project-amenities-list">
             {project.benefits.map((benefit) => (
@@ -227,7 +231,7 @@ const projectStructuredData = {
     )}
 
     {gallery.length > 0 && (
-      <section id="project-gallery" class="project-gallery-strip" aria-label={`${project.title} gallery`}>
+      <section id="project-gallery" class="project-gallery-strip" aria-label={formatMessage(m['project.gallery'], { title: project.title })}>
         <div class="project-gallery-track">
           {galleryMedia.slice(0, 4).map(({ image, src, srcset, fallbackSrc }, index) => (
             <img
@@ -258,14 +262,14 @@ const projectStructuredData = {
           ))}
         </div>
         {gallerySource.length > 1 && (
-          <div class="project-gallery-controls" role="group" aria-label="Gallery navigation">
-            <button class="project-gallery-arrow project-gallery-arrow--previous" type="button" aria-label="Previous image"><span aria-hidden="true">←</span></button>
-            <button class="project-gallery-arrow project-gallery-arrow--next" type="button" aria-label="Next image"><span aria-hidden="true">→</span></button>
+          <div class="project-gallery-controls" role="group" aria-label={m['project.galleryNavigation']}>
+            <button class="project-gallery-arrow project-gallery-arrow--previous" type="button" aria-label={m['project.previousImage']}><span aria-hidden="true">←</span></button>
+            <button class="project-gallery-arrow project-gallery-arrow--next" type="button" aria-label={m['project.nextImage']}><span aria-hidden="true">→</span></button>
           </div>
         )}
         {project.brochureUrl && (
           <a href={project.brochureUrl} class="project-floating-brochure" target="_blank" rel="noreferrer">
-            <img src="/img/olympus-detail/icons/brochure-circle.svg" alt="" class="project-floating-icon" aria-hidden="true"><span>Brochure</span>
+            <img src="/img/olympus-detail/icons/brochure-circle.svg" alt="" class="project-floating-icon" aria-hidden="true"><span>{m['project.brochure']}</span>
           </a>
         )}
       </section>
@@ -281,7 +285,7 @@ const projectStructuredData = {
               <source src={walkthroughVideoPlaylist[0].desktopUrl} type="video/mp4">
             </video>
             <video class="project-video-slot" muted playsinline preload="none"></video>
-            <button class="project-video-reduced-play" type="button" aria-label="Play walkthrough video">Play video</button>
+            <button class="project-video-reduced-play" type="button" aria-label={m['project.playWalkthrough']}>{m['project.playVideo']}</button>
           </div>
         </div>
       </section>
@@ -290,9 +294,9 @@ const projectStructuredData = {
     {project.floorPlanGroups.length > 0 && (
       <section class="project-floor-plans" aria-labelledby="project-floor-title">
         <div class="container">
-          <h2 id="project-floor-title" class="project-section-title">Floor plans</h2>
-          <p class="project-section-subtitle">Modern living, perfectly designed</p>
-          <div class="project-plan-tabs" aria-label="Floor plan types">
+          <h2 id="project-floor-title" class="project-section-title">{m['project.floorPlans']}</h2>
+          <p class="project-section-subtitle">{m['project.floorPlansText']}</p>
+          <div class="project-plan-tabs" aria-label={m['project.floorPlanTypes']}>
             {project.floorPlanGroups.map((group, index) => (
               <button class:list={['project-plan-tab', { active: index === 0 }]} type="button" data-plan-filter={group.id}><span data-label={group.title}>{group.title}</span></button>
             ))}
@@ -308,10 +312,10 @@ const projectStructuredData = {
       </section>
     )}
 
-    <section class="project-location-section" aria-label={`${project.title} location`} data-map-src={mapSrc}>
-      <div class="project-location-map-shell"><iframe class="project-location-map" title={`Map showing ${project.address}`} loading="lazy" referrerpolicy="no-referrer-when-downgrade" aria-hidden="true"></iframe></div>
+    <section class="project-location-section" aria-label={formatMessage(m['project.location'], { title: project.title })} data-map-src={mapSrc}>
+      <div class="project-location-map-shell"><iframe class="project-location-map" title={formatMessage(m['project.mapShowing'], { address: project.address })} loading="lazy" referrerpolicy="no-referrer-when-downgrade" aria-hidden="true"></iframe></div>
       {project.nearbyPlaces.length > 0 && (
-        <div class="project-location-marquee" aria-label="Nearby places">
+        <div class="project-location-marquee" aria-label={m['project.nearby']}>
           <div class="project-location-track">
             <div class="project-location-set">{project.nearbyPlaces.map((place) => <span>{place}</span>)}</div>
             <div class="project-location-set" aria-hidden="true">{project.nearbyPlaces.map((place) => <span>{place}</span>)}</div>
@@ -320,9 +324,9 @@ const projectStructuredData = {
       )}
     </section>
 
-    <ContactSection />
+    <ContactSection locale={locale} />
   </main>
-  <SiteFooter />
+  <SiteFooter locale={locale} />
   <script is:inline src="https://web3forms.com/client/script.js" async defer></script>
   <script is:inline src="/site.js"></script>
 </body>

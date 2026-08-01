@@ -68,6 +68,29 @@ export interface FloorPlanGroup {
   plans: FloorPlan[];
 }
 
+export interface ProjectLocaleTranslation {
+  title?: string;
+  address?: string;
+  cardAddress?: string;
+  price?: string;
+  shortDescription?: string;
+  fullDescription?: string;
+  introTitle?: string;
+  walkthroughVideoTitle?: string;
+  nearbyPlaces?: string[];
+  seoTitle?: string;
+  seoDescription?: string;
+  characteristics?: Record<string, { label?: string; value?: string }>;
+  benefits?: Record<string, { title?: string }>;
+  floorPlanGroups?: Record<string, { title?: string; plans?: Record<string, { title?: string; alt?: string }> }>;
+  imageAlts?: Record<string, string>;
+}
+
+export interface ProjectTranslations {
+  [locale: string]: ProjectLocaleTranslation | undefined;
+  el?: ProjectLocaleTranslation;
+}
+
 export interface Project {
   id: string;
   slug: string;
@@ -113,6 +136,7 @@ export interface Project {
   nearbyPlaces: string[];
   seoTitle: string;
   seoDescription: string;
+  translations?: ProjectTranslations;
   updatedAt: string;
 }
 

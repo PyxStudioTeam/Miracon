@@ -339,18 +339,14 @@ begin
       when p_project ? 'hero_videos' then excluded.hero_videos
       when p_project ? 'hero_url' then
         case
-          when excluded.hero_type = 'video' then
-            case
-              when nullif(excluded.hero_url, '') is not null
-              then jsonb_build_array(jsonb_build_object(
-                'id', coalesce(projects.hero_videos->0->>'id', projects.id || '-hero-1'),
-                'desktopUrl', excluded.hero_url,
-                'mobileUrl', excluded.hero_mobile_url,
-                'posterUrl', excluded.hero_poster_url
-              )) || (projects.hero_videos - 0)
-              else '[]'::jsonb
-            end
-          else projects.hero_videos
+          when excluded.hero_type = 'video' and nullif(excluded.hero_url, '') is not null
+          then jsonb_build_array(jsonb_build_object(
+            'id', projects.id || '-hero-1',
+            'desktopUrl', excluded.hero_url,
+            'mobileUrl', excluded.hero_mobile_url,
+            'posterUrl', excluded.hero_poster_url
+          ))
+          else '[]'::jsonb
         end
       else projects.hero_videos
     end,
@@ -390,11 +386,11 @@ begin
         case
           when nullif(excluded.walkthrough_video_desktop_url, '') is not null
           then jsonb_build_array(jsonb_build_object(
-            'id', coalesce(projects.walkthrough_videos->0->>'id', projects.id || '-walkthrough-1'),
+            'id', projects.id || '-walkthrough-1',
             'desktopUrl', excluded.walkthrough_video_desktop_url,
             'mobileUrl', excluded.walkthrough_video_mobile_url,
             'posterUrl', excluded.walkthrough_video_poster_url
-          )) || (projects.walkthrough_videos - 0)
+          ))
           else '[]'::jsonb
         end
       else projects.walkthrough_videos

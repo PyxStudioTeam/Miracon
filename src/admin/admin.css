@@ -840,6 +840,65 @@ button:disabled { cursor: wait; opacity: .55; }
 .focal-editor button { border-radius: 9px; }
 .plan-group-editor { padding: 20px; box-shadow: 0 10px 28px rgba(5,42,80,.04); }
 
+.editor-locale-toolbar {
+  margin: -30px 0 42px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid rgba(7,52,102,.1);
+  border-radius: 14px;
+  background: rgba(255,255,255,.65);
+  box-shadow: 0 8px 24px rgba(5,42,80,.035);
+}
+.editor-locale-toolbar > div:first-child { display: grid; gap: 4px; }
+.editor-locale-toolbar strong { color: var(--admin-navy); font: 600 11px 'DM Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }
+.editor-locale-toolbar span { color: var(--admin-muted); font-size: 11px; }
+.editor-locale-toolbar .presentation-switch { flex: 0 0 auto; }
+.editor-locale-toolbar .presentation-switch button { min-width: 58px; }
+.translation-list { margin-top: 32px; }
+.translation-pair,
+.translation-structured-row {
+  padding: 13px 0;
+  display: grid;
+  grid-template-columns: minmax(180px, .8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid rgba(7,52,102,.09);
+}
+.translation-pair:last-child,
+.translation-structured-row:last-child { border-bottom: 0; }
+.translation-pair > span,
+.translation-structured-row > span,
+.translation-source span,
+.translation-plan-row span { color: var(--admin-muted); font-size: 11px; }
+.translation-pair input,
+.translation-structured-row input,
+.translation-plan-groups input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 13px;
+  border: 1px solid #d8d3ca;
+  border-radius: 10px;
+  background: white;
+  color: var(--admin-navy);
+}
+.translation-structured-row { grid-template-columns: minmax(150px, .7fr) minmax(0, 1fr) minmax(0, 1fr); }
+.translation-benefit > span { display: flex; align-items: center; gap: 10px; color: var(--admin-navy); }
+.translation-benefit img { width: 34px; height: 34px; object-fit: contain; }
+.translation-image-alts { margin-top: 34px; }
+.translation-image-alts .media-card-meta input { height: auto; padding: 0; border: 0; border-radius: 0; box-shadow: none; }
+.translation-plan-groups .plan-group-editor > input { margin: 12px 0 18px; }
+.translation-source { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.translation-source strong { font-family: Georgia, serif; font-size: 20px; font-weight: 400; }
+.translation-plan-row { padding: 12px 0; display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 14px; border-top: 1px solid rgba(7,52,102,.09); }
+.translation-plan-row > img { width: 70px; height: 70px; border-radius: 8px; object-fit: cover; }
+.translation-plan-row > svg { width: 70px; height: 70px; padding: 22px; border-radius: 8px; background: #ece9e2; }
+.translation-plan-row > div { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 8px; }
+.translation-plan-row > div > span { grid-column: 1 / -1; }
+
 .admin-toast { border-radius: 12px; font-size: 12px; }
 .confirm-modal { border-radius: 20px; box-shadow: 0 30px 90px rgba(0,0,0,.28); }
 .status-confirm > span { background: #dfece5; color: var(--admin-green); }
@@ -963,6 +1022,8 @@ button:disabled { cursor: wait; opacity: .55; }
   .editor-nav > button svg { display: none; }
   .editor-nav .delete-project { display: flex; color: var(--admin-red) !important; }
   .editor-canvas { padding: 36px 16px 84px; }
+  .editor-locale-toolbar { margin: -14px 0 28px; align-items: stretch; flex-direction: column; }
+  .editor-locale-toolbar .presentation-switch { width: 100%; }
   .section-heading { margin-bottom: 30px; }
   .section-heading h2 { font-size: 36px; }
   .editor-form-grid { grid-template-columns: 1fr; gap: 20px; }
@@ -998,6 +1059,10 @@ button:disabled { cursor: wait; opacity: .55; }
   .plan-group-editor { padding: 14px; }
   .plan-row { grid-template-columns: 42px 1fr 28px; }
   .plan-upload { grid-column: 2; width: 100%; }
+  .translation-pair,
+  .translation-structured-row { grid-template-columns: 1fr; gap: 7px; }
+  .translation-plan-row > div { grid-template-columns: 1fr; }
+  .translation-plan-row > div > span { grid-column: auto; }
   .slug-input span { display: none; }
   .slug-input input { padding-left: 13px; }
   .admin-toast { right: 12px; bottom: 12px; left: 12px; max-width: none; }

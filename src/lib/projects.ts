@@ -1,5 +1,6 @@
 import { seedProjects } from '../data/projects';
-import type { ImageVariantSet, Project, ProjectImage, ProjectImageVariantManifest, ProjectVideoItem } from './project-types';
+import type { SiteLocale } from './i18n';
+import type { ImageVariantSet, Project, ProjectImage, ProjectImageVariantManifest, ProjectLocaleTranslation, ProjectTranslations, ProjectVideoItem } from './project-types';
 import { createPublicSupabaseClient } from './supabase';
 
 type ProjectRow = Record<string, unknown> & {
@@ -102,12 +103,79 @@ function mergeLegacyVideo(
   return videos.length ? [first, ...videos.slice(1)] : [first];
 }
 
+function mapTranslations(value: unknown): ProjectTranslations {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+  const translations: ProjectTranslations = {};
+  for (const [locale, translation] of Object.entries(value)) {
+    if (!translation || typeof translation !== 'object' || Array.isArray(translation)) continue;
+    translations[locale] = translation as ProjectLocaleTranslation;
+  }
+  return translations;
+}
+
+function translated(value: string | undefined, fallback: string): string {
+  return value?.trim() ? value : fallback;
+}
+
+export function localizeProject(project: Project, locale: SiteLocale): Project {
+  const translation = locale === 'el' ? project.translations?.el : undefined;
+  if (!translation) return project;
+
+  const localizeImages = (images: ProjectImage[]) => images.map((image) => ({
+    ...image,
+    alt: translated(translation.imageAlts?.[image.id], image.alt),
+  }));
+
+  return {
+    ...project,
+    title: translated(translation.title, project.title),
+    address: translated(translation.address, project.address),
+    cardAddress: translated(translation.cardAddress, project.cardAddress),
+    price: translated(translation.price, project.price),
+    shortDescription: translated(translation.shortDescription, project.shortDescription),
+    fullDescription: translated(translation.fullDescription, project.fullDescription),
+    introTitle: translated(translation.introTitle, project.introTitle),
+    walkthroughVideoTitle: translated(translation.walkthroughVideoTitle, project.walkthroughVideoTitle),
+    cardImages: localizeImages(project.cardImages),
+    gallery: localizeImages(project.gallery),
+    characteristics: project.characteristics.map((item) => ({
+      ...item,
+      label: translated(translation.characteristics?.[item.id]?.label, item.label),
+      value: translated(translation.characteristics?.[item.id]?.value, item.value),
+    })),
+    benefits: project.benefits.map((item) => ({
+      ...item,
+      title: translated(translation.benefits?.[item.id]?.title, item.title),
+    })),
+    floorPlanGroups: project.floorPlanGroups.map((group) => ({
+      ...group,
+      title: translated(translation.floorPlanGroups?.[group.id]?.title, group.title),
+      plans: group.plans.map((plan) => ({
+        ...plan,
+        title: translated(translation.floorPlanGroups?.[group.id]?.plans?.[plan.id]?.title, plan.title),
+        alt: translated(translation.floorPlanGroups?.[group.id]?.plans?.[plan.id]?.alt, plan.alt),
+      })),
+    })),
+    nearbyPlaces: project.nearbyPlaces.map((place, index) => translated(translation.nearbyPlaces?.[index], place)),
+    seoTitle: translated(translation.seoTitle, project.seoTitle),
+    seoDescription: translated(translation.seoDescription, project.seoDescription),
+  };
+}
+
 export function mapProjectRow(row: ProjectRow): Project {
   const images = (row.project_images ?? []).map(mapImage).sort((a, b) => a.sortOrder - b.sortOrder);
   const rowBenefits = Array.isArray(row.benefits) ? row.benefits : [];
   const isLegacyKriopigi = String(row.slug) === 'kriopigi-villas' && row.hero_variant === undefined;
+  const canonicalArtemisBenefitIds = new Set(artemisBenefits.map((benefit) => benefit.id));
+  const rowArtemisBenefitIds = new Set(rowBenefits.map((benefit) => {
+    if (!benefit || typeof benefit !== 'object' || Array.isArray(benefit)) return '';
+    return String((benefit as Record<string, unknown>).id ?? '');
+  }));
   const hasIncorrectArtemisData = String(row.slug) === 'artemis-residences'
-    && rowBenefits.some((benefit) => String((benefit as Record<string, unknown>).title ?? '').includes('9-storey'));
+    && (rowBenefits.length !== canonicalArtemisBenefitIds.size
+      || rowArtemisBenefitIds.size !== canonicalArtemisBenefitIds.size
+      || [...canonicalArtemisBenefitIds].some((id) => !rowArtemisBenefitIds.has(id)));
   const projectId = String(row.id);
   const legacyHeroUrl = String(row.hero_url ?? '').replace(
     '/img/kriopigi-detail/hero-video-optimized.mp4',
@@ -181,6 +249,7 @@ export function mapProjectRow(row: ProjectRow): Project {
     nearbyPlaces: (row.nearby_places ?? []) as string[],
     seoTitle: String(row.seo_title ?? row.title),
     seoDescription: String(row.seo_description ?? row.short_description ?? ''),
+    translations: mapTranslations(row.translations),
     updatedAt: String(row.updated_at ?? new Date().toISOString()),
   };
 }

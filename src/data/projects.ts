@@ -1,4 +1,5 @@
 import type { Project, ProjectBenefit, ProjectCharacteristic } from '../lib/project-types';
+import { greekProjectTranslations } from './project-translations.el';
 
 const updatedAt = '2026-07-22T00:00:00.000Z';
 
@@ -20,7 +21,7 @@ const defaultBenefits: ProjectBenefit[] = [
   { id: 'finish', title: 'Premium finishes', icon: '/img/olympus-detail/icons/amenity-finish.svg' },
 ];
 
-export const seedProjects: Project[] = [
+const seedProjectDefinitions: Project[] = [
   {
     id: 'kriopigi-villas',
     slug: 'kriopigi-villas',
@@ -350,3 +351,19 @@ export const seedProjects: Project[] = [
     updatedAt,
   },
 ];
+
+export const seedProjects: Project[] = seedProjectDefinitions.map((project) => {
+  const greekTranslation = greekProjectTranslations[project.slug];
+
+  if (!greekTranslation) {
+    throw new Error(`Missing Greek seed translation for project: ${project.slug}`);
+  }
+
+  return {
+    ...project,
+    translations: {
+      ...project.translations,
+      el: greekTranslation,
+    },
+  };
+});

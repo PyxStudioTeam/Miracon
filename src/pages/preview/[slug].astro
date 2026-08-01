@@ -1,11 +1,13 @@
 ---
 import ProjectPage from '../../components/ProjectPage.astro';
 import { seedProjects } from '../../data/projects';
-import { mapProjectRow } from '../../lib/projects';
+import { getLocale } from '../../lib/i18n';
+import { localizeProject, mapProjectRow } from '../../lib/projects';
 import type { Project } from '../../lib/project-types';
 import { createAstroSupabaseClient } from '../../lib/supabase-server';
 
 const slug = Astro.params.slug ?? '';
+const locale = getLocale(Astro.originPathname);
 const supabase = createAstroSupabaseClient(Astro.cookies, Astro.request);
 let project: Project | null = null;
 
@@ -45,4 +47,4 @@ if (!project) {
 Astro.response.headers.set('Cache-Control', 'private, no-store');
 ---
 
-<ProjectPage project={project} preview />
+<ProjectPage project={localizeProject(project, locale)} locale={locale} preview />

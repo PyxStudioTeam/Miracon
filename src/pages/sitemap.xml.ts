@@ -1,24 +1,33 @@
 import type { APIRoute } from 'astro';
 import { getPublishedProjects } from '../lib/projects';
-import { absoluteSiteUrl, escapeXml } from '../lib/seo';
+import { absoluteLocalizedUrl, escapeXml } from '../lib/seo';
 
 export const GET: APIRoute = async ({ url }) => {
   const projects = await getPublishedProjects();
-  const entries: Array<{ loc: string; lastmod?: string }> = [
-    { loc: absoluteSiteUrl('/', url) },
-    { loc: absoluteSiteUrl('/golden-visa', url) },
+  const routes: Array<{ path: string; lastmod?: string }> = [
+    { path: '/' },
+    { path: '/golden-visa' },
     ...projects.map((project) => ({
-      loc: absoluteSiteUrl(`/projects/${encodeURIComponent(project.slug)}`, url),
+      path: `/projects/${encodeURIComponent(project.slug)}`,
       lastmod: Number.isNaN(Date.parse(project.updatedAt)) ? undefined : new Date(project.updatedAt).toISOString(),
     })),
   ];
+  const entries = routes.flatMap(({ path, lastmod }) => {
+    const en = absoluteLocalizedUrl(path, 'en', url);
+    const el = absoluteLocalizedUrl(path, 'el', url);
+    const alternates = { en, el, default: en };
+    return [{ loc: en, lastmod, alternates }, { loc: el, lastmod, alternates }];
+  });
 
   const body = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...entries.map(({ loc, lastmod }) => [
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+    ...entries.map(({ loc, lastmod, alternates }) => [
       '  <url>',
       `    <loc>${escapeXml(loc)}</loc>`,
+      `    <xhtml:link rel="alternate" hreflang="en" href="${escapeXml(alternates.en)}" />`,
+      `    <xhtml:link rel="alternate" hreflang="el" href="${escapeXml(alternates.el)}" />`,
+      `    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(alternates.default)}" />`,
       ...(lastmod ? [`    <lastmod>${escapeXml(lastmod)}</lastmod>`] : []),
       '  </url>',
     ].join('\n')),

@@ -3,15 +3,19 @@ import ProjectCard from '../components/ProjectCard.astro';
 import OptimizedImage from '../components/OptimizedImage.astro';
 import SeoHead from '../components/SeoHead.astro';
 import { getHomeHeroVideos } from '../lib/home-hero';
-import { getPublishedProjects } from '../lib/projects';
-import { absoluteSiteUrl } from '../lib/seo';
+import { getLocale, getMessages, localizePath, oppositeLocale } from '../lib/i18n';
+import { getPublishedProjects, localizeProject } from '../lib/projects';
+import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
 import { getSiteSettings } from '../lib/site-settings';
 
-const [projects, homeHeroVideos, siteSettings] = await Promise.all([
+const locale = getLocale(Astro.originPathname);
+const m = getMessages(locale);
+const [sourceProjects, homeHeroVideos, siteSettings] = await Promise.all([
   getPublishedProjects(),
   getHomeHeroVideos(),
   getSiteSettings(),
 ]);
+const projects = sourceProjects.map((project) => localizeProject(project, locale));
 const firstHomeHeroVideo = homeHeroVideos[0];
 Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
@@ -20,7 +24,13 @@ const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
   desktopUrl: video.desktopUrl,
   mobileUrl: video.mobileUrl,
 })));
-const homeUrl = absoluteSiteUrl('/', Astro.url);
+const homeUrl = absoluteLocalizedUrl('/', locale, Astro.url);
+const homeHref = localizePath('/', locale);
+const projectsHref = localizePath('/#projects', locale);
+const aboutHref = localizePath('/#about', locale);
+const contactsHref = localizePath('/#contacts', locale);
+const goldenVisaHref = localizePath('/golden-visa', locale);
+const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 const homeStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -29,7 +39,7 @@ const homeStructuredData = {
       '@id': `${homeUrl}#website`,
       url: homeUrl,
       name: 'MIRACON',
-      inLanguage: 'en',
+      inLanguage: locale,
     },
     {
       '@type': 'Organization',
@@ -56,7 +66,7 @@ const homeStructuredData = {
 };
 ---
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 
 <head>
   <meta charset="UTF-8">
@@ -64,12 +74,13 @@ const homeStructuredData = {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
-    title="MIRACON — Premium Residences in Greece"
-    description="Premium residences and prime locations in Thessaloniki and Halkidiki. Direct Greek developer with full legal support."
+    title={m['home.seoTitle']}
+    description={m['home.seoDescription']}
     path="/"
     image="/img/figma_hero.png"
-    imageAlt="MIRACON premium residences in Greece"
+    imageAlt={m['home.seoImageAlt']}
     jsonLd={homeStructuredData}
+    locale={locale}
   />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -82,7 +93,7 @@ const homeStructuredData = {
 <body>
   <header class="header">
     <div class="header-container">
-      <a href="/" class="logo" aria-label="MIRACON home">
+      <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
         <img src="img/logo_mark.svg" alt="" class="logo-img">
         <div class="logo-letters" aria-hidden="true">
           <img src="img/logo_letters/M.svg" alt="" class="logo-letter">
@@ -95,35 +106,35 @@ const homeStructuredData = {
         </div>
       </a>
 
-      <nav class="nav-menu glass-gradient" aria-label="Main navigation">
-        <a href="#projects" class="nav-link">Projects</a>
-        <a href="/golden-visa" class="nav-link">Golden Visa</a>
-        <a href="#about" class="nav-link">About us</a>
-        <a href="#contacts" class="nav-link">Contacts</a>
+      <nav class="nav-menu glass-gradient" aria-label={m['common.mainNavigation']}>
+        <a href={projectsHref} class="nav-link">{m['common.projects']}</a>
+        <a href={goldenVisaHref} class="nav-link">{m['common.goldenVisa']}</a>
+        <a href={aboutHref} class="nav-link">{m['common.aboutUs']}</a>
+        <a href={contactsHref} class="nav-link">{m['common.contacts']}</a>
       </nav>
 
       <div class="header-actions">
-        <div class="lang-selector glass-gradient">
-          <span class="lang-current">EN</span>
-        </div>
+        <a class="lang-selector glass-gradient" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
+          <span class="lang-current">{m['common.languageCode']}</span>
+        </a>
         <div class="contact-menu">
-          <a href="#contacts" class="contact-btn" aria-haspopup="true">
+          <a href={contactsHref} class="contact-btn" aria-haspopup="true">
             <span class="contact-btn-icon"></span>
-            <span>Contact</span>
+            <span>{m['common.contact']}</span>
             <span class="contact-btn-arrow" aria-hidden="true">
               <img src="img/contact_header/Vector 12.svg" alt="">
             </span>
           </a>
-          <div class="contact-dropdown" aria-label="Quick contact links">
+          <div class="contact-dropdown" aria-label={m['common.quickContacts']}>
             <a href="tel:+306955340416" class="contact-dropdown-link contact-dropdown-link--phone"
-              aria-label="Call +306955340416">
+              aria-label={m['common.callPhone']}>
               <span class="contact-dropdown-text">+306955340416</span>
               <span class="contact-dropdown-circle" aria-hidden="true">
                 <img src="img/contact_header/Vector (1).svg" alt="">
               </span>
             </a>
             <a href="mailto:info@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail"
-              aria-label="Email info@miracon.gr">
+              aria-label={m['common.email']}>
               <span class="contact-dropdown-text">info@miracon.gr</span>
               <span class="contact-dropdown-circle" aria-hidden="true">
                 <img src="img/contact_header/Group 37313 (1).svg" alt="">
@@ -131,8 +142,8 @@ const homeStructuredData = {
             </a>
             <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece"
               class="contact-dropdown-link contact-dropdown-link--geo" target="_blank" rel="noreferrer"
-              aria-label="Open Egnatia 84, 54623 Thessaloniki, Greece in Google Maps">
-              <span class="contact-dropdown-text">Egnatia 84, 54623 Thessaloniki, Greece</span>
+              aria-label={m['common.openAddress']}>
+              <span class="contact-dropdown-text">{m['common.address']}</span>
               <span class="contact-dropdown-circle" aria-hidden="true">
                 <img src="img/contact_header/Vector (2).svg" alt="">
               </span>
@@ -141,27 +152,27 @@ const homeStructuredData = {
         </div>
       </div>
 
-      <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Open menu" aria-controls="mobileNav" aria-expanded="false">
+      <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label={m['common.openMenu']} aria-controls="mobileNav" aria-expanded="false">
         <span aria-hidden="true"></span>
       </button>
-      <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
-        <a href="#projects" class="mobile-nav-link">Projects</a>
-        <a href="/golden-visa" class="mobile-nav-link">Golden Visa</a>
-        <a href="#about" class="mobile-nav-link">About us</a>
+      <nav class="mobile-nav" id="mobileNav" aria-label={m['common.mobileNavigation']}>
+        <a href={projectsHref} class="mobile-nav-link">{m['common.projects']}</a>
+        <a href={goldenVisaHref} class="mobile-nav-link">{m['common.goldenVisa']}</a>
+        <a href={aboutHref} class="mobile-nav-link">{m['common.aboutUs']}</a>
         <button class="mobile-nav-contact" type="button" aria-expanded="false" aria-controls="mobileContactDetails">
-          <span>Contacts</span><span aria-hidden="true">+</span>
+          <span>{m['common.contacts']}</span><span aria-hidden="true">+</span>
         </button>
         <div class="mobile-nav-contacts" id="mobileContactDetails">
           <a href="tel:+306955340416">+30 695 534 0416</a>
           <a href="mailto:info@miracon.gr">info@miracon.gr</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">Egnatia 84, Thessaloniki</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">{m['common.addressShort']}</a>
         </div>
       </nav>
     </div>
   </header>
 
   <main>
-    <section class="hero-pin" aria-label="MIRACON hero">
+    <section class="hero-pin" aria-label={m['home.heroLabel']}>
       <div class="hero">
         <div class="hero-media" data-home-hero-playlist={serializedHomeHeroVideos}>
           <video class="hero-video is-active" autoplay muted loop={homeHeroVideos.length === 1} playsinline preload="auto" poster="/img/figma_hero.png">
@@ -171,17 +182,17 @@ const homeStructuredData = {
           <video class="hero-video" muted playsinline preload="none" poster="/img/figma_hero.png" aria-hidden="true"></video>
         </div>
         <div class="container hero-content">
-          <p class="hero-subtitle">Thessaloniki · Halkidiki · Greece</p>
-          <h1 class="hero-title">Premium Residences<br>Prime Locations</h1>
+          <p class="hero-subtitle">{m['home.heroLocation']}</p>
+          <h1 class="hero-title">{m['home.heroTitleLine1']}<br>{m['home.heroTitleLine2']}</h1>
           <div class="hero-actions">
-            <a href="#projects" class="btn-hero">
+            <a href={projectsHref} class="btn-hero">
               <span class="btn-arrow btn-arrow-left"></span>
-              <span>Explore projects</span>
+              <span>{m['home.exploreProjects']}</span>
             </a>
-            <a href="/golden-visa" class="badge-visa glass-gradient">Golden Visa from €250k</a>
+            <a href={goldenVisaHref} class="badge-visa glass-gradient">{m['home.goldenVisaBadge']}</a>
           </div>
         </div>
-        <a href="#projects" class="hero-scroll-indicator" aria-label="Scroll to projects">
+        <a href={projectsHref} class="hero-scroll-indicator" aria-label={m['home.scrollProjects']}>
           <img src="img/arrow_white.svg" alt="" aria-hidden="true">
         </a>
       </div>
@@ -189,19 +200,18 @@ const homeStructuredData = {
 
     <section id="projects" class="projects-section">
       <div class="container">
-        <h2 class="section-title">Our projects</h2>
-        <p class="section-subtitle">Thessaloniki city center. Coastal residences. Premium sea view villas</p>
+        <h2 class="section-title">{m['home.projectsTitle']}</h2>
+        <p class="section-subtitle">{m['home.projectsDescription']}</p>
 
-        <div class="filter-tabs" aria-label="Project filters">
-          <button class="filter-tab active" type="button" data-filter="all" aria-pressed="true" aria-controls="projectsList"><span data-label="All">All</span></button>
-          <button class="filter-tab" type="button" data-filter="coastal" aria-pressed="false" aria-controls="projectsList"><span data-label="Coastal">Coastal</span></button>
-          <button class="filter-tab" type="button" data-filter="city" aria-pressed="false" aria-controls="projectsList"><span data-label="City">City</span></button>
-          <button class="filter-tab" type="button" data-filter="golden-visa" aria-pressed="false" aria-controls="projectsList"><span data-label="Golden Visa">Golden
-              Visa</span></button>
+        <div class="filter-tabs" aria-label={m['home.projectFilters']}>
+          <button class="filter-tab active" type="button" data-filter="all" aria-pressed="true" aria-controls="projectsList"><span data-label={m['common.categoryAll']}>{m['common.categoryAll']}</span></button>
+          <button class="filter-tab" type="button" data-filter="coastal" aria-pressed="false" aria-controls="projectsList"><span data-label={m['common.categoryCoastal']}>{m['common.categoryCoastal']}</span></button>
+          <button class="filter-tab" type="button" data-filter="city" aria-pressed="false" aria-controls="projectsList"><span data-label={m['common.categoryCity']}>{m['common.categoryCity']}</span></button>
+          <button class="filter-tab" type="button" data-filter="golden-visa" aria-pressed="false" aria-controls="projectsList"><span data-label={m['common.categoryGoldenVisa']}>{m['common.categoryGoldenVisa']}</span></button>
         </div>
 
         <div class="projects-list" id="projectsList">
-          {projects.map((project) => <ProjectCard project={project} />)}
+          {projects.map((project) => <ProjectCard project={project} locale={locale} />)}
         </div>
       </div>
     </section>
@@ -209,8 +219,8 @@ const homeStructuredData = {
     <section id="about" class="about-section">
       <div class="container about-container">
         <div class="about-copy">
-          <h2 class="about-heading about-reveal" aria-label="About MIRACON">
-            <span class="about-title-word" aria-hidden="true">About</span>
+          <h2 class="about-heading about-reveal" aria-label={m['home.aboutLabel']}>
+            <span class="about-title-word" aria-hidden="true">{m['home.about']}</span>
             <span class="about-brand" aria-hidden="true">
               <span class="about-brand-letter about-brand-letter-m"></span>
               <span class="about-brand-letter about-brand-letter-i"></span>
@@ -221,66 +231,60 @@ const homeStructuredData = {
               <span class="about-brand-letter about-brand-letter-n"></span>
             </span>
           </h2>
-          <p class="section-subtitle about-reveal">We build. We sell. We stay with you</p>
+          <p class="section-subtitle about-reveal">{m['home.aboutTagline']}</p>
           <div class="about-text about-reveal">
-            <p>MIRACON Constructions develops modern residential properties in Thessaloniki — Greece's second-largest
-              city and a key gateway between Europe and Asia. Located on the Aegean coast, with direct access to the
-              Balkans and close proximity to Turkey and major European markets, it offers a rare combination of
-              lifestyle, connectivity, and investment potential</p>
-            <p>Our portfolio includes contemporary city apartments in central Thessaloniki, boutique residential
-              projects
-              in coastal Halkidiki, premium villas with panoramic sea views — all fully eligible for the Greek Golden
-              Visa program</p>
+            <p>{m['home.aboutParagraph1']}</p>
+            <p>{m['home.aboutParagraph2']}</p>
           </div>
         </div>
-        <OptimizedImage src="/img/about_bg.png" alt="Premium residence with sea view" class="about-image about-reveal" loading="lazy" decoding="async" />
+        <OptimizedImage src="/img/about_bg.png" alt={m['home.aboutImageAlt']} class="about-image about-reveal" loading="lazy" decoding="async" />
       </div>
 
-      <div class="about-carousel" aria-label="MIRACON benefits">
+      <div class="about-carousel" aria-label={m['home.benefitsLabel']}>
         <div class="about-carousel-track">
           <div class="about-carousel-set">
             <article class="about-card about-card-direct">
               <img src="img/about_carousel/Group 2136141923.svg" alt="" class="about-card-icon">
-              <h3>Direct developer</h3>
-              <p>No agencies. No markups. You buy from the builder at a transparent price</p>
+              <h3>{m['home.benefitDirectTitle']}</h3>
+              <p>{m['home.benefitDirectText']}</p>
             </article>
             <article class="about-card about-card-legal">
               <img src="img/about_carousel/Group 2136141905.svg" alt="" class="about-card-icon">
-              <h3>Full legal support</h3>
-              <p>AFM registration, bank account, title transfer, Golden Visa filing — we handle it all</p>
+              <h3>{m['home.benefitLegalTitle']}</h3>
+              <p>{m['home.benefitLegalText']}</p>
             </article>
             <article class="about-card about-card-personal">
               <img src="img/about_carousel/Group 2136141924.svg" alt="" class="about-card-icon">
-              <h3>Personal approach</h3>
-              <p>A dedicated manager guides you from first enquiry to key handover — and beyond</p>
+              <h3>{m['home.benefitPersonalTitle']}</h3>
+              <p>{m['home.benefitPersonalText']}</p>
             </article>
             <article class="about-card about-card-locations">
               <img src="img/about_carousel/Group 2136141925.svg" alt="" class="about-card-icon">
-              <h3>Prime locations</h3>
-              <p>First-line Halkidiki coast and central Thessaloniki — prime markets in Northern Greece</p>
+              <h3>{m['home.benefitLocationTitle']}</h3>
+              <p>{m['home.benefitLocationText']}</p>
             </article>
           </div>
 
           <div class="about-carousel-set" aria-hidden="true">
             <article class="about-card about-card-direct">
               <img src="img/about_carousel/Group 2136141923.svg" alt="" class="about-card-icon">
-              <h3>Direct developer</h3>
-              <p>No agencies. No markups. You buy from the builder at a transparent price</p>
+              <h3>{m['home.benefitDirectTitle']}</h3>
+              <p>{m['home.benefitDirectText']}</p>
             </article>
             <article class="about-card about-card-legal">
               <img src="img/about_carousel/Group 2136141905.svg" alt="" class="about-card-icon">
-              <h3>Full legal support</h3>
-              <p>AFM registration, bank account, title transfer, Golden Visa filing — we handle it all</p>
+              <h3>{m['home.benefitLegalTitle']}</h3>
+              <p>{m['home.benefitLegalText']}</p>
             </article>
             <article class="about-card about-card-personal">
               <img src="img/about_carousel/Group 2136141924.svg" alt="" class="about-card-icon">
-              <h3>Personal approach</h3>
-              <p>A dedicated manager guides you from first enquiry to key handover — and beyond</p>
+              <h3>{m['home.benefitPersonalTitle']}</h3>
+              <p>{m['home.benefitPersonalText']}</p>
             </article>
             <article class="about-card about-card-locations">
               <img src="img/about_carousel/Group 2136141925.svg" alt="" class="about-card-icon">
-              <h3>Prime locations</h3>
-              <p>First-line Halkidiki coast and central Thessaloniki — prime markets in Northern Greece</p>
+              <h3>{m['home.benefitLocationTitle']}</h3>
+              <p>{m['home.benefitLocationText']}</p>
             </article>
           </div>
         </div>
@@ -297,85 +301,75 @@ const homeStructuredData = {
                   <source media="(max-width: 600px)" srcset="/img/figma-mobile/golden-visa.avif" type="image/avif">
                   <source media="(max-width: 600px)" srcset="/img/figma-mobile/golden-visa.png">
                   <source srcset="/img/figma_golden_visa.avif" type="image/avif">
-                  <img src="/img/figma_golden_visa.png" alt="Greek Residency" loading="lazy" decoding="async">
+                  <img src="/img/figma_golden_visa.png" alt={m['home.visaResidencyTitle']} loading="lazy" decoding="async">
                 </picture>
               </div>
               <div class="golden-carousel-face">
                 <picture>
                   <source srcset="/img/golden_visa_2.avif" type="image/avif">
-                  <img src="/img/golden_visa_2.png" alt="Investment threshold" loading="lazy" decoding="async">
+                  <img src="/img/golden_visa_2.png" alt={m['home.visaThresholdTitle']} loading="lazy" decoding="async">
                 </picture>
               </div>
               <div class="golden-carousel-face">
                 <picture>
                   <source srcset="/img/golden_visa_3.avif" type="image/avif">
-                  <img src="/img/golden_visa_3.png" alt="Family included" loading="lazy" decoding="async">
+                  <img src="/img/golden_visa_3.png" alt={m['home.visaFamilyTitle']} loading="lazy" decoding="async">
                 </picture>
               </div>
               <div class="golden-carousel-face">
                 <picture>
                   <source srcset="/img/golden_visa_4.avif" type="image/avif">
-                  <img src="/img/golden_visa_4.png" alt="Schengen access" loading="lazy" decoding="async">
+                  <img src="/img/golden_visa_4.png" alt={m['home.visaSchengenTitle']} loading="lazy" decoding="async">
                 </picture>
               </div>
             </div>
           </div>
-          <a href="/golden-visa" class="visa-consult-badge glass-gradient">
-            <span>More details</span>
+          <a href={goldenVisaHref} class="visa-consult-badge glass-gradient">
+            <span>{m['home.moreDetails']}</span>
             <span class="visa-consult-arrow"></span>
           </a>
         </div>
 
         <div class="golden-content">
-          <h2 class="section-title">Golden Visa</h2>
-          <p class="section-subtitle">EU residency through property investment — from €250,000</p>
+          <h2 class="section-title">{m['common.goldenVisa']}</h2>
+          <p class="section-subtitle">{m['home.visaDescription']}</p>
 
-          <div class="slider-wrapper" aria-label="Golden Visa benefits">
+          <div class="slider-wrapper" aria-label={m['home.visaBenefits']}>
             <div class="slider-slides">
               <article class="slide active">
                 <h3 class="slide-title">
                   <img src="img/golden_visa/Subtract_1.svg" alt="" class="slide-icon">
-                  Greek Residency
+                  {m['home.visaResidencyTitle']}
                 </h3>
-                <p class="slide-text">Greece offers one of Europe's most accessible residency-by-investment programmes.
-                  Purchase qualifying real estate and receive a 5-year renewable residence permit for your entire family
-                  — no minimum stay required</p>
+                <p class="slide-text">{m['home.visaResidencyText']}</p>
               </article>
               <article class="slide">
                 <h3 class="slide-title">
                   <img src="img/golden_visa/trending-up_2.svg" alt="" class="slide-icon">
-                  Investment threshold
+                  {m['home.visaThresholdTitle']}
                 </h3>
-                <p class="slide-text">The minimum qualifying investment is €250,000. Selected residences at Monastiriou 4
-                  in central Thessaloniki meet this threshold — making MIRACON projects an ideal entry point into the
-                  programme</p>
+                <p class="slide-text">{m['home.visaThresholdText']}</p>
               </article>
               <article class="slide">
                 <h3 class="slide-title">
                   <img src="img/golden_visa/Vector_3.svg" alt="" class="slide-icon">
-                  Family included
+                  {m['home.visaFamilyTitle']}
                 </h3>
-                <p class="slide-text">The residence permit covers the investor, spouse, children under 21, and both sets
-                  of parents. No additional fees per family member. The permit is renewed every 5 years as long as the
-                  property is owned</p>
+                <p class="slide-text">{m['home.visaFamilyText']}</p>
               </article>
               <article class="slide">
                 <h3 class="slide-title">
                   <img src="img/golden_visa/keypad_4.svg" alt="" class="slide-icon">
-                  Schengen access
+                  {m['home.visaSchengenTitle']}
                 </h3>
-                <p class="slide-text slide-text-short">As a Greek residence permit holder you can travel freely across
-                  26
-                  Schengen countries without a visa. No minimum stay in Greece required — visit when you wish, live
-                  where
-                  you want</p>
+                <p class="slide-text slide-text-short">{m['home.visaSchengenText']}</p>
               </article>
             </div>
 
             <div class="slider-controls">
-              <button class="slider-btn btn-prev" aria-label="Previous Golden Visa card"></button>
+              <button class="slider-btn btn-prev" aria-label={m['home.visaPrevious']}></button>
               <span class="slider-counter">1/4</span>
-              <button class="slider-btn btn-next" aria-label="Next Golden Visa card"></button>
+              <button class="slider-btn btn-next" aria-label={m['home.visaNext']}></button>
             </div>
           </div>
         </div>
@@ -385,66 +379,66 @@ const homeStructuredData = {
     <section class="stages-section">
       <div class="container stages-container">
         <div class="stages-intro">
-          <h2 class="section-title">Stage of work</h2>
-          <p class="section-subtitle">A clear process from first contact to key handover</p>
+          <h2 class="section-title">{m['stages.title']}</h2>
+          <p class="section-subtitle">{m['stages.description']}</p>
         </div>
       </div>
 
-      <div class="stages-carousel" aria-label="Stages of work">
+      <div class="stages-carousel" aria-label={m['stages.label']}>
         <div class="stages-carousel-track">
           <div class="stages-carousel-set">
             <article class="stage-card">
               <span class="stage-number">01</span>
-              <h3>Consultation</h3>
-              <p>We find the right property for your goals</p>
+              <h3>{m['stages.consultation']}</h3>
+              <p>{m['stages.consultationText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">02</span>
-              <h3>Reservation</h3>
-              <p>Deposit placed,<br>unit secured</p>
+              <h3>{m['stages.reservation']}</h3>
+              <p>{m['stages.reservationText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">03</span>
-              <h3>Due Diligence</h3>
-              <p>AFM, bank account,<br>due diligence</p>
+              <h3>{m['stages.dueDiligence']}</h3>
+              <p>{m['stages.dueDiligenceText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">04</span>
-              <h3>Purchase</h3>
-              <p>Signed before<br>a Greek notary</p>
+              <h3>{m['stages.purchase']}</h3>
+              <p>{m['stages.purchaseText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">05</span>
-              <h3>Handover</h3>
-              <p>Fully finished.<br>Ready to move in</p>
+              <h3>{m['stages.handover']}</h3>
+              <p>{m['stages.handoverText']}</p>
             </article>
           </div>
 
           <div class="stages-carousel-set" aria-hidden="true">
             <article class="stage-card">
               <span class="stage-number">01</span>
-              <h3>Consultation</h3>
-              <p>We find the right property for your goals</p>
+              <h3>{m['stages.consultation']}</h3>
+              <p>{m['stages.consultationText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">02</span>
-              <h3>Reservation</h3>
-              <p>Deposit placed,<br>unit secured</p>
+              <h3>{m['stages.reservation']}</h3>
+              <p>{m['stages.reservationText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">03</span>
-              <h3>Due Diligence</h3>
-              <p>AFM, bank account,<br>due diligence</p>
+              <h3>{m['stages.dueDiligence']}</h3>
+              <p>{m['stages.dueDiligenceText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">04</span>
-              <h3>Contract</h3>
-              <p>Documents signed,<br>payment schedule fixed</p>
+              <h3>{m['stages.contract']}</h3>
+              <p>{m['stages.contractText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">05</span>
-              <h3>Key handover</h3>
-              <p>Property delivered,<br>support continues</p>
+              <h3>{m['stages.handover']}</h3>
+              <p>{m['stages.handoverText']}</p>
             </article>
           </div>
         </div>
@@ -454,41 +448,41 @@ const homeStructuredData = {
     <section id="contacts" class="contacts-section">
       <div class="container">
         <div class="form-container">
-          <h2 class="section-title">Free consultation</h2>
-          <p class="section-subtitle">Lorem ipsum dolo lorem ipsum dolor sit amet<br>consecteturr</p>
+          <h2 class="section-title">{m['form.title']}</h2>
+          <p class="section-subtitle">{m['form.description']}</p>
 
           <form class="consultation-form" data-consultation-form data-web3forms-key="bcf7cde0-e5e8-4908-8b89-02ebe78bcd0d" novalidate>
             <div class="form-row">
               <label class="form-group">
-                <span>Name</span>
-                <input type="text" name="name" class="form-input" placeholder="Name" maxlength="120" required>
+                <span>{m['form.name']}</span>
+                <input type="text" name="name" class="form-input" placeholder={m['form.name']} maxlength="120" required>
               </label>
               <label class="form-group">
-                <span>Phone</span>
-                <input type="tel" name="phone" class="form-input" placeholder="Phone" maxlength="40">
+                <span>{m['form.phone']}</span>
+                <input type="tel" name="phone" class="form-input" placeholder={m['form.phone']} maxlength="40">
               </label>
               <label class="form-group">
-                <span>Email</span>
-                <input type="email" name="email" class="form-input" placeholder="Email" maxlength="254">
+                <span>{m['form.email']}</span>
+                <input type="email" name="email" class="form-input" placeholder={m['form.email']} maxlength="254">
               </label>
             </div>
 
             <label class="form-group form-message">
-              <span>What info are you interested in?</span>
-              <textarea name="message" class="form-input form-textarea" placeholder="What info are you interested in?" maxlength="3000"></textarea>
+              <span>{m['form.message']}</span>
+              <textarea name="message" class="form-input form-textarea" placeholder={m['form.message']} maxlength="3000"></textarea>
             </label>
 
             <label class="form-consent">
               <input type="checkbox" name="consent" class="form-consent-input" required>
               <span class="form-consent-box" aria-hidden="true"></span>
-              <span class="form-consent-text">I agree to the processing of my personal data in accordance with the <a
-                  href="#">Privacy Policy</a> and consent to being contacted using the details provided</span>
+              <span class="form-consent-text">{m['form.consentBefore']} <a
+                  href="#">{m['common.privacy']}</a> {m['form.consentAfter']}</span>
             </label>
 
             <div class="form-captcha"><div class="h-captcha" data-captcha="true" data-theme="light"></div></div>
 
             <button type="submit" class="btn-submit" disabled>
-              <span>Request a consultation</span>
+              <span>{m['form.submit']}</span>
               <span class="btn-submit-arrow"></span>
             </button>
             <input class="form-honeypot" type="checkbox" name="botcheck" tabindex="-1" aria-hidden="true">
@@ -502,7 +496,7 @@ const homeStructuredData = {
   <footer class="footer">
     <div class="container footer-container">
       <div class="footer-top">
-        <a href="/" class="logo" aria-label="MIRACON home">
+        <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
           <img src="img/logo_mark.svg" alt="" class="logo-img">
           <div class="logo-letters" aria-hidden="true">
             <img src="img/logo_letters/M.svg" alt="" class="logo-letter">
@@ -514,11 +508,11 @@ const homeStructuredData = {
             <img src="img/logo_letters/N.svg" alt="" class="logo-letter">
           </div>
         </a>
-        <nav class="footer-socials" aria-label="Contact links">
-          <a href="mailto:info@miracon.gr" aria-label="Email info@miracon.gr" title="info@miracon.gr">
+        <nav class="footer-socials" aria-label={m['common.contactLinks']}>
+          <a href="mailto:info@miracon.gr" aria-label={m['common.email']} title="info@miracon.gr">
             <img src="img/contact_header/Group 37313 (1).svg" alt="">
           </a>
-          <a href="tel:+306955340416" aria-label="Call +30 695 534 0416" title="+30 695 534 0416">
+          <a href="tel:+306955340416" aria-label={m['common.callPhone']} title="+30 695 534 0416">
             <img src="img/contact_header/Vector (1).svg" alt="">
           </a>
           <a href="https://wa.me/306955340416" target="_blank" rel="noreferrer" aria-label="WhatsApp +30 695 534 0416" title="WhatsApp">
@@ -528,18 +522,18 @@ const homeStructuredData = {
       </div>
       <div class="footer-bottom">
         <div class:list={['footer-links', { 'footer-links--empty': !siteSettings.footerTermsVisible && !siteSettings.footerPrivacyVisible && !siteSettings.footerCookieVisible }]}>
-          <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>Terms of Use</a>
-          <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>Privacy Policy</a>
-          <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>Cookie Policy</a>
+          <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
+          <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>{m['common.privacy']}</a>
+          <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
         </div>
-        <button class="lang-dropdown-btn">
-          <span>English</span>
+        <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
+          <span>{m['common.languageName']}</span>
           <span class="lang-refresh" aria-hidden="true">
             <img src="img/Vector.svg" alt="">
           </span>
-        </button>
+        </a>
       </div>
-      <p class="footer-copyright">© 2026 Miracon Constructions, Thessaloniki, Greece</p>
+      <p class="footer-copyright">{m['common.copyright']}</p>
     </div>
   </footer>
 

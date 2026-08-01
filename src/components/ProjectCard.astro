@@ -1,12 +1,20 @@
 ---
 import { getImageVariantSet, getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
-import { categoryLabels, type Project } from '../lib/project-types';
+import { formatMessage, getMessages, localizePath, type SiteLocale } from '../lib/i18n';
+import type { Project } from '../lib/project-types';
 
 interface Props {
   project: Project;
+  locale?: SiteLocale;
 }
 
-const { project } = Astro.props;
+const { project, locale = 'en' } = Astro.props;
+const m = getMessages(locale);
+const categoryLabels = {
+  coastal: m['common.categoryCoastal'],
+  city: m['common.categoryCity'],
+  'golden-visa': m['common.categoryGoldenVisa'],
+};
 const fallbackImage = { id: `${project.id}-cover`, url: project.coverUrl, alt: project.title, role: 'card' as const, sortOrder: 0 };
 const mainImage = project.coverUrl ? fallbackImage : (project.cardImages[0] ?? fallbackImage);
 const additionalImages = project.cardImages.filter((image) => image.url !== mainImage.url);
@@ -40,7 +48,7 @@ const cardDescription = project.shortDescription.replace(/\.+\s*$/, '');
     </div>
     <div class="project-bottom">
       <div class="project-price">{project.price}</div>
-      <a href={`/projects/${project.slug}`} class="learn-more" aria-label={`View ${project.title}`}>Learn more <span></span></a>
+      <a href={localizePath(`/projects/${project.slug}`, locale)} class="learn-more" aria-label={formatMessage(m['common.viewProject'], { title: project.title })}>{m['common.learnMore']} <span></span></a>
     </div>
   </div>
   <div class="project-gallery">

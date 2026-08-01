@@ -1,6 +1,49 @@
 document.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('js-enabled');
 
+  const isGreek = document.documentElement.lang === 'el';
+  const ui = isGreek ? {
+    playVideo: 'Αναπαραγωγή',
+    pauseVideo: 'Παύση βίντεο',
+    enableSound: 'Ενεργοποίηση ήχου βίντεο',
+    muteSound: 'Σίγαση ήχου βίντεο',
+    sound: 'Ήχος',
+    mute: 'Σίγαση',
+    openMenu: 'Άνοιγμα μενού',
+    closeMenu: 'Κλείσιμο μενού',
+    missingContact: 'Συμπληρώστε το όνομά σας και τουλάχιστον ένα στοιχείο επικοινωνίας',
+    invalidEmail: 'Συμπληρώστε μια έγκυρη διεύθυνση email',
+    sendError: 'Δεν ήταν δυνατή η αποστολή του αιτήματος. Δοκιμάστε ξανά',
+    securityCheck: 'Ολοκληρώστε τον έλεγχο ασφαλείας',
+    waitMoment: 'Περιμένετε λίγο και δοκιμάστε ξανά',
+    waitBeforeRetry: 'Περιμένετε πριν στείλετε νέο αίτημα',
+    sending: 'Το αίτημά σας αποστέλλεται',
+    formUnavailable: 'Η φόρμα δεν είναι προσωρινά διαθέσιμη. Δοκιμάστε ξανά αργότερα',
+    success: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε',
+    sendLater: 'Δεν ήταν δυνατή η αποστολή του αιτήματος. Δοκιμάστε ξανά αργότερα',
+    subject: (name) => `Αίτημα συμβουλευτικής από ${name}`,
+  } : {
+    playVideo: 'Play video',
+    pauseVideo: 'Pause video',
+    enableSound: 'Enable video sound',
+    muteSound: 'Mute video sound',
+    sound: 'Sound',
+    mute: 'Mute',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    missingContact: 'Please enter your name and at least one contact detail',
+    invalidEmail: 'Please enter a valid email address',
+    sendError: 'Unable to send your request. Please try again',
+    securityCheck: 'Please complete the security check',
+    waitMoment: 'Please wait a moment and try again',
+    waitBeforeRetry: 'Please wait before sending another request',
+    sending: 'Sending your request',
+    formUnavailable: 'The form is temporarily unavailable. Please try again later',
+    success: 'Thank you. Your request has been sent',
+    sendLater: 'Unable to send your request. Please try again later',
+    subject: (name) => `Consultation request from ${name}`,
+  };
+
   /* ==========================================================================
      HOME HERO VIDEO PLAYLIST
      ========================================================================== */
@@ -239,8 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function syncReducedPlayButton() {
       if (!reducedPlayButton) return;
       const isPlaying = manualReducedPlayback && !activeVideo().paused;
-      reducedPlayButton.textContent = isPlaying ? 'Pause video' : 'Play video';
-      reducedPlayButton.setAttribute('aria-label', isPlaying ? 'Pause video' : 'Play video');
+      reducedPlayButton.textContent = isPlaying ? ui.pauseVideo : ui.playVideo;
+      reducedPlayButton.setAttribute('aria-label', isPlaying ? ui.pauseVideo : ui.playVideo);
     }
 
     function findNextIndex() {
@@ -467,8 +510,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const soundText = projectHeroSoundButton.querySelector('.project-hero-sound-text');
     projectHeroSoundButton.classList.toggle('is-sound-on', isSoundOn);
     projectHeroSoundButton.setAttribute('aria-pressed', String(isSoundOn));
-    projectHeroSoundButton.setAttribute('aria-label', isSoundOn ? 'Mute video sound' : 'Enable video sound');
-    if (soundText) soundText.textContent = isSoundOn ? 'Mute' : 'Sound';
+    projectHeroSoundButton.setAttribute('aria-label', isSoundOn ? ui.muteSound : ui.enableSound);
+    if (soundText) soundText.textContent = isSoundOn ? ui.mute : ui.sound;
   }
 
   if (projectHeroDeck) {
@@ -560,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mobileNav.classList.toggle('active', isOpen);
       mobileMenuBtn.classList.toggle('active', isOpen);
       mobileMenuBtn.setAttribute('aria-expanded', String(isOpen));
-      mobileMenuBtn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+      mobileMenuBtn.setAttribute('aria-label', isOpen ? ui.closeMenu : ui.openMenu);
       mobileNav.setAttribute('aria-hidden', String(!isOpen));
       if (!isOpen && mobileContactButton && mobileContactDetails) {
         mobileContactButton.setAttribute('aria-expanded', 'false');
@@ -984,48 +1027,48 @@ document.addEventListener('DOMContentLoaded', () => {
       const now = Date.now();
 
       if (!name || (!phone && !email)) {
-        setStatus('Please enter your name and at least one contact detail', 'error');
+        setStatus(ui.missingContact, 'error');
         return;
       }
 
       if (email && emailInput && !emailInput.checkValidity()) {
-        setStatus('Please enter a valid email address', 'error');
+        setStatus(ui.invalidEmail, 'error');
         return;
       }
 
       if (formData.get('botcheck')) {
-        setStatus('Unable to send your request. Please try again', 'error');
+        setStatus(ui.sendError, 'error');
         return;
       }
 
       if (!captchaResponse) {
-        setStatus('Please complete the security check', 'error');
+        setStatus(ui.securityCheck, 'error');
         return;
       }
 
       if (now - formStartedAt < 1500) {
-        setStatus('Please wait a moment and try again', 'error');
+        setStatus(ui.waitMoment, 'error');
         return;
       }
 
       const lastAttempt = storedTimestamp(sessionStorage, attemptStorageKey);
       const lastSuccess = storedTimestamp(localStorage, successStorageKey);
       if (now - lastAttempt < 15000 || now - lastSuccess < 60000) {
-        setStatus('Please wait before sending another request', 'error');
+        setStatus(ui.waitBeforeRetry, 'error');
         return;
       }
 
       submitBtn.disabled = true;
-      setStatus('Sending your request', 'pending');
+      setStatus(ui.sending, 'pending');
       storeTimestamp(sessionStorage, attemptStorageKey, now);
 
       try {
-        if (!web3FormsKey) throw new Error('The form is temporarily unavailable. Please try again later');
+        if (!web3FormsKey) throw new Error(ui.formUnavailable);
 
         const web3FormsPayload = new FormData(consultationForm);
         web3FormsPayload.append('access_key', web3FormsKey);
         web3FormsPayload.append('from_name', 'MIRACON Website');
-        web3FormsPayload.append('subject', `Consultation request from ${name}`);
+        web3FormsPayload.append('subject', ui.subject(name));
         web3FormsPayload.append('page', window.location.pathname);
         if (!email) web3FormsPayload.set('email', 'not-provided@miracon.gr');
         if (email) web3FormsPayload.set('replyto', email);
@@ -1037,13 +1080,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const result = await response.json();
 
-        if (!response.ok || !result.success) throw new Error(result.message || 'Unable to send your request');
+        if (!response.ok || !result.success) throw new Error(ui.sendError);
 
         consultationForm.reset();
         storeTimestamp(localStorage, successStorageKey, Date.now());
-        setStatus('Thank you. Your request has been sent', 'success');
+        setStatus(ui.success, 'success');
       } catch (error) {
-        setStatus(error instanceof Error ? error.message.replace(/[.]+$/, '') : 'Unable to send your request. Please try again later', 'error');
+        setStatus(error instanceof Error && [ui.formUnavailable, ui.sendError].includes(error.message) ? error.message.replace(/[.]+$/, '') : ui.sendLater, 'error');
       } finally {
         window.hcaptcha?.reset();
         updateSubmitState();

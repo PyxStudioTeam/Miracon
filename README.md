@@ -48,8 +48,9 @@ On the first authenticated visit, an empty database shows an **Import current we
 
 - Draft projects are available only to the administrator.
 - Published projects appear in the catalog and at `/projects/[slug]`.
+- English is served without a URL prefix; Greek uses `/el/*`. The project editor's EN tab owns shared structure and media, while the ΕΛ tab stores translated text. Empty Greek fields fall back to English.
 - Unpublishing removes the public project without deleting its content.
-- Preview is rendered at `/preview/[slug]`, requires the administrator session, has `noindex`, and is sent with `Cache-Control: private, no-store`.
+- Preview is rendered at `/preview/[slug]` or `/el/preview/[slug]`, requires the administrator session, has `noindex`, and is sent with `Cache-Control: private, no-store`.
 - Project and gallery ordering are stored explicitly and can be changed by drag and drop.
 - By default, JPEG/PNG images are resized to at most 2400px and converted to WebP in the administrator browser before direct Storage upload. Videos are uploaded directly.
 - Projects can optionally show ordered desktop/mobile walkthrough videos after the gallery and before floor plans. Public playback is muted, control-free, cropped to the frame, and crossfades between clips.

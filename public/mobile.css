@@ -6,7 +6,7 @@
   display: none;
 }
 
-@media (min-width: 601px) and (max-width: 820px) {
+@media (min-width: 601px) and (max-width: 950px) {
   .nav-menu,
   .header-actions {
     display: none;
@@ -1674,9 +1674,9 @@
     position: absolute;
     top: 99px;
     right: 3px;
-    width: 88px;
+    width: 112px;
     height: 28px;
-    padding: 0 27px 0 16px;
+    padding: 0 31px 0 8px;
     border-radius: 14px;
     font-size: 11.256px;
     line-height: 13.508px;
@@ -1786,10 +1786,45 @@
   .lang-dropdown-btn {
     position: relative;
     inset: auto;
-    width: 88px;
+    width: 112px;
     height: 28px;
-    padding: 0 27px 0 16px;
+    padding: 0 31px 0 8px;
     font-size: 11.25px;
     transform: none;
   }
+}
+
+@media (max-width: 600px) {
+  .projects-section .section-subtitle { width: 100%; height: auto; min-height: 34px; margin-bottom: 20px; }
+  .filter-tabs { width: calc(100vw - 20px); height: auto; margin-right: -20px; padding: 0 20px 4px 0; gap: 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .filter-tabs::-webkit-scrollbar { display: none; }
+  .filter-tab:nth-child(n) { width: auto; min-width: max-content; padding-inline: 14px; scroll-snap-align: start; }
+  .project-tags { right: 13px; flex-wrap: wrap; }
+  .project-tags .tag, .tag--coastal, .tag--city, .tag--golden-visa { width: auto; min-width: max-content !important; padding-inline: 10px; }
+  .project-name, .project-location, .project-price, .learn-more { overflow-wrap: anywhere; }
+
+  .about-section { height: auto; padding: 63px 0 46px; }
+  .about-container, .about-copy { height: auto; }
+  .about-heading, .about-copy .section-subtitle, .about-text, .about-image, .about-carousel { position: relative; inset: auto; }
+  .about-heading { width: min(100%, 335px); margin-bottom: 14px; }
+  .about-copy .section-subtitle { width: 100%; height: auto; margin-bottom: 24px; }
+  .about-text { width: 100%; height: auto; overflow: visible; line-height: 1.22; }
+  .about-text p { display: block; }
+  .about-text p + p { margin-top: 18px; }
+  .about-text p + p::before { content: none; }
+  .about-container > picture.optimized-image-picture { display: block; margin-top: 28px; }
+  .about-image { width: 100%; height: auto; margin: 0; aspect-ratio: 335 / 237; }
+  .about-carousel { width: 100%; height: auto; margin-top: 26px; }
+  .about-carousel-track, .about-carousel-set { height: auto; }
+  .about-card, .about-card-direct, .about-card-legal, .about-card-personal, .about-card-locations { position: relative; top: auto !important; min-height: 92px; height: auto; padding: 14px 16px 14px 61px; }
+  .about-card + .about-card { margin-top: 12px; }
+  .about-card h3, .about-card p { position: static; width: auto; height: auto; overflow: visible; }
+  .about-card h3 { min-height: 20px; font-size: 16px; line-height: 1.15; }
+  .about-card p { margin-top: 6px; font-size: 11.5px; line-height: 1.22; }
+
+  .golden-visa-section, .golden-container { height: 650px; }
+  .golden-content .section-subtitle { width: 100%; height: auto; }
+  .slider-wrapper { top: 386px; height: 238px; }
+  .slide-title { height: auto; min-height: 19px; align-items: flex-start; }
+  .slide-text, .slide-text-short { right: 17px; bottom: 58px; width: auto; height: auto; max-height: none; overflow: visible; line-height: 1.2; }
 }

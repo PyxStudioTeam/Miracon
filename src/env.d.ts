@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly PUBLIC_SITE_URL?: string;
   readonly PUBLIC_SUPABASE_URL?: string;
   readonly PUBLIC_SUPABASE_ANON_KEY?: string;
+  readonly PUBLIC_MEDIA_WORKER_ENABLED?: string;
 }
 
 interface ImportMeta {

@@ -7,7 +7,8 @@ const developmentConnections = import.meta.env.DEV
 export const onRequest = defineMiddleware(async ({ url }, next) => {
   const response = await next();
   const headers = new Headers(response.headers);
-  const frameAncestors = url.pathname.startsWith('/preview/') ? "'self'" : "'none'";
+  const isPreview = url.pathname.startsWith('/preview/') || url.pathname.startsWith('/el/preview/');
+  const frameAncestors = isPreview ? "'self'" : "'none'";
   const contentSecurityPolicy = [
     "default-src 'self'",
     "base-uri 'self'",

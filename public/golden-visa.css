@@ -69,10 +69,10 @@
 
 .gv-hero h1 {
   position: relative;
-  display: flex;
-  align-items: center;
-  width: 1156px;
-  height: 222px;
+  display: block;
+  width: min(100%, 1500px);
+  min-height: 222px;
+  height: auto;
   margin: 0;
   font-family: 'Gilroy', sans-serif;
   font-size: 116px;
@@ -230,20 +230,18 @@
 }
 
 .gv-family .section-title {
-  display: flex;
-  align-items: center;
-  width: 462px;
-  height: 62px;
+  display: block;
+  width: min(100%, 760px);
+  height: auto;
   margin: 0 0 30px;
   font-size: 64px;
   line-height: 97.02%;
 }
 
 .gv-family .section-subtitle {
-  display: flex;
-  align-items: center;
-  width: 1178px;
-  height: 31px;
+  display: block;
+  width: min(100%, 1400px);
+  height: auto;
   margin: 0;
   font-size: 32px;
   font-weight: 400;
@@ -397,13 +395,33 @@
 
 .gv-family-summary h3 {
   width: 498px;
-  height: 47px;
+  min-height: 47px;
+  height: auto;
   margin: 0 0 30px;
   color: #003075;
   font-family: 'Gilroy', sans-serif;
   font-size: 48px;
   font-weight: 500;
   line-height: 97.02%;
+}
+
+@media (min-width: 1181px) {
+  html[lang='el'] .gv-hero h1 {
+    max-width: 1450px;
+    font-size: clamp(78px, 5.35vw, 103px);
+    line-height: 1.02;
+    text-wrap: balance;
+  }
+}
+
+html[lang='el'] .gv-family .section-title,
+html[lang='el'] .gv-family .section-subtitle,
+html[lang='el'] .gv-family-summary h3 {
+  text-wrap: balance;
+}
+
+html[lang='el'] .gv-family {
+  height: auto;
 }
 
 .gv-family-summary p {
@@ -1301,5 +1319,72 @@
     left: 2.2917vw;
     width: 0.3646vw;
     height: 1.7188vw;
+  }
+}
+
+/* Greek CTAs need more horizontal room than the English Figma geometry. */
+@media (min-width: 761px) {
+  html[lang='el'] .golden-visa-page .gv-primary-cta {
+    justify-content: center;
+    gap: clamp(18px, 1.1458vw, 22px);
+    width: min(100%, clamp(570px, 32.2917vw, 620px));
+    padding-inline: clamp(34px, 2.1875vw, 42px);
+    font-size: clamp(25px, 2.1458vw, 30.9091px);
+    line-height: 1;
+  }
+
+  html[lang='el'] .golden-visa-page .gv-primary-cta > span:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  html[lang='el'] .golden-visa-page .gv-hero-actions .btn-hero {
+    --btn-hero-arrow-travel: 261px;
+    width: min(100%, 360px);
+  }
+
+  html[lang='el'] .golden-visa-page .gv-hero-actions .btn-hero span:not(.btn-arrow) {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    line-height: 1;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1919px) {
+  html[lang='el'] .golden-visa-page .gv-hero-actions .btn-hero {
+    --btn-hero-arrow-travel: 16.7036vw;
+    width: 21.8297vw;
+  }
+
+  html[lang='el'] .golden-visa-page .gv-hero-actions .btn-hero span:not(.btn-arrow) {
+    width: 15.3125vw;
+    height: auto;
+    line-height: 1;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 1920px) {
+  html[lang='el'] .golden-visa-page .gv-hero-actions .btn-hero {
+    --btn-hero-arrow-travel: 320.71px;
+    width: 419.13px;
+  }
+
+  html[lang='el'] .golden-visa-page .gv-hero-actions .btn-hero span:not(.btn-arrow) {
+    width: 294px;
+    height: auto;
+    line-height: 1;
+    white-space: nowrap;
   }
 }

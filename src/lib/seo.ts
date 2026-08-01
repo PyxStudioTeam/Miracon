@@ -22,6 +22,10 @@ export function absoluteSiteUrl(pathOrUrl: string, requestUrl: URL): string {
   }
 }
 
+export function absoluteLocalizedUrl(path: string, locale: SiteLocale, requestUrl: URL): string {
+  return absoluteSiteUrl(localizePath(path, locale), requestUrl);
+}
+
 export function escapeXml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -30,3 +34,4 @@ export function escapeXml(value: string): string {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&apos;');
 }
+import { localizePath, type SiteLocale } from './i18n';

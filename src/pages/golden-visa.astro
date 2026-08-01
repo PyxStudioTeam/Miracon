@@ -2,14 +2,24 @@
 import ProjectCard from '../components/ProjectCard.astro';
 import OptimizedImage from '../components/OptimizedImage.astro';
 import SeoHead from '../components/SeoHead.astro';
-import { getPublishedProjects } from '../lib/projects';
-import { absoluteSiteUrl } from '../lib/seo';
+import { getLocale, getMessages, localizePath, oppositeLocale } from '../lib/i18n';
+import { getPublishedProjects, localizeProject } from '../lib/projects';
+import { absoluteLocalizedUrl } from '../lib/seo';
 import { getSiteSettings } from '../lib/site-settings';
 
-const [publishedProjects, siteSettings] = await Promise.all([getPublishedProjects(), getSiteSettings()]);
+const locale = getLocale(Astro.originPathname);
+const m = getMessages(locale);
+const [sourceProjects, siteSettings] = await Promise.all([getPublishedProjects(), getSiteSettings()]);
+const publishedProjects = sourceProjects.map((project) => localizeProject(project, locale));
 const goldenVisaProjects = publishedProjects.filter((project) => project.categories.includes('golden-visa'));
 Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
-const goldenVisaUrl = absoluteSiteUrl('/golden-visa', Astro.url);
+const goldenVisaUrl = absoluteLocalizedUrl('/golden-visa', locale, Astro.url);
+const homeHref = localizePath('/', locale);
+const projectsHref = localizePath('/#projects', locale);
+const aboutHref = localizePath('/#about', locale);
+const topHref = localizePath('/golden-visa#top', locale);
+const contactsHref = localizePath('/golden-visa#contacts', locale);
+const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 const goldenVisaStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -17,15 +27,15 @@ const goldenVisaStructuredData = {
       '@type': 'WebPage',
       '@id': `${goldenVisaUrl}#webpage`,
       url: goldenVisaUrl,
-      name: 'Golden Visa — MIRACON',
-      description: 'Greek Golden Visa through qualifying MIRACON real estate investments in Thessaloniki and Halkidiki.',
-      inLanguage: 'en',
+      name: m['gv.seoTitle'],
+      description: m['gv.seoDescription'],
+      inLanguage: locale,
     },
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteSiteUrl('/', Astro.url) },
-        { '@type': 'ListItem', position: 2, name: 'Golden Visa', item: goldenVisaUrl },
+        { '@type': 'ListItem', position: 1, name: m['common.home'], item: absoluteLocalizedUrl('/', locale, Astro.url) },
+        { '@type': 'ListItem', position: 2, name: m['common.goldenVisa'], item: goldenVisaUrl },
       ],
     },
   ],
@@ -33,7 +43,7 @@ const goldenVisaStructuredData = {
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang={locale}>
 
 <head>
   <meta charset="UTF-8">
@@ -41,12 +51,13 @@ const goldenVisaStructuredData = {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
-    title="Golden Visa — MIRACON"
-    description="Greek Golden Visa through qualifying MIRACON real estate investments in Thessaloniki and Halkidiki."
+    title={m['gv.seoTitle']}
+    description={m['gv.seoDescription']}
     path="/golden-visa"
     image="/img/golden-visa/hero-interior.jpg"
-    imageAlt="Premium residence interior in Greece"
+    imageAlt={m['gv.seoImageAlt']}
     jsonLd={goldenVisaStructuredData}
+    locale={locale}
   />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,7 +73,7 @@ const goldenVisaStructuredData = {
 <body class="golden-visa-page">
   <header class="header">
     <div class="header-container">
-      <a href="/" class="logo" aria-label="MIRACON home">
+      <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
         <img src="img/logo_mark.svg" alt="" class="logo-img">
         <div class="logo-letters" aria-hidden="true">
           <img src="img/logo_letters/M.svg" alt="" class="logo-letter">
@@ -75,35 +86,35 @@ const goldenVisaStructuredData = {
         </div>
       </a>
 
-      <nav class="nav-menu glass-gradient" aria-label="Main navigation">
-        <a href="#projects" class="nav-link">Projects</a>
-        <a href="#top" class="nav-link nav-link-current" aria-current="page">Golden Visa</a>
-        <a href="/#about" class="nav-link">About us</a>
-        <a href="#contacts" class="nav-link">Contacts</a>
+      <nav class="nav-menu glass-gradient" aria-label={m['common.mainNavigation']}>
+        <a href={projectsHref} class="nav-link">{m['common.projects']}</a>
+        <a href={topHref} class="nav-link nav-link-current" aria-current="page">{m['common.goldenVisa']}</a>
+        <a href={aboutHref} class="nav-link">{m['common.aboutUs']}</a>
+        <a href={contactsHref} class="nav-link">{m['common.contacts']}</a>
       </nav>
 
       <div class="header-actions">
-        <div class="lang-selector glass-gradient">
-          <span class="lang-current">EN</span>
-        </div>
+        <a class="lang-selector glass-gradient" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
+          <span class="lang-current">{m['common.languageCode']}</span>
+        </a>
         <div class="contact-menu">
-          <a href="#contacts" class="contact-btn" aria-haspopup="true">
+          <a href={contactsHref} class="contact-btn" aria-haspopup="true">
             <span class="contact-btn-icon"></span>
-            <span>Contact</span>
+            <span>{m['common.contact']}</span>
             <span class="contact-btn-arrow" aria-hidden="true">
               <img src="img/contact_header/Vector 12.svg" alt="">
             </span>
           </a>
-          <div class="contact-dropdown" aria-label="Quick contact links">
+          <div class="contact-dropdown" aria-label={m['common.quickContacts']}>
             <a href="tel:+306955340416" class="contact-dropdown-link contact-dropdown-link--phone"
-              aria-label="Call +306955340416">
+              aria-label={m['common.callPhone']}>
               <span class="contact-dropdown-text">+306955340416</span>
               <span class="contact-dropdown-circle" aria-hidden="true">
                 <img src="img/contact_header/Vector (1).svg" alt="">
               </span>
             </a>
             <a href="mailto:info@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail"
-              aria-label="Email info@miracon.gr">
+              aria-label={m['common.email']}>
               <span class="contact-dropdown-text">info@miracon.gr</span>
               <span class="contact-dropdown-circle" aria-hidden="true">
                 <img src="img/contact_header/Group 37313 (1).svg" alt="">
@@ -111,8 +122,8 @@ const goldenVisaStructuredData = {
             </a>
             <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece"
               class="contact-dropdown-link contact-dropdown-link--geo" target="_blank" rel="noreferrer"
-              aria-label="Open Egnatia 84, 54623 Thessaloniki, Greece in Google Maps">
-              <span class="contact-dropdown-text">Egnatia 84, 54623 Thessaloniki, Greece</span>
+              aria-label={m['common.openAddress']}>
+              <span class="contact-dropdown-text">{m['common.address']}</span>
               <span class="contact-dropdown-circle" aria-hidden="true">
                 <img src="img/contact_header/Vector (2).svg" alt="">
               </span>
@@ -121,20 +132,20 @@ const goldenVisaStructuredData = {
         </div>
       </div>
 
-      <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Open menu" aria-controls="mobileNav" aria-expanded="false">
+      <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label={m['common.openMenu']} aria-controls="mobileNav" aria-expanded="false">
         <span aria-hidden="true"></span>
       </button>
-      <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
-        <a href="/#projects" class="mobile-nav-link">Projects</a>
-        <a href="#top" class="mobile-nav-link" aria-current="page">Golden Visa</a>
-        <a href="/#about" class="mobile-nav-link">About us</a>
+      <nav class="mobile-nav" id="mobileNav" aria-label={m['common.mobileNavigation']}>
+        <a href={projectsHref} class="mobile-nav-link">{m['common.projects']}</a>
+        <a href={topHref} class="mobile-nav-link" aria-current="page">{m['common.goldenVisa']}</a>
+        <a href={aboutHref} class="mobile-nav-link">{m['common.aboutUs']}</a>
         <button class="mobile-nav-contact" type="button" aria-expanded="false" aria-controls="mobileContactDetails">
-          <span>Contacts</span><span aria-hidden="true">+</span>
+          <span>{m['common.contacts']}</span><span aria-hidden="true">+</span>
         </button>
         <div class="mobile-nav-contacts" id="mobileContactDetails">
           <a href="tel:+306955340416">+30 695 534 0416</a>
           <a href="mailto:info@miracon.gr">info@miracon.gr</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">Egnatia 84, Thessaloniki</a>
+          <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">{m['common.addressShort']}</a>
         </div>
       </nav>
     </div>
@@ -143,18 +154,17 @@ const goldenVisaStructuredData = {
   <main id="top">
     <section class="gv-hero" aria-labelledby="golden-visa-title">
       <OptimizedImage src="/img/golden-visa/hero-beach.jpg" alt="" class="gv-hero-bg gv-hero-bg-base" loading="lazy" decoding="async" />
-      <OptimizedImage src="/img/golden-visa/hero-interior.jpg" alt="Premium residence interior" class="gv-hero-bg gv-hero-bg-front" loading="eager" fetchpriority="high" decoding="async" />
+      <OptimizedImage src="/img/golden-visa/hero-interior.jpg" alt={m['gv.heroImageAlt']} class="gv-hero-bg gv-hero-bg-front" loading="eager" fetchpriority="high" decoding="async" />
       <div class="gv-hero-softener" aria-hidden="true"></div>
       <div class="container gv-hero-content">
-        <h1 id="golden-visa-title">Your Pathway<br>to Greek Residency</h1>
-        <p class="gv-hero-lead">Secure your Greek Golden Visa through prime real estate investments in Thessaloniki &amp;
-          Halkidiki with MIRACON Constructions</p>
+        <h1 id="golden-visa-title">{m['gv.heroTitleLine1']}<br>{m['gv.heroTitleLine2']}</h1>
+        <p class="gv-hero-lead">{m['gv.heroText']}</p>
         <div class="gv-hero-actions hero-actions">
-          <a href="#projects" class="btn-hero">
+          <a href={projectsHref} class="btn-hero">
             <span class="btn-arrow btn-arrow-left"></span>
-            <span>Explore projects</span>
+            <span>{m['home.exploreProjects']}</span>
           </a>
-          <a href="#projects" class="badge-visa glass-gradient">Golden Visa from €250k</a>
+          <a href={projectsHref} class="badge-visa glass-gradient">{m['home.goldenVisaBadge']}</a>
         </div>
       </div>
     </section>
@@ -164,8 +174,8 @@ const goldenVisaStructuredData = {
         <div class="gv-threshold-card">
           <div class="gv-threshold-main">
             <h2 id="gv-threshold-title">€250 000</h2>
-            <p>investment option for obtaining a Golden Visa in the European Union</p>
-            <span>- the most affordable</span>
+            <p>{m['gv.thresholdText']}</p>
+            <span>{m['gv.thresholdAffordable']}</span>
           </div>
           <span class="gv-threshold-divider" aria-hidden="true"></span>
           <div class="gv-threshold-note">
@@ -173,7 +183,7 @@ const goldenVisaStructuredData = {
               <img src="img/golden-visa/warning-shape.svg" alt="" class="gv-warning-shape">
               <img src="img/golden-visa/warning-mark.svg" alt="" class="gv-warning-mark">
             </span>
-            <p>For standard residential property purchases in most regions of Greece, the minimum investment is&nbsp;
+            <p>{m['gv.thresholdNote']}&nbsp;
               <strong>€400,000</strong></p>
           </div>
         </div>
@@ -182,92 +192,90 @@ const goldenVisaStructuredData = {
 
     <section class="gv-family" aria-labelledby="gv-family-title">
       <div class="container gv-family-container">
-        <h2 id="gv-family-title" class="section-title">Family Eligibility</h2>
-        <p class="section-subtitle">Eligibility for the Golden Visa extends not only to the property owner, but also to:</p>
+        <h2 id="gv-family-title" class="section-title">{m['gv.familyTitle']}</h2>
+        <p class="section-subtitle">{m['gv.familyDescription']}</p>
 
         <div class="gv-family-panel">
-          <a href="#contacts" class="gv-primary-cta">
-            <span>Get Your Golden Visa Now</span>
+          <a href={contactsHref} class="gv-primary-cta">
+            <span>{m['gv.familyCta']}</span>
             <span class="btn-submit-arrow" aria-hidden="true"></span>
           </a>
 
           <div class="gv-family-cards">
             <article class="gv-family-card">
               <img src="img/golden-visa/icon-children.svg" alt="" aria-hidden="true">
-              <h3>Spouse</h3>
+              <h3>{m['gv.spouse']}</h3>
             </article>
             <article class="gv-family-card">
               <img src="img/golden-visa/icon-parents.svg" alt="" aria-hidden="true">
-              <h3>Children of both spouses under 21</h3>
+              <h3>{m['gv.children']}</h3>
             </article>
             <article class="gv-family-card">
               <img src="img/golden-visa/icon-spouse.svg" alt="" aria-hidden="true">
-              <h3>Parents of both spouses</h3>
+              <h3>{m['gv.parents']}</h3>
             </article>
             <article class="gv-family-card">
               <img src="img/golden-visa/icon-application.svg" alt="" aria-hidden="true">
-              <h3>One application for the whole family</h3>
+              <h3>{m['gv.oneApplication']}</h3>
             </article>
           </div>
 
           <div class="gv-family-summary">
             <img src="img/golden-visa/icon-application-large.svg" alt="" class="gv-family-summary-icon" aria-hidden="true">
             <div class="gv-family-summary-copy">
-              <h3>Family Inclusion</h3>
-              <p>The Greek Golden Visa grants residency rights to the investor and eligible family members under a single
-                application structure, providing long-term flexibility, mobility within the Schengen Area and access to
-                local services</p>
+              <h3>{m['gv.familyInclusion']}</h3>
+              <p>{m['gv.familyInclusionText']}</p>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="gv-metrics" aria-label="Golden Visa key figures">
+    <section class="gv-metrics" aria-label={m['gv.metricsLabel']}>
       <div class="gv-metrics-track">
         <div class="gv-metrics-set">
           <article class="gv-metric-card">
-            <h3>33 countries</h3>
-            <p>Will be accessible for visit</p>
+            <h3>{m['gv.countries']}</h3>
+            <p>{m['gv.countriesText']}</p>
           </article>
           <article class="gv-metric-card">
             <h3>€250 000</h3>
-            <p>Minimum investment</p>
+            <p>{m['gv.minimumInvestment']}</p>
           </article>
           <article class="gv-metric-card">
-            <h3>5 years</h3>
-            <p>Permit duration, renewable while property is owned</p>
+            <h3>{m['gv.fiveYears']}</h3>
+            <p>{m['gv.durationText']}</p>
           </article>
           <article class="gv-metric-card">
             <h3>100%</h3>
-            <p>Guarantee of the EU residence permit</p>
+            <p>{m['gv.guaranteeText']}</p>
           </article>
           <article class="gv-metric-card">
             <h3>~€20 000</h3>
-            <p>Additional official state charges for processing</p>
+            <p>{m['gv.chargesText']}</p>
           </article>
         </div>
 
         <div class="gv-metrics-set" aria-hidden="true">
           <article class="gv-metric-card">
-            <h3>33 countries</h3>
-            <p>Will be accessible for visit</p>
+            <h3>{m['gv.countries']}</h3>
+            <p>{m['gv.countriesText']}</p>
           </article>
           <article class="gv-metric-card">
             <h3>€250 000</h3>
-            <p>Minimum investment</p>
+            <p>{m['gv.minimumInvestment']}</p>
           </article>
           <article class="gv-metric-card">
-            <h3>5 years</h3>
-            <p>Permit duration, renewable while property is owned</p>
+            <h3>{m['gv.fiveYears']}</h3>
+            <p>{m['gv.durationText']}</p>
           </article>
           <article class="gv-metric-card">
             <h3>100%</h3>
-            <p>Guarantee of the EU residence permit</p>
+            <p>{m['gv.guaranteeText']}</p>
           </article>
           <article class="gv-metric-card">
             <h3>~€20 000</h3>
-            <p>Additional official state charges for processing</p>
+            <p>{m['gv.chargesText']}</p>
           </article>
         </div>
       </div>
@@ -275,13 +283,13 @@ const goldenVisaStructuredData = {
 
     <section id="projects" class="projects-section gv-projects">
       <div class="container">
-        <h2 class="section-title">{goldenVisaProjects.length === 1 ? 'Featured Property' : 'Golden Visa Properties'}</h2>
-        <p class="section-subtitle">Properties eligible for the Greek Golden Visa programme</p>
+        <h2 class="section-title">{goldenVisaProjects.length === 1 ? m['gv.featuredProperty'] : m['gv.properties']}</h2>
+        <p class="section-subtitle">{m['gv.propertiesDescription']}</p>
 
         <div class="projects-list">
           {goldenVisaProjects.length > 0
-            ? goldenVisaProjects.map((project) => <ProjectCard project={project} />)
-            : <p class="gv-projects-empty">Golden Visa properties will appear here when published</p>}
+            ? goldenVisaProjects.map((project) => <ProjectCard project={project} locale={locale} />)
+            : <p class="gv-projects-empty">{m['gv.propertiesEmpty']}</p>}
         </div>
       </div>
     </section>
@@ -289,66 +297,66 @@ const goldenVisaStructuredData = {
     <section class="stages-section">
       <div class="container stages-container">
         <div class="stages-intro">
-          <h2 class="section-title">Stage of work</h2>
-          <p class="section-subtitle">A clear process from first contact to key handover</p>
+          <h2 class="section-title">{m['stages.title']}</h2>
+          <p class="section-subtitle">{m['stages.description']}</p>
         </div>
       </div>
 
-      <div class="stages-carousel" aria-label="Stages of work">
+      <div class="stages-carousel" aria-label={m['stages.label']}>
         <div class="stages-carousel-track">
           <div class="stages-carousel-set">
             <article class="stage-card">
               <span class="stage-number">01</span>
-              <h3>Consultation</h3>
-              <p>We find the right property for your goals</p>
+              <h3>{m['stages.consultation']}</h3>
+              <p>{m['stages.consultationText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">02</span>
-              <h3>Reservation</h3>
-              <p>Deposit placed,<br>unit secured</p>
+              <h3>{m['stages.reservation']}</h3>
+              <p>{m['stages.reservationText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">03</span>
-              <h3>Due Diligence</h3>
-              <p>AFM, bank account,<br>due diligence</p>
+              <h3>{m['stages.dueDiligence']}</h3>
+              <p>{m['stages.dueDiligenceText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">04</span>
-              <h3>Contract</h3>
-              <p>Documents signed,<br>payment schedule fixed</p>
+              <h3>{m['stages.contract']}</h3>
+              <p>{m['stages.contractText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">05</span>
-              <h3>Key handover</h3>
-              <p>Property delivered,<br>support continues</p>
+              <h3>{m['stages.handover']}</h3>
+              <p>{m['stages.handoverText']}</p>
             </article>
           </div>
 
           <div class="stages-carousel-set" aria-hidden="true">
             <article class="stage-card">
               <span class="stage-number">01</span>
-              <h3>Consultation</h3>
-              <p>We find the right property for your goals</p>
+              <h3>{m['stages.consultation']}</h3>
+              <p>{m['stages.consultationText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">02</span>
-              <h3>Reservation</h3>
-              <p>Deposit placed,<br>unit secured</p>
+              <h3>{m['stages.reservation']}</h3>
+              <p>{m['stages.reservationText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">03</span>
-              <h3>Due Diligence</h3>
-              <p>AFM, bank account,<br>due diligence</p>
+              <h3>{m['stages.dueDiligence']}</h3>
+              <p>{m['stages.dueDiligenceText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">04</span>
-              <h3>Contract</h3>
-              <p>Documents signed,<br>payment schedule fixed</p>
+              <h3>{m['stages.contract']}</h3>
+              <p>{m['stages.contractText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">05</span>
-              <h3>Key handover</h3>
-              <p>Property delivered,<br>support continues</p>
+              <h3>{m['stages.handover']}</h3>
+              <p>{m['stages.handoverText']}</p>
             </article>
           </div>
         </div>
@@ -358,41 +366,41 @@ const goldenVisaStructuredData = {
     <section id="contacts" class="contacts-section">
       <div class="container">
         <div class="form-container">
-          <h2 class="section-title">Free consultation</h2>
-          <p class="section-subtitle">Lorem ipsum dolo lorem ipsum dolor sit amet consecteturr</p>
+          <h2 class="section-title">{m['form.title']}</h2>
+          <p class="section-subtitle">{m['form.description']}</p>
 
           <form class="consultation-form" data-consultation-form data-web3forms-key="bcf7cde0-e5e8-4908-8b89-02ebe78bcd0d" novalidate>
             <div class="form-row">
               <label class="form-group">
-                <span>Name</span>
-                <input type="text" name="name" class="form-input" placeholder="Name" maxlength="120" required>
+                <span>{m['form.name']}</span>
+                <input type="text" name="name" class="form-input" placeholder={m['form.name']} maxlength="120" required>
               </label>
               <label class="form-group">
-                <span>Phone</span>
-                <input type="tel" name="phone" class="form-input" placeholder="Phone" maxlength="40">
+                <span>{m['form.phone']}</span>
+                <input type="tel" name="phone" class="form-input" placeholder={m['form.phone']} maxlength="40">
               </label>
               <label class="form-group">
-                <span>Email</span>
-                <input type="email" name="email" class="form-input" placeholder="Email" maxlength="254">
+                <span>{m['form.email']}</span>
+                <input type="email" name="email" class="form-input" placeholder={m['form.email']} maxlength="254">
               </label>
             </div>
 
             <label class="form-group form-message">
-              <span>What info are you interested in?</span>
-              <textarea name="message" class="form-input form-textarea" placeholder="What info are you interested in?" maxlength="3000"></textarea>
+              <span>{m['form.message']}</span>
+              <textarea name="message" class="form-input form-textarea" placeholder={m['form.message']} maxlength="3000"></textarea>
             </label>
 
             <label class="form-consent">
               <input type="checkbox" name="consent" class="form-consent-input" required>
               <span class="form-consent-box" aria-hidden="true"></span>
-              <span class="form-consent-text">I agree to the processing of my personal data in accordance with the <a
-                  href="#">Privacy Policy</a> and consent to being contacted using the details provided</span>
+              <span class="form-consent-text">{m['form.consentBefore']} <a
+                  href="#">{m['common.privacy']}</a> {m['form.consentAfter']}</span>
             </label>
 
             <div class="form-captcha"><div class="h-captcha" data-captcha="true" data-theme="light"></div></div>
 
             <button type="submit" class="btn-submit" disabled>
-              <span>Request a consultation</span>
+              <span>{m['form.submit']}</span>
               <span class="btn-submit-arrow"></span>
             </button>
             <input class="form-honeypot" type="checkbox" name="botcheck" tabindex="-1" aria-hidden="true">
@@ -406,7 +414,7 @@ const goldenVisaStructuredData = {
   <footer class="footer">
     <div class="container footer-container">
       <div class="footer-top">
-        <a href="/" class="logo" aria-label="MIRACON home">
+        <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
           <img src="img/logo_mark.svg" alt="" class="logo-img">
           <div class="logo-letters" aria-hidden="true">
             <img src="img/logo_letters/M.svg" alt="" class="logo-letter">
@@ -418,11 +426,11 @@ const goldenVisaStructuredData = {
             <img src="img/logo_letters/N.svg" alt="" class="logo-letter">
           </div>
         </a>
-        <nav class="footer-socials" aria-label="Contact links">
-          <a href="mailto:info@miracon.gr" aria-label="Email info@miracon.gr" title="info@miracon.gr">
+        <nav class="footer-socials" aria-label={m['common.contactLinks']}>
+          <a href="mailto:info@miracon.gr" aria-label={m['common.email']} title="info@miracon.gr">
             <img src="img/contact_header/Group 37313 (1).svg" alt="">
           </a>
-          <a href="tel:+306955340416" aria-label="Call +30 695 534 0416" title="+30 695 534 0416">
+          <a href="tel:+306955340416" aria-label={m['common.callPhone']} title="+30 695 534 0416">
             <img src="img/contact_header/Vector (1).svg" alt="">
           </a>
           <a href="https://wa.me/306955340416" target="_blank" rel="noreferrer" aria-label="WhatsApp +30 695 534 0416" title="WhatsApp">
@@ -432,18 +440,18 @@ const goldenVisaStructuredData = {
       </div>
       <div class="footer-bottom">
         <div class:list={['footer-links', { 'footer-links--empty': !siteSettings.footerTermsVisible && !siteSettings.footerPrivacyVisible && !siteSettings.footerCookieVisible }]}>
-          <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>Terms of Use</a>
-          <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>Privacy Policy</a>
-          <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>Cookie Policy</a>
+          <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
+          <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>{m['common.privacy']}</a>
+          <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
         </div>
-        <button class="lang-dropdown-btn">
-          <span>English</span>
+        <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
+          <span>{m['common.languageName']}</span>
           <span class="lang-refresh" aria-hidden="true">
             <img src="img/Vector.svg" alt="">
           </span>
-        </button>
+        </a>
       </div>
-      <p class="footer-copyright">© 2026 Miracon Constructions, Thessaloniki, Greece</p>
+      <p class="footer-copyright">{m['common.copyright']}</p>
     </div>
   </footer>
 

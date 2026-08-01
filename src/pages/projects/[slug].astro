@@ -1,8 +1,11 @@
 ---
 import ProjectPage from '../../components/ProjectPage.astro';
-import { getPublishedProjectBySlug } from '../../lib/projects';
+import { getLocale } from '../../lib/i18n';
+import { getPublishedProjectBySlug, localizeProject } from '../../lib/projects';
 
-const project = await getPublishedProjectBySlug(Astro.params.slug ?? '');
+const locale = getLocale(Astro.originPathname);
+const sourceProject = await getPublishedProjectBySlug(Astro.params.slug ?? '');
+const project = sourceProject ? localizeProject(sourceProject, locale) : null;
 Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 
 if (!project) {
@@ -10,4 +13,4 @@ if (!project) {
 }
 ---
 
-<ProjectPage project={project} />
+<ProjectPage project={project} locale={locale} />

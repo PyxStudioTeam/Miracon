@@ -1,5 +1,6 @@
 ---
-import { absoluteSiteUrl } from '../lib/seo';
+import { getLocale, getMessages, type SiteLocale } from '../lib/i18n';
+import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
 
 interface Props {
   title: string;
@@ -11,24 +12,30 @@ interface Props {
   noindex?: boolean;
   canonical?: boolean;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  locale?: SiteLocale;
 }
 
 const {
   title,
   description,
-  path = Astro.url.pathname,
+  path = Astro.originPathname,
   image = '/img/figma_hero.png',
-  imageAlt = 'MIRACON premium residences in Greece',
+  imageAlt,
   type = 'website',
   noindex = false,
   canonical = true,
   jsonLd,
+  locale = getLocale(Astro.originPathname),
 } = Astro.props;
 
+const m = getMessages(locale);
 const cleanTitle = title.trim();
 const cleanDescription = description.trim().replace(/\s+/g, ' ');
-const canonicalUrl = absoluteSiteUrl(path, Astro.url);
+const canonicalUrl = absoluteLocalizedUrl(path, locale, Astro.url);
+const englishUrl = absoluteLocalizedUrl(path, 'en', Astro.url);
+const greekUrl = absoluteLocalizedUrl(path, 'el', Astro.url);
 const imageUrl = absoluteSiteUrl(image, Astro.url);
+const cleanImageAlt = imageAlt ?? m['home.seoImageAlt'];
 const robotsContent = noindex
   ? 'noindex,nofollow,noarchive'
   : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
@@ -39,21 +46,24 @@ const structuredData = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
 <meta name="description" content={cleanDescription}>
 <meta name="robots" content={robotsContent}>
 {canonical && <link rel="canonical" href={canonicalUrl}>}
+{canonical && !noindex && <link rel="alternate" hreflang="en" href={englishUrl}>}
+{canonical && !noindex && <link rel="alternate" hreflang="el" href={greekUrl}>}
+{canonical && !noindex && <link rel="alternate" hreflang="x-default" href={englishUrl}>}
 
 <meta property="og:site_name" content="MIRACON">
-<meta property="og:locale" content="en_GR">
+<meta property="og:locale" content={locale === 'el' ? 'el_GR' : 'en_GR'}>
 <meta property="og:type" content={type}>
 <meta property="og:title" content={cleanTitle}>
 <meta property="og:description" content={cleanDescription}>
 <meta property="og:url" content={canonicalUrl}>
 <meta property="og:image" content={imageUrl}>
-<meta property="og:image:alt" content={imageAlt}>
+<meta property="og:image:alt" content={cleanImageAlt}>
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content={cleanTitle}>
 <meta name="twitter:description" content={cleanDescription}>
 <meta name="twitter:image" content={imageUrl}>
-<meta name="twitter:image:alt" content={imageAlt}>
+<meta name="twitter:image:alt" content={cleanImageAlt}>
 
 {structuredData.map((entry) => (
   <script is:inline type="application/ld+json" set:html={JSON.stringify(entry).replaceAll('<', '\\u003c')}></script>

@@ -59,6 +59,7 @@ import {
   type Project,
   type ProjectCategory,
   type ProjectImage,
+  type ProjectLocaleTranslation,
   type ProjectVideoItem,
 } from '../lib/project-types';
 import { getBrowserSupabaseClient } from '../lib/supabase-browser';
@@ -195,6 +196,7 @@ const emptyProject = (sortOrder: number): Project => ({
   nearbyPlaces: [],
   seoTitle: '',
   seoDescription: '',
+  translations: {},
   updatedAt: new Date().toISOString(),
 });
 
@@ -242,6 +244,7 @@ function projectToRow(project: Project) {
     nearby_places: project.nearbyPlaces,
     seo_title: project.seoTitle || `${project.title} — MIRACON`,
     seo_description: project.seoDescription || project.shortDescription,
+    translations: project.translations ?? {},
   };
 }
 
@@ -315,6 +318,39 @@ function pruneImageVariants(project: Project): Project {
     imageVariants: {
       version: 1,
       images: Object.fromEntries(Object.entries(currentImages).filter(([url]) => referenced.has(normalizeMediaUrl(url)))),
+    },
+  };
+}
+
+function pruneTranslations(project: Project): Project {
+  const translation = project.translations?.el;
+  if (!translation) return project;
+
+  const characteristicIds = new Set(project.characteristics.map((item) => item.id));
+  const benefitIds = new Set(project.benefits.map((item) => item.id));
+  const imageIds = new Set([...project.cardImages, ...project.gallery].map((item) => item.id));
+  const floorPlanGroups = Object.fromEntries(project.floorPlanGroups.flatMap((group) => {
+    const translatedGroup = translation.floorPlanGroups?.[group.id];
+    if (!translatedGroup) return [];
+    const planIds = new Set(group.plans.map((plan) => plan.id));
+    return [[group.id, {
+      ...translatedGroup,
+      plans: Object.fromEntries(Object.entries(translatedGroup.plans ?? {}).filter(([id]) => planIds.has(id))),
+    }]];
+  }));
+
+  return {
+    ...project,
+    translations: {
+      ...project.translations,
+      el: {
+        ...translation,
+        nearbyPlaces: translation.nearbyPlaces?.slice(0, project.nearbyPlaces.length),
+        characteristics: Object.fromEntries(Object.entries(translation.characteristics ?? {}).filter(([id]) => characteristicIds.has(id))),
+        benefits: Object.fromEntries(Object.entries(translation.benefits ?? {}).filter(([id]) => benefitIds.has(id))),
+        floorPlanGroups,
+        imageAlts: Object.fromEntries(Object.entries(translation.imageAlts ?? {}).filter(([id]) => imageIds.has(id))),
+      },
     },
   };
 }
@@ -873,6 +909,15 @@ function ImageCollection({ title, images, onChange, onUpload, uploading }: { tit
   );
 }
 
+function TranslationImageAlts({ title, images, values, onChange }: { title: string; images: ProjectImage[]; values: Record<string, string>; onChange: (id: string, value: string) => void }) {
+  return (
+    <div className="image-collection translation-image-alts">
+      <div className="collection-heading"><div><h3>{title}</h3><span>Greek alt text · media and order are shared with English</span></div></div>
+      {images.length ? <div className="media-grid">{images.map((image) => <article className="media-card" key={image.id}><div className="media-card-crop"><img src={image.url} alt="" style={{ objectPosition: `${image.focalX ?? 50}% ${image.focalY ?? 50}%` }} /></div><div className="media-card-meta"><input value={values[image.id] ?? ''} onChange={(event) => onChange(image.id, event.target.value)} placeholder={image.alt || 'English alt text'} /><span>EL alt</span></div></article>)}</div> : <div className="media-empty">Add images in the English tab first</div>}
+    </div>
+  );
+}
+
 type ProjectVideoField = 'desktopUrl' | 'mobileUrl' | 'posterUrl';
 
 function SortableProjectVideo({
@@ -951,6 +996,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
   const [project, setProject] = useState<Project>(() => structuredClone(initialProject));
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialProject));
   const [section, setSection] = useState<AdminSection>('content');
+  const [editingLocale, setEditingLocale] = useState<'en' | 'el'>('en');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState('');
   const [toast, setToast] = useState<Toast>(null);
@@ -964,6 +1010,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
   const requirements = getPublishRequirements(project);
   const missingRequirements = requirements.filter((item) => !item.complete);
   const readiness = projectReadiness(project);
+  const greek = project.translations?.el ?? {};
 
   useEffect(() => {
     if (!isDirty) return;
@@ -976,6 +1023,49 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
 
   function update<K extends keyof Project>(key: K, value: Project[K]) {
     setProject((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateGreek(patch: Partial<ProjectLocaleTranslation>) {
+    setProject((current) => ({
+      ...current,
+      translations: {
+        ...current.translations,
+        el: { ...current.translations?.el, ...patch },
+      },
+    }));
+  }
+
+  function updateGreekCharacteristic(id: string, patch: { label?: string; value?: string }) {
+    const characteristics = greek.characteristics ?? {};
+    updateGreek({ characteristics: { ...characteristics, [id]: { ...characteristics[id], ...patch } } });
+  }
+
+  function updateGreekBenefit(id: string, title: string) {
+    updateGreek({ benefits: { ...greek.benefits, [id]: { ...greek.benefits?.[id], title } } });
+  }
+
+  function updateGreekFloorGroup(id: string, patch: { title?: string }) {
+    updateGreek({ floorPlanGroups: { ...greek.floorPlanGroups, [id]: { ...greek.floorPlanGroups?.[id], ...patch } } });
+  }
+
+  function updateGreekFloorPlan(groupId: string, planId: string, patch: { title?: string; alt?: string }) {
+    const group = greek.floorPlanGroups?.[groupId] ?? {};
+    updateGreek({
+      floorPlanGroups: {
+        ...greek.floorPlanGroups,
+        [groupId]: { ...group, plans: { ...group.plans, [planId]: { ...group.plans?.[planId], ...patch } } },
+      },
+    });
+  }
+
+  function updateGreekImageAlt(id: string, value: string) {
+    updateGreek({ imageAlts: { ...greek.imageAlts, [id]: value } });
+  }
+
+  function updateGreekNearbyPlace(index: number, value: string) {
+    const nearbyPlaces = Array.from({ length: project.nearbyPlaces.length }, (_, itemIndex) => greek.nearbyPlaces?.[itemIndex] ?? '');
+    nearbyPlaces[index] = value;
+    updateGreek({ nearbyPlaces });
   }
 
   function updateProjectVideos(collection: 'heroVideos' | 'walkthroughVideos', videos: ProjectVideoItem[]) {
@@ -1014,7 +1104,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       return false;
     }
 
-    const nextProject = pruneImageVariants(syncLegacyVideoFields({ ...project, slug, status, updatedAt: new Date().toISOString(), seoTitle: project.seoTitle || `${project.title} — MIRACON`, seoDescription: project.seoDescription || project.shortDescription }));
+    const nextProject = pruneTranslations(pruneImageVariants(syncLegacyVideoFields({ ...project, slug, status, updatedAt: new Date().toISOString(), seoTitle: project.seoTitle || `${project.title} — MIRACON`, seoDescription: project.seoDescription || project.shortDescription })));
     setSaving(true);
     try {
       if (demo || !supabase) {
@@ -1466,7 +1556,11 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
           <button className="delete-project" onClick={() => setConfirmDelete(true)}><Trash2 size={16} />Delete project</button>
         </aside>
         <section className="editor-canvas">
-          {section === 'content' && <>
+          <div className="editor-locale-toolbar">
+            <div><strong>Content language</strong><span>{editingLocale === 'el' ? 'Greek fields are optional; empty values fall back to English' : 'English is the source content and controls shared structure'}</span></div>
+            <div className="presentation-switch" role="group" aria-label="Content language"><button type="button" className={editingLocale === 'en' ? 'active' : ''} onClick={() => setEditingLocale('en')}>EN</button><button type="button" className={editingLocale === 'el' ? 'active' : ''} onClick={() => setEditingLocale('el')}>ΕΛ</button></div>
+          </div>
+          {section === 'content' && editingLocale === 'en' && <>
             <div className="section-heading"><span>01 / Content</span><h2>Project identity</h2><p>The information used in the catalog card and the project page</p></div>
             <div className="editor-form-grid">
               <Field label="Project name"><input value={project.title} onChange={(event) => update('title', event.target.value)} /></Field>
@@ -1482,12 +1576,30 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
               <Field label="Nearby places / running line" wide hint="One item per line"><textarea rows={5} value={project.nearbyPlaces.join('\n')} onChange={(event) => update('nearbyPlaces', event.target.value.split('\n').filter(Boolean))} /></Field>
             </div>
           </>}
-          {section === 'specs' && <>
+          {section === 'content' && editingLocale === 'el' && <>
+            <div className="section-heading"><span>01 / Ελληνικά</span><h2>Project identity</h2><p>Translate visitor-facing content. Leave a field empty to use its English value</p></div>
+            <div className="editor-form-grid">
+              <Field label="Project name"><input value={greek.title ?? ''} placeholder={project.title} onChange={(event) => updateGreek({ title: event.target.value })} /></Field>
+              <Field label="Project page address"><input value={greek.address ?? ''} placeholder={project.address} onChange={(event) => updateGreek({ address: event.target.value })} /></Field>
+              <Field label="Homepage card location"><input value={greek.cardAddress ?? ''} placeholder={project.cardAddress || project.address} onChange={(event) => updateGreek({ cardAddress: event.target.value })} /></Field>
+              <Field label="Price label"><input value={greek.price ?? ''} placeholder={project.price || 'from 250 000 €'} onChange={(event) => updateGreek({ price: event.target.value })} /></Field>
+              <Field label="Short card description" wide hint={`${(greek.shortDescription ?? '').length}/420`}><textarea rows={4} maxLength={420} value={greek.shortDescription ?? ''} placeholder={project.shortDescription} onChange={(event) => updateGreek({ shortDescription: event.target.value })} /></Field>
+              <Field label="Page intro heading" wide><input value={greek.introTitle ?? ''} placeholder={project.introTitle} onChange={(event) => updateGreek({ introTitle: event.target.value })} /></Field>
+              <Field label="Full project description" wide><textarea rows={10} value={greek.fullDescription ?? ''} placeholder={project.fullDescription} onChange={(event) => updateGreek({ fullDescription: event.target.value })} /></Field>
+            </div>
+            <div className="repeat-section translation-list"><div className="repeat-heading"><div><h3>Nearby places</h3><span>Order and item count come from English</span></div></div>{project.nearbyPlaces.length ? project.nearbyPlaces.map((place, index) => <div className="translation-pair" key={`${index}-${place}`}><span>{place}</span><input value={greek.nearbyPlaces?.[index] ?? ''} placeholder={place} onChange={(event) => updateGreekNearbyPlace(index, event.target.value)} /></div>) : <div className="media-empty">Add nearby places in the English tab first</div>}</div>
+          </>}
+          {section === 'specs' && editingLocale === 'en' && <>
             <div className="section-heading"><span>02 / Features</span><h2>Characteristics & benefits</h2><p>Structured facts used in the page highlights</p></div>
             <div className="repeat-section"><div className="repeat-heading"><h3>Characteristics</h3><button onClick={() => update('characteristics', [...project.characteristics, { id: crypto.randomUUID(), label: 'Characteristic', value: '', icon: 'area' }])}><Plus size={16} />Add</button></div>{project.characteristics.map((item) => <div className="repeat-row" key={item.id}><select value={item.icon} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, icon: event.target.value as typeof item.icon } : current))}><option value="bed">Bed</option><option value="bath">Bath</option><option value="area">Area</option><option value="levels">Levels</option></select><input value={item.label} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, label: event.target.value } : current))} /><input value={item.value} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, value: event.target.value } : current))} /><button onClick={() => update('characteristics', project.characteristics.filter((current) => current.id !== item.id))}><Trash2 size={16} /></button></div>)}</div>
             <div className="repeat-section"><div className="repeat-heading"><h3>Benefits</h3><button onClick={() => update('benefits', [...project.benefits, { id: crypto.randomUUID(), title: 'New benefit', icon: '/img/olympus-detail/icons/amenity-finish.svg' }])}><Plus size={16} />Add</button></div>{project.benefits.map((item) => <div className="repeat-row benefit-row" key={item.id}><div className="benefit-icon-preview"><img src={item.icon} alt="" /></div><input value={item.title} onChange={(event) => update('benefits', project.benefits.map((current) => current.id === item.id ? { ...current, title: event.target.value } : current))} /><label className="benefit-icon-upload"><input type="file" accept="image/svg+xml,.svg" onChange={(event) => uploadBenefitIcon(item.id, event)} />{uploading === `benefit-${item.id}` ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Replace SVG</label><button onClick={() => update('benefits', project.benefits.filter((current) => current.id !== item.id))}><Trash2 size={16} /></button></div>)}</div>
           </>}
-          {section === 'media' && <>
+          {section === 'specs' && editingLocale === 'el' && <>
+            <div className="section-heading"><span>02 / Ελληνικά</span><h2>Characteristics & benefits</h2><p>Translate labels and values; icons and order are shared with English</p></div>
+            <div className="repeat-section"><div className="repeat-heading"><h3>Characteristics</h3></div>{project.characteristics.length ? project.characteristics.map((item) => <div className="translation-structured-row" key={item.id}><span>{item.label}: {item.value}</span><input value={greek.characteristics?.[item.id]?.label ?? ''} placeholder={item.label} onChange={(event) => updateGreekCharacteristic(item.id, { label: event.target.value })} /><input value={greek.characteristics?.[item.id]?.value ?? ''} placeholder={item.value} onChange={(event) => updateGreekCharacteristic(item.id, { value: event.target.value })} /></div>) : <div className="media-empty">Add characteristics in the English tab first</div>}</div>
+            <div className="repeat-section"><div className="repeat-heading"><h3>Benefits</h3></div>{project.benefits.length ? project.benefits.map((item) => <div className="translation-pair translation-benefit" key={item.id}><span><img src={item.icon} alt="" />{item.title}</span><input value={greek.benefits?.[item.id]?.title ?? ''} placeholder={item.title} onChange={(event) => updateGreekBenefit(item.id, event.target.value)} /></div>) : <div className="media-empty">Add benefits in the English tab first</div>}</div>
+          </>}
+          {section === 'media' && editingLocale === 'en' && <>
             <div className="section-heading"><span>03 / Media</span><h2>Visual materials</h2><p>Cover, page imagery, gallery, walkthrough and brochure</p></div>
             <div className="hero-presentation-panel">
               <div className="presentation-heading"><div><span>Hero presentation</span><strong>{project.heroType === 'video' || project.heroVariant === 'immersive' ? 'Immersive viewport' : 'Standard editorial'}</strong></div><div className="presentation-switch">{project.heroType !== 'video' && <button type="button" className={project.heroVariant === 'standard' ? 'active' : ''} onClick={() => setProject((current) => ({ ...current, heroVariant: 'standard', heroIdleUi: false }))}>Standard</button>}<button type="button" className={project.heroType === 'video' || project.heroVariant === 'immersive' ? 'active' : ''} onClick={() => update('heroVariant', 'immersive')}>Immersive</button></div></div>
@@ -1516,15 +1628,30 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
               <ProjectVideoPlaylist title="Walkthrough sequence" hint="Add the first walkthrough video" videos={project.walkthroughVideos} uploading={uploading} onChange={(videos) => updateProjectVideos('walkthroughVideos', videos)} onUpload={(itemId, field, event) => uploadProjectVideo(event, 'walkthroughVideos', itemId, field)} />
             </div>
           </>}
-          {section === 'plans' && <>
+          {section === 'media' && editingLocale === 'el' && <>
+            <div className="section-heading"><span>03 / Ελληνικά</span><h2>Media text</h2><p>Translate alt text and the optional walkthrough heading; media files remain shared</p></div>
+            <div className="editor-form-grid"><Field label="Walkthrough section heading" wide><input value={greek.walkthroughVideoTitle ?? ''} placeholder={project.walkthroughVideoTitle} onChange={(event) => updateGreek({ walkthroughVideoTitle: event.target.value })} /></Field></div>
+            <TranslationImageAlts title="Catalog card images" images={project.cardImages} values={greek.imageAlts ?? {}} onChange={updateGreekImageAlt} />
+            <TranslationImageAlts title="Project gallery" images={project.gallery} values={greek.imageAlts ?? {}} onChange={updateGreekImageAlt} />
+          </>}
+          {section === 'plans' && editingLocale === 'en' && <>
             <div className="section-heading"><span>04 / Floor plans</span><h2>Plan collections</h2><p>Group plan images by apartment or villa type</p></div>
             <div className="plan-groups">{project.floorPlanGroups.map((group) => <article className="plan-group-editor" key={group.id}><div className="plan-group-head"><input value={group.title} onChange={(event) => updatePlanGroup(group.id, { title: event.target.value })} /><button onClick={() => update('floorPlanGroups', project.floorPlanGroups.filter((item) => item.id !== group.id))}><Trash2 size={16} /></button></div>{group.plans.map((plan) => <div className="plan-row" key={plan.id}>{plan.imageUrl ? <img src={plan.imageUrl} alt="" /> : <ImagePlus size={20} />}<input value={plan.title} onChange={(event) => updatePlanGroup(group.id, { plans: group.plans.map((item) => item.id === plan.id ? { ...item, title: event.target.value } : item) })} /><label className="plan-upload"><input type="file" accept="image/*" onChange={(event) => uploadPlanImage(group.id, plan.id, event)} />{uploading === plan.id ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Upload plan</label><button onClick={() => updatePlanGroup(group.id, { plans: group.plans.filter((item) => item.id !== plan.id) })}><X size={15} /></button></div>)}<button className="add-plan" onClick={() => updatePlanGroup(group.id, { plans: [...group.plans, { id: crypto.randomUUID(), title: 'Floor plan', imageUrl: '', alt: `${project.title} floor plan` }] })}><Plus size={16} />Add plan</button></article>)}</div>
             <button className="secondary-button" onClick={addPlanGroup}><Plus size={17} />Add plan collection</button>
           </>}
-          {section === 'seo' && <>
+          {section === 'plans' && editingLocale === 'el' && <>
+            <div className="section-heading"><span>04 / Ελληνικά</span><h2>Plan collections</h2><p>Translate group names, plan names and image alt text; plan media and order are shared</p></div>
+            <div className="plan-groups translation-plan-groups">{project.floorPlanGroups.length ? project.floorPlanGroups.map((group) => <article className="plan-group-editor" key={group.id}><div className="translation-source"><strong>{group.title}</strong><span>English group name</span></div><input value={greek.floorPlanGroups?.[group.id]?.title ?? ''} placeholder={group.title} onChange={(event) => updateGreekFloorGroup(group.id, { title: event.target.value })} />{group.plans.map((plan) => <div className="translation-plan-row" key={plan.id}>{plan.imageUrl ? <img src={plan.imageUrl} alt="" /> : <ImagePlus size={20} />}<div><span>{plan.title}</span><input value={greek.floorPlanGroups?.[group.id]?.plans?.[plan.id]?.title ?? ''} placeholder={plan.title} onChange={(event) => updateGreekFloorPlan(group.id, plan.id, { title: event.target.value })} /><input value={greek.floorPlanGroups?.[group.id]?.plans?.[plan.id]?.alt ?? ''} placeholder={plan.alt || `${project.title} floor plan`} onChange={(event) => updateGreekFloorPlan(group.id, plan.id, { alt: event.target.value })} /></div></div>)}</article>) : <div className="media-empty">Add floor plans in the English tab first</div>}</div>
+          </>}
+          {section === 'seo' && editingLocale === 'en' && <>
             <div className="section-heading"><span>05 / SEO & URL</span><h2>Search appearance</h2><p>Control the public URL and search engine snippet</p></div>
             <div className="editor-form-grid"><Field label="Page slug" wide hint={`Public URL: /projects/${normalizedSlug(project.slug)}`}><div className="slug-input"><span>/projects/</span><input value={project.slug} onBlur={() => update('slug', normalizedSlug(project.slug))} onChange={(event) => update('slug', event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'))} /></div></Field><Field label="SEO title" wide hint={`${project.seoTitle.length}/60`}><input value={project.seoTitle} maxLength={60} onChange={(event) => update('seoTitle', event.target.value)} /></Field><Field label="SEO description" wide hint={`${project.seoDescription.length}/160`}><textarea rows={5} value={project.seoDescription} maxLength={160} onChange={(event) => update('seoDescription', event.target.value)} /></Field></div>
             <div className="search-preview"><span>miracon.gr › projects › {project.slug}</span><h3>{project.seoTitle || `${project.title} — MIRACON`}</h3><p>{project.seoDescription || project.shortDescription || 'Add a description to preview the search result'}</p></div>
+          </>}
+          {section === 'seo' && editingLocale === 'el' && <>
+            <div className="section-heading"><span>05 / Ελληνικά</span><h2>Search appearance</h2><p>The slug is shared; translate the search title and description</p></div>
+            <div className="editor-form-grid"><Field label="SEO title" wide hint={`${(greek.seoTitle ?? '').length}/60`}><input value={greek.seoTitle ?? ''} placeholder={project.seoTitle || `${project.title} — MIRACON`} maxLength={60} onChange={(event) => updateGreek({ seoTitle: event.target.value })} /></Field><Field label="SEO description" wide hint={`${(greek.seoDescription ?? '').length}/160`}><textarea rows={5} value={greek.seoDescription ?? ''} placeholder={project.seoDescription || project.shortDescription} maxLength={160} onChange={(event) => updateGreek({ seoDescription: event.target.value })} /></Field></div>
+            <div className="search-preview"><span>miracon.gr › el › projects › {project.slug}</span><h3>{greek.seoTitle || project.seoTitle || greek.title || `${project.title} — MIRACON`}</h3><p>{greek.seoDescription || project.seoDescription || greek.shortDescription || project.shortDescription || 'English fallback will be used'}</p></div>
           </>}
         </section>
       </div>
@@ -1532,7 +1659,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       {confirmDelete && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title"><span><Trash2 size={20} /></span><h3 id="delete-title">Delete “{project.title}”?</h3><p>The project and its uploaded files will be permanently removed</p><div><button className="secondary-button" onClick={() => setConfirmDelete(false)}>Cancel</button><button className="danger-button" onClick={removeProject}>Delete permanently</button></div></div></div>}
       {confirmLeave && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="leave-title"><span><CircleAlert size={20} /></span><h3 id="leave-title">Discard unsaved changes?</h3><p>Your latest edits have not been saved and cannot be restored</p><div><button className="secondary-button" onClick={() => setConfirmLeave(false)}>Continue editing</button><button className="danger-button" onClick={onBack}>Discard changes</button></div></div></div>}
       {confirmStatus && <div className="modal-backdrop"><div className="confirm-modal status-confirm" role="dialog" aria-modal="true" aria-labelledby="status-title"><span><Check size={20} /></span><h3 id="status-title">{confirmStatus === 'published' ? 'Publish this project?' : 'Remove project from the website?'}</h3><p>{confirmStatus === 'published' ? 'The saved project will become visible to every website visitor' : 'The project will remain in the desk as a draft and its public page will be unavailable'}</p><div><button className="secondary-button" onClick={() => setConfirmStatus(null)}>Cancel</button><button className="primary-button" disabled={saving} onClick={async () => { if (await save(confirmStatus)) setConfirmStatus(null); }}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{confirmStatus === 'published' ? 'Publish project' : 'Unpublish'}</button></div></div></div>}
-      {previewOpen && <div className="responsive-preview"><header><div><strong>Responsive preview</strong><span>Save changes to refresh database content</span></div><div className="preview-sizes"><button className={previewWidth === 1440 ? 'active' : ''} onClick={() => setPreviewWidth(1440)}>Desktop</button><button className={previewWidth === 768 ? 'active' : ''} onClick={() => setPreviewWidth(768)}>Tablet</button><button className={previewWidth === 390 ? 'active' : ''} onClick={() => setPreviewWidth(390)}>Mobile</button><button className={previewWidth === '100%' ? 'active' : ''} onClick={() => setPreviewWidth('100%')}>Full</button></div><button className="preview-close" onClick={() => setPreviewOpen(false)}><X size={19} /></button></header><div className="preview-stage"><iframe title={`${project.title} responsive preview`} src={`/preview/${project.slug}`} style={{ width: previewWidth === '100%' ? '100%' : `${previewWidth}px` }} /></div></div>}
+      {previewOpen && <div className="responsive-preview"><header><div><strong>Responsive preview · {editingLocale.toUpperCase()}</strong><span>Save changes to refresh database content</span></div><div className="preview-sizes"><button className={previewWidth === 1440 ? 'active' : ''} onClick={() => setPreviewWidth(1440)}>Desktop</button><button className={previewWidth === 768 ? 'active' : ''} onClick={() => setPreviewWidth(768)}>Tablet</button><button className={previewWidth === 390 ? 'active' : ''} onClick={() => setPreviewWidth(390)}>Mobile</button><button className={previewWidth === '100%' ? 'active' : ''} onClick={() => setPreviewWidth('100%')}>Full</button></div><button className="preview-close" onClick={() => setPreviewOpen(false)}><X size={19} /></button></header><div className="preview-stage"><iframe title={`${project.title} responsive preview`} src={`${editingLocale === 'el' ? '/el' : ''}/preview/${project.slug}`} style={{ width: previewWidth === '100%' ? '100%' : `${previewWidth}px` }} /></div></div>}
     </main>
   );
 }

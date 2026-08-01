@@ -2025,7 +2025,9 @@ body.js-enabled .project-page .project-brochure-link {
 
 .project-page .form-container .project-contact-copy {
   display: block;
-  width: 760px;
+  width: min(100%, 760px);
+  height: auto;
+  line-height: 1.18;
 }
 
 .project-contact-copy span {
@@ -2033,7 +2035,7 @@ body.js-enabled .project-page .project-brochure-link {
 }
 
 .project-contact-copy span:first-child {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .project-page--idle-hero .project-hero-content,
@@ -2554,6 +2556,28 @@ body.js-enabled .project-page .project-brochure-link {
   .project-plan-tabs--villa .project-plan-tab:nth-child(n) {
     width: 100%;
     min-width: 0;
+    height: auto;
+    min-height: 58px;
+    padding: 12px 20px;
+  }
+
+  .project-plan-tab span {
+    min-width: 0;
+    color: #003075;
+    line-height: 1.12;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .project-plan-tab span::before,
+  .project-plan-tab span::after {
+    content: none;
+  }
+
+  .project-plan-tab.active span,
+  .project-plan-tab:hover span,
+  .project-plan-tab:focus-visible span {
+    color: #fff;
   }
 
   .project-location-set,

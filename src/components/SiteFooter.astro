@@ -1,13 +1,21 @@
 ---
 import { getSiteSettings } from '../lib/site-settings';
+import { getLocale, getMessages, localizePath, oppositeLocale, type SiteLocale } from '../lib/i18n';
 
+interface Props {
+  locale?: SiteLocale;
+}
+
+const { locale = getLocale(Astro.originPathname) } = Astro.props;
 const siteSettings = await getSiteSettings();
+const m = getMessages(locale);
+const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 ---
 
 <footer class="footer">
   <div class="container footer-container">
     <div class="footer-top">
-      <a href="/" class="logo" aria-label="MIRACON home">
+      <a href={localizePath('/', locale)} class="logo" aria-label={m['common.logoHome']}>
         <img src="/img/logo_mark.svg" alt="" class="logo-img">
         <div class="logo-letters" aria-hidden="true">
           {['M', 'I', 'R', 'A', 'C', 'O', 'N'].map((letter) => (
@@ -15,20 +23,20 @@ const siteSettings = await getSiteSettings();
           ))}
         </div>
       </a>
-      <nav class="footer-socials" aria-label="Contact links">
-        <a href="mailto:info@miracon.gr" aria-label="Email info@miracon.gr" title="info@miracon.gr"><img src="/img/contact_header/Group 37313 (1).svg" alt=""></a>
-        <a href="tel:+306955340416" aria-label="Call +30 695 534 0416" title="+30 695 534 0416"><img src="/img/contact_header/Vector (1).svg" alt=""></a>
+      <nav class="footer-socials" aria-label={m['common.contactLinks']}>
+        <a href="mailto:info@miracon.gr" aria-label={m['common.email']} title="info@miracon.gr"><img src="/img/contact_header/Group 37313 (1).svg" alt=""></a>
+        <a href="tel:+306955340416" aria-label={m['common.callPhone']} title="+30 695 534 0416"><img src="/img/contact_header/Vector (1).svg" alt=""></a>
         <a href="https://wa.me/306955340416" target="_blank" rel="noreferrer" aria-label="WhatsApp +30 695 534 0416" title="WhatsApp"><img src="/img/footer-whatsapp.svg" alt=""></a>
       </nav>
     </div>
     <div class="footer-bottom">
       <div class:list={['footer-links', { 'footer-links--empty': !siteSettings.footerTermsVisible && !siteSettings.footerPrivacyVisible && !siteSettings.footerCookieVisible }]}>
-        <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>Terms of Use</a>
-        <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>Privacy Policy</a>
-        <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>Cookie Policy</a>
+        <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
+        <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>{m['common.privacy']}</a>
+        <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
       </div>
-      <button class="lang-dropdown-btn"><span>English</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></button>
+      <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span>{m['common.languageName']}</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></a>
     </div>
-    <p class="footer-copyright">© 2026 Miracon Constructions, Thessaloniki, Greece</p>
+    <p class="footer-copyright">{m['common.copyright']}</p>
   </div>
 </footer>

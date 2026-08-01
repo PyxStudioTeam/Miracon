@@ -1,3 +1,9 @@
 ---
-return Astro.redirect('/projects/kriopigi-villas', 301);
+import { getLocale, localizePath } from '../lib/i18n';
+
+const locale = getLocale(Astro.originPathname);
+const destination = localizePath(`/projects/kriopigi-villas${Astro.url.search}`, locale);
+void destination; // Astro's checker misses reads inside top-level return expressions.
+
+return Astro.redirect(destination, 301);
 ---
