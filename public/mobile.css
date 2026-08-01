@@ -2232,19 +2232,26 @@
   }
 
   .project-bottom {
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px 12px;
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    justify-content: stretch;
+    gap: 12px;
   }
 
   .project-price {
     min-width: 0;
+    white-space: nowrap;
   }
 
   .learn-more {
     flex: 0 0 auto;
-    margin-left: auto;
-    white-space: normal;
+    justify-self: start;
+    width: max-content;
+    max-width: 100%;
+    margin-left: 0;
+    white-space: nowrap;
   }
 
   /* Contact intro and every form control now participate in one vertical
@@ -2252,7 +2259,7 @@
   .contacts-section {
     height: auto;
     min-height: 0;
-    padding: 42px 0 56px;
+    padding: 42px 0 32px;
   }
 
   .contacts-section > .container,
@@ -2356,14 +2363,21 @@
     justify-self: center;
     width: 303px;
     max-width: none;
-    margin-top: 4px;
+    margin-top: 0;
     transform: none;
   }
 
   .btn-submit {
     justify-self: center;
-    margin-top: 4px;
+    margin-top: 0;
     transform: none;
+  }
+
+  .form-status {
+    justify-self: center;
+    width: min(100%, 320px);
+    margin: 0;
+    text-align: center;
   }
 }
 
