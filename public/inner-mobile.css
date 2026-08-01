@@ -1328,7 +1328,7 @@
 
   html[lang='el'] .golden-visa-page .gv-hero h1 {
     min-height: 0;
-    font-size: clamp(34px, 10.5vw, 43px);
+    font-size: clamp(18px, 5.4vw, 29px);
     line-height: .95;
   }
 

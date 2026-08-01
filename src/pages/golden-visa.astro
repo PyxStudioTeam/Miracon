@@ -162,7 +162,10 @@ const goldenVisaStructuredData = {
       <OptimizedImage src="/img/golden-visa/hero-interior.jpg" alt={m['gv.heroImageAlt']} class="gv-hero-bg gv-hero-bg-front" loading="eager" fetchpriority="high" decoding="async" />
       <div class="gv-hero-softener" aria-hidden="true"></div>
       <div class="container gv-hero-content">
-        <h1 id="golden-visa-title">{m['gv.heroTitleLine1']}<br>{m['gv.heroTitleLine2']}</h1>
+        <h1 id="golden-visa-title">
+          <span>{m['gv.heroTitleLine1']}</span>
+          <span>{m['gv.heroTitleLine2']}</span>
+        </h1>
         <p class="gv-hero-lead">{m['gv.heroText']}</p>
         <div class="gv-hero-actions hero-actions">
           <a href={projectsHref} class="btn-hero">

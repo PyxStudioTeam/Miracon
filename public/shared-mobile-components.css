@@ -430,3 +430,24 @@
     margin-inline: auto;
   }
 }
+
+@media (min-width: 601px) and (max-width: 760px) {
+  .golden-visa-page .project-bottom {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .golden-visa-page .project-price,
+  .golden-visa-page .learn-more {
+    flex: 0 0 auto;
+    width: max-content;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .golden-visa-page .project-price { font-size: 22px; }
+  .golden-visa-page .learn-more { font-size: 14px; }
+}
