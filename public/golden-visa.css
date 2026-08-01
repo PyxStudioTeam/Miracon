@@ -80,13 +80,7 @@
   line-height: 95.98%;
   letter-spacing: 0;
   text-shadow: 0px 4.61938px 9.23876px rgba(0, 0, 0, 0.25);
-}
-
-.gv-hero h1 span {
-  display: block;
-  width: max-content;
-  max-width: 100%;
-  white-space: nowrap;
+  text-wrap: balance;
 }
 
 .gv-hero-lead {
@@ -417,6 +411,7 @@
     max-width: 1450px;
     font-size: clamp(62px, 4.45vw, 85px);
     line-height: 1.02;
+    text-wrap: balance;
   }
 }
 
@@ -810,6 +805,11 @@ html[lang='el'] .gv-family {
     width: auto;
     height: auto;
     font-size: clamp(56px, 12vw, 92px);
+    text-wrap: balance;
+  }
+
+  html[lang='el'] .gv-hero h1 {
+    font-size: clamp(30px, 5vw, 56px);
   }
 
   .gv-hero-lead {

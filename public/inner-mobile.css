@@ -1305,7 +1305,7 @@
     display: flex;
     height: 100%;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: center;
     box-sizing: border-box;
     padding-top: 104px;
     padding-bottom: 34px;
@@ -1321,14 +1321,15 @@
     height: auto;
     min-height: 0;
     margin: 0;
-    font-size: clamp(40px, 12vw, 52px);
+    font-size: clamp(36px, 11vw, 52px);
     line-height: .95;
     overflow-wrap: normal;
+    text-wrap: balance;
   }
 
   html[lang='el'] .golden-visa-page .gv-hero h1 {
     min-height: 0;
-    font-size: clamp(18px, 5.4vw, 29px);
+    font-size: clamp(28px, 8.5vw, 38px);
     line-height: .95;
   }
 
