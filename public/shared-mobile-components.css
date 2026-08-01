@@ -421,4 +421,9 @@
     width: calc(100% - 40px);
     margin: 20px auto 0;
   }
+
+  .golden-visa-page .stages-container {
+    width: calc(100% - 40px);
+    margin-inline: auto;
+  }
 }

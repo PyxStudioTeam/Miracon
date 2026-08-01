@@ -1352,10 +1352,16 @@
   .stages-container,
   .stages-intro {
     position: static;
-    width: 100%;
     height: auto;
     margin: 0;
   }
+
+  .stages-container {
+    width: calc(100% - 40px);
+    margin-inline: auto;
+  }
+
+  .stages-intro { width: 100%; }
 
   .stages-intro {
     display: grid;
