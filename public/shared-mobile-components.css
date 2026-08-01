@@ -305,12 +305,14 @@
   .learn-more {
     position: static;
     display: inline-flex;
+    flex: 0 0 auto;
     align-items: center;
     gap: 14px;
     height: auto;
     color: #b68a3d;
     font-size: 14px;
     line-height: 16.8px;
+    white-space: nowrap;
   }
 
   .learn-more span {
