@@ -4095,6 +4095,14 @@ body.js-enabled .about-reveal.visible {
   }
 }
 
+/* Keep the longest English card title within its fixed desktop geometry. */
+@media (min-width: 821px) {
+  html[lang='en'] .about-card-personal h3 {
+    font-size: min(1.9792vw, 38px);
+    white-space: nowrap;
+  }
+}
+
 /* Greek cards use their available geometry rather than desktop pixel offsets. */
 @media (min-width: 821px) {
   html[lang='el'] .about-card {
