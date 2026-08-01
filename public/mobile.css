@@ -1952,6 +1952,7 @@
     font-size: clamp(40px, 12vw, 48px);
     line-height: .94;
     letter-spacing: -.025em;
+    text-wrap: balance;
   }
 
   html[lang='el'] .hero-title {
