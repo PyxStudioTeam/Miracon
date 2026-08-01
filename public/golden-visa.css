@@ -1004,59 +1004,6 @@ html[lang='el'] .gv-family {
     line-height: 1.22;
   }
 
-  .golden-visa-page .project-card {
-    grid-template-columns: 1fr;
-    gap: 24px;
-    height: auto;
-    padding: 24px;
-    border-radius: 28px;
-  }
-
-  .golden-visa-page .project-info {
-    gap: 28px;
-    padding: 0;
-  }
-
-  .golden-visa-page .project-name,
-  .golden-visa-page .project-price {
-    font-size: 38px;
-  }
-
-  .golden-visa-page .project-location,
-  .golden-visa-page .project-description,
-  .golden-visa-page .learn-more {
-    width: auto;
-    font-size: 24px;
-  }
-
-  .golden-visa-page .project-price {
-    margin-bottom: 22px;
-  }
-
-  .golden-visa-page .project-gallery {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-
-  .golden-visa-page .gallery-main {
-    height: auto;
-  }
-
-  .golden-visa-page .gallery-sides {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto;
-    gap: 16px;
-  }
-
-  .golden-visa-page .gallery-sides img {
-    aspect-ratio: 1.25;
-  }
-
-  .golden-visa-page .gallery-main img,
-  .golden-visa-page .gallery-sides img {
-    height: auto;
-  }
-
   .golden-visa-page .stages-container,
   .golden-visa-page .stages-carousel {
     height: auto;

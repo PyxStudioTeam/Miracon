@@ -1,0 +1,404 @@
+/* One mobile source of truth for shared SiteFooter and ProjectCard markup. */
+@media (max-width: 600px) {
+  .footer,
+  .footer-container {
+    height: auto;
+    min-height: 0;
+  }
+
+  .footer {
+    padding: 32px 0 30px;
+  }
+
+  .footer-container {
+    position: static;
+    display: grid;
+    width: calc(100% - 40px);
+    margin-inline: auto;
+    gap: 28px;
+  }
+
+  .footer-top,
+  .footer-bottom {
+    position: static;
+    display: flex;
+    height: auto;
+  }
+
+  .footer-top {
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .footer .logo {
+    position: static;
+    display: flex;
+    flex: 0 0 150px;
+    width: 150px;
+    min-width: 0;
+    height: 24px;
+    align-items: center;
+    gap: 2px;
+    transform: none;
+  }
+
+  .footer .logo .logo-img {
+    flex: 0 0 29px;
+    width: 29px;
+    height: 23px;
+    transform: translateY(3px);
+  }
+
+  .footer .logo-letters {
+    display: flex;
+    height: 17px;
+  }
+
+  .footer .logo-letter { max-height: 17px; }
+  .footer .logo-letter:nth-child(2) { margin-left: 2px; }
+  .footer .logo-letter:nth-child(3) { margin-left: 2.5px; }
+  .footer .logo-letter:nth-child(4) { margin-left: 1.25px; }
+  .footer .logo-letter:nth-child(5) { margin-left: -.5px; }
+  .footer .logo-letter:nth-child(6) { margin-left: 2px; }
+  .footer .logo-letter:nth-child(7) { margin-left: 1.25px; }
+
+  .footer-socials {
+    position: static;
+    display: flex;
+    flex: 0 0 72px;
+    align-items: center;
+    gap: 12px;
+    transform: none;
+  }
+
+  .footer-socials a,
+  .footer-socials img {
+    width: 16px;
+    height: 16px;
+  }
+
+  .footer-socials a {
+    display: flex;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .footer-socials img {
+    display: block;
+    object-fit: contain;
+  }
+
+  .footer-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 22px;
+    padding-top: 22px;
+  }
+
+  .footer-links {
+    position: static;
+    display: grid;
+    width: auto;
+    margin: 0;
+    gap: 15px;
+    text-align: left;
+    transform: none;
+  }
+
+  .footer-links.footer-links--empty { display: none; }
+
+  .footer-links a,
+  .footer-copyright {
+    font-size: 10.9px;
+    line-height: 1;
+  }
+
+  .lang-dropdown-btn {
+    position: relative;
+    inset: auto;
+    flex: 0 0 auto;
+    width: 112px;
+    height: 28px;
+    margin: 0;
+    padding: 0 31px 0 8px;
+    border-radius: 14px;
+    font-size: 11.25px;
+    line-height: 1;
+    transform: none;
+  }
+
+  .footer-copyright {
+    position: static;
+    width: auto;
+    margin: -14px 0 0;
+    text-align: left;
+  }
+
+  .project-card {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    width: 100%;
+    min-height: 520px;
+    padding: 0;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #fefbf5 0%, #fff 100%);
+    box-shadow: 0 1.787px 1.787px rgba(0, 0, 0, .05);
+    overflow: hidden;
+  }
+
+  .project-gallery {
+    position: relative;
+    order: -1;
+    display: block;
+    width: auto;
+    height: 231px;
+    margin: 17px 17px 0;
+    padding: 0;
+  }
+
+  .gallery-main,
+  .gallery-main picture,
+  .gallery-main img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .gallery-main img {
+    border-radius: 12px;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .project-card[data-project-slug='kriopigi-villas'] .gallery-main img { object-position: 50% 32% !important; }
+  .project-card[data-project-slug='giannitson-thessaloniki'] .gallery-main img { object-position: 50% 77.5% !important; }
+
+  .gallery-sides { display: none; }
+
+  .project-tags {
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    display: flex;
+    gap: 7px;
+  }
+
+  .project-tags .tag {
+    flex: 0 0 auto;
+    min-width: 0 !important;
+    height: 24px;
+    padding: 0;
+    border-radius: 8px;
+    color: #f7f4ee;
+    background: rgba(0, 80, 250, .53);
+    font-size: 12.145px;
+    line-height: 14.574px;
+    backdrop-filter: blur(2.43px);
+    -webkit-backdrop-filter: blur(2.43px);
+  }
+
+  .tag--coastal { width: 84px; }
+  .tag--city { width: 63px; }
+  .tag--golden-visa { width: 110px; }
+
+  .project-info {
+    position: static;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0;
+    padding: 24px 17px 20px;
+  }
+
+  .project-name {
+    position: static;
+    width: auto;
+    min-height: 0;
+    margin: 0 0 8px;
+    color: #003075;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 21.343px;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .project-card[data-project-slug='monastiriou-4-residences'] .project-name { text-transform: none; }
+
+  .project-location {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: auto;
+    margin: 0 0 14px;
+    color: #003075;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 16.8px;
+  }
+
+  .location-dot {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #003075;
+  }
+
+  .project-description {
+    position: static;
+    display: flex;
+    width: auto;
+    height: auto;
+    max-height: none;
+    margin: 0;
+    overflow: visible;
+    color: #003075;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 15.893px;
+    opacity: .8;
+  }
+
+  .project-bottom {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: auto;
+    padding-top: 24px;
+  }
+
+  .project-price {
+    position: static;
+    display: flex;
+    align-items: center;
+    width: auto;
+    height: auto;
+    margin: 0;
+    color: #003075;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 21.343px;
+  }
+
+  .learn-more {
+    position: static;
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    height: auto;
+    color: #b68a3d;
+    font-size: 14px;
+    line-height: 16.8px;
+    overflow-wrap: anywhere;
+  }
+
+  .learn-more span {
+    width: 18px;
+    height: 8px;
+    transform: none;
+  }
+
+  .learn-more span::before {
+    width: 18px;
+    border-width: 1px;
+  }
+
+  .learn-more span::after {
+    width: 6px;
+    height: 6px;
+    border-width: 1px;
+  }
+
+  /* Golden Visa loads additional page CSS, so match its selector specificity
+     to keep this shared component layer authoritative. */
+  .golden-visa-page .footer,
+  .golden-visa-page .footer-container {
+    height: auto;
+    min-height: 0;
+  }
+
+  .golden-visa-page .footer { padding: 32px 0 30px; }
+
+  .golden-visa-page .footer-container {
+    position: static;
+    display: grid;
+    width: calc(100% - 40px);
+    margin-inline: auto;
+    gap: 28px;
+  }
+
+  .golden-visa-page .footer-top,
+  .golden-visa-page .footer-bottom {
+    position: static;
+    display: flex;
+    height: auto;
+    margin: 0;
+  }
+
+  .golden-visa-page .footer-top {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .golden-visa-page .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 22px;
+    padding-top: 22px;
+  }
+
+  .golden-visa-page .footer .logo,
+  .golden-visa-page .footer-socials,
+  .golden-visa-page .footer-links {
+    position: static;
+  }
+
+  .golden-visa-page .footer .logo {
+    flex: 0 0 150px;
+    width: 150px;
+    height: 24px;
+    transform: none;
+  }
+
+  .golden-visa-page .footer .logo-letters { display: flex; }
+
+  .golden-visa-page .footer-socials {
+    flex: 0 0 72px;
+    gap: 12px;
+    transform: none;
+  }
+
+  .golden-visa-page .footer-links {
+    display: grid;
+    width: auto;
+    margin: 0;
+    gap: 15px;
+    transform: none;
+  }
+
+  .golden-visa-page .lang-dropdown-btn {
+    position: relative;
+    inset: auto;
+    width: 112px;
+    height: 28px;
+    margin: 0;
+    padding: 0 31px 0 8px;
+    font-size: 11.25px;
+    transform: none;
+  }
+
+  .golden-visa-page .footer-copyright {
+    position: static;
+    width: auto;
+    margin: -14px 0 0;
+    text-align: left;
+  }
+}

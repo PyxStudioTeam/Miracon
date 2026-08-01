@@ -1343,9 +1343,9 @@
   /* Stages — Figma: y5325..5903. */
   .stages-section {
     position: relative;
-    height: 662px;
-    padding: 0;
-    overflow: hidden;
+    height: auto;
+    padding: 56px 0;
+    overflow: visible;
     background: var(--mobile-cream);
   }
 
@@ -1353,39 +1353,41 @@
   .stages-intro {
     position: static;
     width: 100%;
-    height: 100%;
+    height: auto;
     margin: 0;
   }
 
+  .stages-intro {
+    display: grid;
+    gap: 14px;
+  }
+
   .stages-intro .section-title {
-    position: absolute;
-    top: 56px;
-    left: 20px;
+    position: static;
     display: block;
-    width: 204px;
-    height: 31px;
+    width: 100%;
+    height: auto;
     margin: 0;
   }
 
   .stages-intro .section-subtitle {
-    position: absolute;
-    top: 101px;
-    left: 20px;
+    position: static;
     display: block;
-    width: 335px;
-    height: 34px;
+    width: 100%;
+    height: auto;
     margin: 0;
   }
 
   .stages-carousel {
-    position: absolute;
+    position: relative;
     z-index: 1;
-    top: 154px;
+    top: auto;
     right: auto;
-    left: 20px;
-    width: calc(100% - 43px);
-    height: 452px;
-    padding: 0;
+    left: auto;
+    width: 100%;
+    height: auto;
+    margin-top: 20px;
+    padding: 0 3px;
     overflow: visible;
   }
 
@@ -1393,7 +1395,7 @@
   .stages-carousel-set {
     display: block;
     width: 100%;
-    height: 452px;
+    height: auto;
     animation: none;
     transform: none;
   }
@@ -1401,29 +1403,30 @@
   .stages-carousel-set + .stages-carousel-set { display: none; }
 
   .stage-card {
-    position: absolute;
-    left: 0;
+    position: relative;
+    left: auto;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 11px;
     width: 100%;
-    height: 84px;
     min-height: 84px;
+    height: auto;
+    padding: 15px 14px;
     border-radius: 22px;
     background: var(--mobile-card);
     box-shadow: 0 1.6px 1.6px rgba(0, 0, 0, .05);
   }
 
-  .stage-card:nth-child(1) { top: 0; }
-  .stage-card:nth-child(2) { top: 92px; }
-  .stage-card:nth-child(3) { top: 184px; }
-  .stage-card:nth-child(4) { top: 276px; }
-  .stage-card:nth-child(5) { top: 368px; }
+  .stage-card + .stage-card { margin-top: 8px; }
 
   .stage-number {
-    position: absolute;
-    top: 27px;
-    left: 14px;
+    position: static;
+    grid-row: 1 / span 2;
     display: block;
     width: 34px;
-    height: 28px;
+    height: auto;
+    align-self: center;
     color: var(--mobile-blue);
     font-size: 29.11px;
     font-weight: 500;
@@ -1433,27 +1436,25 @@
   }
 
   .stage-card h3 {
-    position: absolute;
-    top: 16px;
-    left: 59px;
+    position: static;
+    grid-column: 2;
     display: block;
-    width: calc(100% - 76px);
+    width: auto;
     height: auto;
     margin: 0;
     color: var(--mobile-blue);
     font-size: 16px;
     font-weight: 500;
-    line-height: 1.1;
+    line-height: 1.12;
     white-space: normal;
   }
 
   .stage-card p {
-    position: absolute;
-    top: 46px;
-    left: 59px;
-    width: calc(100% - 76px);
+    position: static;
+    grid-column: 2;
+    width: auto;
     height: auto;
-    margin: 0;
+    margin: 5px 0 0;
     color: var(--mobile-blue);
     font-size: 11px;
     font-weight: 400;
