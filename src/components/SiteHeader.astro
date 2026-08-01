@@ -67,6 +67,9 @@ const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, 
       </div>
     </div>
 
+    <a class="mobile-lang-selector" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
+      <span>{m['common.languageCode']}</span>
+    </a>
     <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label={m['common.openMenu']} aria-controls="mobileNav" aria-expanded="false">
       <span aria-hidden="true"></span>
     </button>

@@ -1,6 +1,7 @@
 /* Mobile layout reconstructed from Figma node 39:944 (375 × 6661). */
 
 .hero-mobile-image,
+.mobile-lang-selector,
 .mobile-menu-btn,
 .mobile-nav {
   display: none;
@@ -24,6 +25,44 @@
     border: 0;
     background: transparent;
   }
+
+  .mobile-lang-selector {
+    position: absolute;
+    z-index: 30;
+    top: 8px;
+    right: 56px;
+    display: inline-flex;
+    width: 46px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: .08em;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+  }
+
+  .mobile-lang-selector:hover,
+  .mobile-lang-selector:focus-visible {
+    border-color: rgba(255, 255, 255, .72);
+    background-color: rgba(255, 255, 255, .16);
+    transform: translateY(-1px);
+  }
+
+  .mobile-lang-selector:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+  }
+
+  .mobile-lang-selector:active { transform: scale(.96); }
 
   .mobile-menu-btn::before,
   .mobile-menu-btn::after,
@@ -221,6 +260,44 @@
   .header-actions {
     display: none;
   }
+
+  .mobile-lang-selector {
+    position: absolute;
+    z-index: 30;
+    top: 19px;
+    right: 42px;
+    display: inline-flex;
+    width: 42px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: .08em;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+  }
+
+  .mobile-lang-selector:hover,
+  .mobile-lang-selector:focus-visible {
+    border-color: rgba(255, 255, 255, .72);
+    background-color: rgba(255, 255, 255, .16);
+    transform: translateY(-1px);
+  }
+
+  .mobile-lang-selector:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  .mobile-lang-selector:active { transform: scale(.96); }
 
   .mobile-menu-btn {
     position: absolute;
@@ -1827,4 +1904,242 @@
   .slider-wrapper { top: 386px; height: 238px; }
   .slide-title { height: auto; min-height: 19px; align-items: flex-start; }
   .slide-text, .slide-text-short { right: 17px; bottom: 58px; width: auto; height: auto; max-height: none; overflow: visible; line-height: 1.2; }
+}
+
+/* Keep the compact hero as one content flow instead of a stack of viewport
+   coordinates. This lets both languages grow without meeting the controls. */
+@media (max-width: 600px) {
+  .hero-pin,
+  .hero {
+    min-height: 620px;
+  }
+
+  .hero-content,
+  body.js-enabled .hero-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    padding: 96px 20px 86px;
+  }
+
+  .hero-subtitle,
+  .hero-title {
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .hero-subtitle {
+    margin: 0 0 16px;
+    font-size: clamp(13px, 3.75vw, 16px);
+    line-height: 1.18;
+    letter-spacing: .12em;
+    white-space: normal;
+  }
+
+  .hero-title {
+    max-width: 390px;
+    margin: 0;
+    font-size: clamp(40px, 12vw, 48px);
+    line-height: .94;
+    letter-spacing: -.025em;
+  }
+
+  html[lang='el'] .hero-title {
+    font-size: clamp(37px, 10.8vw, 45px);
+    line-height: .95;
+  }
+
+  .hero-title br { display: block; }
+
+  .hero-actions {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 24px 0 0;
+  }
+
+  .hero-content .btn-hero,
+  .hero-content .badge-visa {
+    position: relative;
+    inset: auto;
+    flex: 0 0 auto;
+    height: 46px;
+  }
+
+  .hero-content .btn-hero {
+    display: flex;
+    width: 217px;
+    padding: 0 22px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  html[lang='el'] .hero-content .btn-hero { width: min(250px, 100%); }
+
+  .hero-content .btn-hero .btn-arrow,
+  .hero-content .btn-hero span:not(.btn-arrow) {
+    position: relative;
+    inset: auto;
+  }
+
+  .hero-content .btn-hero .btn-arrow {
+    flex: 0 0 15px;
+    margin: 0;
+  }
+
+  .hero-content .btn-hero span:not(.btn-arrow) {
+    width: auto;
+    height: auto;
+    font-size: 17px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .hero-content .badge-visa {
+    display: flex;
+    width: min(258px, 100%);
+  }
+
+  .hero-scroll-indicator {
+    right: 14px;
+    bottom: 20px;
+    left: auto;
+    display: flex;
+    width: 44px;
+    height: 44px;
+    transform: none;
+  }
+
+  .hero-scroll-indicator img { width: 23px; }
+
+  /* The About copy lives in its container while the benefits rail is a
+     sibling. Give both the same gutter instead of relying on viewport widths. */
+  .about-container {
+    width: calc(100% - 40px);
+    margin-inline: auto;
+  }
+
+  .about-carousel {
+    width: calc(100% - 40px);
+    margin-inline: auto;
+  }
+}
+
+/* Keep the compact language link available until the full desktop language
+   control returns. It sits below the desktop header row, clear of navigation
+   and contact actions. */
+@media (min-width: 951px) and (max-width: 1180px) {
+  .mobile-lang-selector {
+    position: absolute;
+    z-index: 30;
+    top: 59px;
+    right: 0;
+    display: inline-flex;
+    width: 46px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    color: #fff;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: .08em;
+  }
+
+  .mobile-lang-selector span {
+    display: inline-flex;
+    width: 46px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .mobile-lang-selector:focus-visible {
+    border-radius: 999px;
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+}
+
+/* The visible controls stay compact while their hit areas meet the 44px
+   minimum and remain separated on narrow screens. */
+@media (max-width: 950px) {
+  .mobile-lang-selector {
+    top: 4px;
+    width: 46px;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .mobile-lang-selector span {
+    display: inline-flex;
+    width: 46px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+@media (max-width: 600px) {
+  .mobile-lang-selector {
+    top: 14px;
+    right: 48px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .mobile-lang-selector span {
+    width: 42px;
+    height: 34px;
+  }
+
+  .mobile-menu-btn {
+    top: 14px;
+    right: 0;
+    width: 44px;
+    height: 44px;
+  }
+
+  .mobile-menu-btn::before,
+  .mobile-menu-btn::after,
+  .mobile-menu-btn span {
+    left: 25px;
+  }
+
+  .mobile-menu-btn::before { top: 15px; }
+  .mobile-menu-btn span { top: 21px; }
+  .mobile-menu-btn::after { top: 27px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-lang-selector,
+  .mobile-menu-btn::before,
+  .mobile-menu-btn::after,
+  .mobile-menu-btn span,
+  .mobile-nav {
+    transition: none;
+  }
 }

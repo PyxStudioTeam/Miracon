@@ -3,7 +3,9 @@
 .project-page .mobile-menu-btn,
 .project-page .mobile-nav,
 .golden-visa-page .mobile-menu-btn,
-.golden-visa-page .mobile-nav {
+.golden-visa-page .mobile-nav,
+.project-page .mobile-lang-selector,
+.golden-visa-page .mobile-lang-selector {
   display: none;
 }
 
@@ -74,6 +76,49 @@
   .golden-visa-page .header-actions {
     display: none;
   }
+
+  .project-page .mobile-lang-selector,
+  .golden-visa-page .mobile-lang-selector {
+    position: absolute;
+    z-index: 32;
+    top: 19px;
+    right: 42px;
+    display: inline-flex;
+    width: 42px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: .08em;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+  }
+
+  .project-page .mobile-lang-selector:hover,
+  .project-page .mobile-lang-selector:focus-visible,
+  .golden-visa-page .mobile-lang-selector:hover,
+  .golden-visa-page .mobile-lang-selector:focus-visible {
+    border-color: rgba(255, 255, 255, .72);
+    background-color: rgba(255, 255, 255, .16);
+    transform: translateY(-1px);
+  }
+
+  .project-page .mobile-lang-selector:focus-visible,
+  .golden-visa-page .mobile-lang-selector:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  .project-page .mobile-lang-selector:active,
+  .golden-visa-page .mobile-lang-selector:active { transform: scale(.96); }
 
   .project-page .mobile-menu-btn,
   .golden-visa-page .mobile-menu-btn {
@@ -1180,6 +1225,31 @@
     padding: 0;
   }
 
+  .project-page .mobile-lang-selector,
+  .golden-visa-page .mobile-lang-selector {
+    position: absolute;
+    z-index: 32;
+    top: 8px;
+    right: 56px;
+    display: inline-flex;
+    width: 46px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: .08em;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+  }
+
   .project-page .mobile-menu-btn::before,
   .project-page .mobile-menu-btn::after,
   .project-page .mobile-menu-btn span,
@@ -1240,4 +1310,221 @@
   .golden-visa-page .mobile-nav-contacts { display: none; padding: 8px 0 4px; gap: 8px; }
   .project-page .mobile-nav-contacts.active,
   .golden-visa-page .mobile-nav-contacts.active { display: grid; }
+}
+
+/* Mobile Golden Visa hero: content shares one vertical flow, so translated
+   copy can wrap naturally without colliding with the stacked actions. */
+@media (max-width: 760px) {
+  .golden-visa-page .gv-hero {
+    height: max(620px, 100svh);
+    min-height: 620px;
+  }
+
+  .golden-visa-page .gv-hero-content {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    padding-top: 104px;
+    padding-bottom: 34px;
+  }
+
+  html[lang='el'] .golden-visa-page .gv-hero-content {
+    padding-top: 104px;
+    padding-bottom: 34px;
+  }
+
+  .golden-visa-page .gv-hero h1 {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    font-size: clamp(40px, 12vw, 52px);
+    line-height: .95;
+    overflow-wrap: normal;
+  }
+
+  html[lang='el'] .golden-visa-page .gv-hero h1 {
+    min-height: 0;
+    font-size: clamp(34px, 10.5vw, 43px);
+    line-height: .95;
+  }
+
+  .golden-visa-page .gv-hero-lead,
+  html[lang='el'] .golden-visa-page .gv-hero-lead {
+    width: 100%;
+    height: auto;
+    margin: 18px 0 0;
+    font-size: clamp(12.5px, 3.65vw, 14px);
+    line-height: 1.28;
+    letter-spacing: .055em;
+  }
+
+  .golden-visa-page .gv-hero-actions,
+  html[lang='el'] .golden-visa-page .gv-hero-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 24px 0 0;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero,
+  .golden-visa-page .gv-hero-actions .badge-visa,
+  html[lang='el'] .golden-visa-page .gv-hero-actions .btn-hero,
+  html[lang='el'] .golden-visa-page .gv-hero-actions .badge-visa {
+    width: 100%;
+    max-width: none;
+    height: 48px;
+    min-height: 48px;
+    box-sizing: border-box;
+  }
+}
+
+/* Bridge the tablet-to-desktop handoff without placing another control in the
+   already occupied navigation row. */
+@media (min-width: 951px) and (max-width: 1180px) {
+  .project-page .mobile-lang-selector,
+  .golden-visa-page .mobile-lang-selector {
+    position: absolute;
+    z-index: 32;
+    top: 59px;
+    right: 0;
+    display: inline-flex;
+    width: 46px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    color: #fff;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: .08em;
+  }
+
+  .project-page .mobile-lang-selector span,
+  .golden-visa-page .mobile-lang-selector span {
+    display: inline-flex;
+    width: 46px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .project-page .mobile-lang-selector:focus-visible,
+  .golden-visa-page .mobile-lang-selector:focus-visible {
+    border-radius: 999px;
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 950px) {
+  .project-page .mobile-lang-selector,
+  .golden-visa-page .mobile-lang-selector {
+    top: 4px;
+    width: 46px;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .project-page .mobile-lang-selector span,
+  .golden-visa-page .mobile-lang-selector span {
+    display: inline-flex;
+    width: 46px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+@media (max-width: 760px) {
+  .project-page .mobile-lang-selector,
+  .golden-visa-page .mobile-lang-selector {
+    top: 14px;
+    right: 48px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .project-page .mobile-lang-selector span,
+  .golden-visa-page .mobile-lang-selector span {
+    width: 42px;
+    height: 34px;
+  }
+
+  .project-page .mobile-menu-btn,
+  .golden-visa-page .mobile-menu-btn {
+    top: 14px;
+    right: 0;
+    width: 44px;
+    height: 44px;
+  }
+
+  .project-page .mobile-menu-btn::before,
+  .project-page .mobile-menu-btn::after,
+  .project-page .mobile-menu-btn span,
+  .golden-visa-page .mobile-menu-btn::before,
+  .golden-visa-page .mobile-menu-btn::after,
+  .golden-visa-page .mobile-menu-btn span {
+    left: 25px;
+  }
+
+  .project-page .mobile-menu-btn::before,
+  .golden-visa-page .mobile-menu-btn::before { top: 15px; }
+  .project-page .mobile-menu-btn span,
+  .golden-visa-page .mobile-menu-btn span { top: 21px; }
+  .project-page .mobile-menu-btn::after,
+  .golden-visa-page .mobile-menu-btn::after { top: 27px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-page .mobile-lang-selector,
+  .golden-visa-page .mobile-lang-selector,
+  .project-page .mobile-menu-btn::before,
+  .project-page .mobile-menu-btn::after,
+  .project-page .mobile-menu-btn span,
+  .golden-visa-page .mobile-menu-btn::before,
+  .golden-visa-page .mobile-menu-btn::after,
+  .golden-visa-page .mobile-menu-btn span,
+  .project-page .mobile-nav,
+  .golden-visa-page .mobile-nav {
+    transition: none;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero,
+  .golden-visa-page .gv-hero-actions .btn-arrow,
+  .golden-visa-page .gv-hero-actions .btn-hero span:not(.btn-arrow) {
+    transition: none;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero:hover .btn-arrow,
+  .golden-visa-page .gv-hero-actions .btn-hero:focus-visible .btn-arrow {
+    rotate: 0deg;
+    translate: 0 0;
+  }
+
+  .golden-visa-page .gv-hero-actions .btn-hero:hover span:not(.btn-arrow),
+  .golden-visa-page .gv-hero-actions .btn-hero:focus-visible span:not(.btn-arrow) {
+    clip-path: none;
+  }
 }
