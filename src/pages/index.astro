@@ -3,13 +3,14 @@ import ProjectCard from '../components/ProjectCard.astro';
 import OptimizedImage from '../components/OptimizedImage.astro';
 import SeoHead from '../components/SeoHead.astro';
 import { getHomeHeroVideos } from '../lib/home-hero';
-import { getLocale, getMessages, localizePath, oppositeLocale } from '../lib/i18n';
+import { getContactDescriptionLines, getLocale, getMessages, localizePath, oppositeLocale } from '../lib/i18n';
 import { getPublishedProjects, localizeProject } from '../lib/projects';
 import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
 import { getSiteSettings } from '../lib/site-settings';
 
 const locale = getLocale(Astro.originPathname);
 const m = getMessages(locale);
+const contactDescriptionLines = getContactDescriptionLines(locale);
 const [sourceProjects, homeHeroVideos, siteSettings] = await Promise.all([
   getPublishedProjects(),
   getHomeHeroVideos(),
@@ -449,7 +450,9 @@ const homeStructuredData = {
       <div class="container">
         <div class="form-container">
           <h2 class="section-title">{m['form.title']}</h2>
-          <p class="section-subtitle">{m['form.description']}</p>
+          <p class="section-subtitle form-description-copy">
+            {contactDescriptionLines.map((line) => <span>{line}</span>)}
+          </p>
 
           <form class="consultation-form" data-consultation-form data-web3forms-key="bcf7cde0-e5e8-4908-8b89-02ebe78bcd0d" novalidate>
             <div class="form-row">

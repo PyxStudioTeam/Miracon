@@ -2132,6 +2132,15 @@ body.js-enabled .about-reveal.visible {
   opacity: 0.8;
 }
 
+.section-subtitle.form-description-copy {
+  display: block;
+  width: 760px;
+}
+
+.form-description-copy span {
+  display: block;
+}
+
 .consultation-form {
   position: absolute;
   top: 268px;
@@ -3519,6 +3528,11 @@ body.js-enabled .about-reveal.visible {
     height: 2.3958vw;
     margin: 0;
     font-size: 1.25vw;
+  }
+
+  .section-subtitle.form-description-copy {
+    display: block;
+    width: 39.5833vw;
   }
 
   .consultation-form {

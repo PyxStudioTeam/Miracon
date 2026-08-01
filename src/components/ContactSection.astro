@@ -1,5 +1,5 @@
 ---
-import { getMessages, getProjectContactDescriptionLines, type SiteLocale } from '../lib/i18n';
+import { getContactDescriptionLines, getMessages, type SiteLocale } from '../lib/i18n';
 
 interface Props {
   locale?: SiteLocale;
@@ -7,14 +7,14 @@ interface Props {
 
 const { locale = 'en' } = Astro.props;
 const m = getMessages(locale);
-const descriptionLines = getProjectContactDescriptionLines(locale);
+const descriptionLines = getContactDescriptionLines(locale);
 ---
 
 <section id="contacts" class="contacts-section">
   <div class="container">
     <div class="form-container">
       <h2 class="section-title">{m['form.title']}</h2>
-      <p class="section-subtitle project-contact-copy">
+      <p class="section-subtitle form-description-copy">
         {descriptionLines.map((line) => <span>{line}</span>)}
       </p>
       <form class="consultation-form" data-consultation-form data-web3forms-key="bcf7cde0-e5e8-4908-8b89-02ebe78bcd0d" novalidate>

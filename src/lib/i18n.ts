@@ -333,12 +333,15 @@ const elMessages: Messages = {
 
 export const messages: Record<SiteLocale, Messages> = { en: enMessages, el: elMessages };
 
-const projectContactDescriptionLines = {
+const contactDescriptionLines = {
   en: [
     "Leave a request — we'll get back to you within one",
     'business day and answer all your questions',
   ],
-  el: [elMessages['form.description']],
+  el: [
+    'Αφήστε ένα αίτημα και θα επικοινωνήσουμε μαζί σας εντός μίας',
+    'εργάσιμης ημέρας για να απαντήσουμε σε όλες τις ερωτήσεις σας',
+  ],
 } as const satisfies Record<SiteLocale, readonly string[]>;
 
 export function getLocale(value?: string | URL | null): SiteLocale {
@@ -350,8 +353,8 @@ export function getMessages(locale: SiteLocale): Messages {
   return messages[locale];
 }
 
-export function getProjectContactDescriptionLines(locale: SiteLocale): readonly string[] {
-  return projectContactDescriptionLines[locale];
+export function getContactDescriptionLines(locale: SiteLocale): readonly string[] {
+  return contactDescriptionLines[locale];
 }
 
 export function formatMessage(message: string, values: Record<string, string>): string {
