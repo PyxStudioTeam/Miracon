@@ -1384,10 +1384,10 @@
     top: auto;
     right: auto;
     left: auto;
-    width: 100%;
+    width: calc(100% - 40px);
     height: auto;
-    margin-top: 20px;
-    padding: 0 3px;
+    margin: 20px auto 0;
+    padding: 0;
     overflow: visible;
   }
 

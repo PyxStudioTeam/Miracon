@@ -149,6 +149,20 @@
     overflow: hidden;
   }
 
+  .projects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 21px;
+  }
+
+  body.js-enabled .project-card,
+  body.js-enabled .project-card.visible {
+    opacity: 1 !important;
+    clip-path: none !important;
+    transform: none !important;
+    transition-delay: 0s !important;
+  }
+
   .project-gallery {
     position: relative;
     order: -1;
@@ -400,5 +414,11 @@
     width: auto;
     margin: -14px 0 0;
     text-align: left;
+  }
+
+  .golden-visa-page .stages-carousel {
+    left: auto;
+    width: calc(100% - 40px);
+    margin: 20px auto 0;
   }
 }
