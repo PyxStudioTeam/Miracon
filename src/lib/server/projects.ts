@@ -1,5 +1,5 @@
 import type { QueryResult, QueryResultRow } from 'pg';
-import { mapProjectRow } from '../projects';
+import { mapProjectRow } from '../projects.ts';
 import type { Project } from '../project-types';
 
 export interface ProjectDatabase {

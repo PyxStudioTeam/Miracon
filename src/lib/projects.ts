@@ -1,4 +1,4 @@
-import { seedProjects } from '../data/projects';
+import { seedProjects } from '../data/projects.ts';
 import type { SiteLocale } from './i18n';
 import type { ImageVariantSet, Project, ProjectImage, ProjectImageVariantManifest, ProjectLocaleTranslation, ProjectTranslations, ProjectVideoItem } from './project-types';
 

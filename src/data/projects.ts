@@ -1,5 +1,5 @@
 import type { Project, ProjectBenefit, ProjectCharacteristic } from '../lib/project-types';
-import { greekProjectTranslations } from './project-translations.el';
+import { greekProjectTranslations } from './project-translations.el.ts';
 
 const updatedAt = '2026-07-22T00:00:00.000Z';
 

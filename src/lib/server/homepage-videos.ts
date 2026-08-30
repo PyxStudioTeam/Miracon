@@ -1,6 +1,6 @@
 import type { QueryResult, QueryResultRow } from 'pg';
-import { mapHomeHeroVideo } from '../home-hero';
-import type { HomeHeroVideo } from '../home-hero';
+import { mapHomeHeroVideo } from '../home-hero.ts';
+import type { HomeHeroVideo } from '../home-hero.ts';
 
 export interface HomepageVideoDatabase {
   query<Row extends QueryResultRow = QueryResultRow>(
