@@ -332,7 +332,7 @@ main>section+section {
   left: 0;
   display: flex;
   align-items: center;
-  width: 62px;
+  width: 146px;
   height: 51px;
   padding-left: 25px;
   border-radius: 25px;
@@ -420,6 +420,15 @@ main>section+section {
   font-size: 24px;
   font-weight: 400;
   transition: var(--transition);
+}
+
+html[lang='el'] .header-actions {
+  width: 296px;
+}
+
+html[lang='el'] .contact-menu,
+html[lang='el'] .contact-btn {
+  width: 234px;
 }
 
 .contact-btn-icon {
@@ -4024,10 +4033,7 @@ body.js-enabled .about-reveal.visible {
   }
 
   .header .logo,
-  .nav-menu,
-  .header-actions,
-  .lang-selector,
-  .contact-btn {
+  .nav-menu {
     position: static;
   }
 
@@ -4039,18 +4045,47 @@ body.js-enabled .about-reveal.visible {
   }
 
   .header-actions {
-    display: flex;
+    position: relative;
     width: 256px;
-    align-items: center;
+    height: 51px;
+    display: block;
+  }
+
+  html[lang='el'] .header-actions {
+    width: 296px;
   }
 
   .lang-selector {
-    flex: 0 0 62px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 146px;
+    height: 51px;
+    display: flex;
+    align-items: center;
+    padding-left: 25px;
   }
 
   .contact-menu {
-    position: relative;
-    flex: 0 0 194px;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    width: 194px;
+    height: 51px;
+  }
+
+  .contact-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 194px;
+    height: 51px;
+  }
+
+  html[lang='el'] .contact-menu,
+  html[lang='el'] .contact-btn {
+    width: 234px;
   }
 
   .mobile-lang-selector,
