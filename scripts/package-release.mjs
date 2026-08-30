@@ -32,6 +32,7 @@ const forbiddenSegments = new Set([
   'fixtures', 'logs', 'node_modules', 'playwright-report', 'public', 'qa-artifacts', 'qa-output',
   'release-tests', 'temp', 'test-fixtures', 'test-results', 'tests', 'tmp', 'worker',
 ]);
+const migrationFilePattern = /^postgres\/migrations\/\d{4}_[a-z0-9_]+\.sql$/u;
 const forbiddenNamePatterns = [
   /^\.env(?:\..*)?$/u,
   /^\.(?:netrc|npmrc|pypirc|yarnrc)$/u,
@@ -175,8 +176,14 @@ async function walkInput(projectRoot, relativePath, candidates) {
 }
 
 function isForbidden(relativePath) {
-  const segments = relativePath.toLowerCase().split('/');
+  const normalized = relativePath.toLowerCase();
+  const segments = normalized.split('/');
   if (segments.some((segment) => forbiddenSegments.has(segment))) return true;
+  // Ordered SQL migrations are schema definitions, never credential material. Their
+  // filenames legitimately describe credential-related columns (for example
+  // 0006_tighten_admin_password_hash.sql), and dropping one silently breaks the
+  // runner's exact-prefix ledger preflight on a fresh environment.
+  if (migrationFilePattern.test(normalized)) return false;
   return forbiddenNamePatterns.some((pattern) => pattern.test(segments.at(-1)));
 }
 

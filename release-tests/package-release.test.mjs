@@ -87,6 +87,66 @@ test('writes a sorted deterministic manifest when package inputs are valid', asy
   });
 });
 
+test('packages every ordered migration even when its name describes credential columns', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const credentialNamedMigrations = [
+      'postgres/migrations/0006_tighten_admin_password_hash.sql',
+      'postgres/migrations/0007_rotate_session_tokens.sql',
+      'postgres/migrations/0008_admin_credentials_audit.sql',
+    ];
+    for (const relativePath of credentialNamedMigrations) {
+      await writeFile(join(projectRoot, ...relativePath.split('/')), 'select 1;\n');
+    }
+    const output = join(projectRoot, 'release-output');
+
+    // When
+    await packageRelease({ projectRoot, output });
+
+    // Then
+    const manifest = JSON.parse(await readFile(join(output, 'release-manifest.json'), 'utf8'));
+    const paths = manifest.files.map((file) => file.path);
+    for (const relativePath of credentialNamedMigrations) {
+      assert.equal(paths.includes(relativePath), true, `${relativePath} must be packaged`);
+    }
+    const packagedMigrations = paths.filter((path) => path.startsWith('postgres/migrations/'));
+    assert.deepEqual(packagedMigrations, [
+      'postgres/migrations/0001_initial.sql',
+      ...credentialNamedMigrations,
+    ].sort());
+    assert.equal(paths.includes('postgres/migrations/.env'), false);
+  });
+});
+
+test('still excludes non-migration secrets inside the migrations directory', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    for (const [relativePath, contents] of [
+      ['postgres/migrations/.env', 'DATABASE_URL=postgresql://user:pass@localhost/db\n'],
+      ['postgres/migrations/deploy.key', 'PRIVATE KEY\n'],
+      ['postgres/migrations/apply.log', 'applied\n'],
+      ['postgres/migrations/0009_notes_password.sql.bak', 'select 1;\n'],
+    ]) {
+      await writeFile(join(projectRoot, ...relativePath.split('/')), contents);
+    }
+    const output = join(projectRoot, 'release-output');
+
+    // When
+    await packageRelease({ projectRoot, output });
+
+    // Then
+    const manifest = JSON.parse(await readFile(join(output, 'release-manifest.json'), 'utf8'));
+    const paths = manifest.files.map((file) => file.path);
+    for (const forbiddenPath of [
+      'postgres/migrations/.env',
+      'postgres/migrations/deploy.key',
+      'postgres/migrations/apply.log',
+      'postgres/migrations/0009_notes_password.sql.bak',
+    ]) assert.equal(paths.includes(forbiddenPath), false, `${forbiddenPath} must not be packaged`);
+    assert.equal(paths.includes('postgres/migrations/0001_initial.sql'), true);
+  });
+});
+
 test('does not package workstation-only migration tooling', async () => {
   await withFixture(async (projectRoot) => {
     for (const relativePath of [
