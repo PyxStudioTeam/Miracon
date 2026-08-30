@@ -1,7 +1,7 @@
 import { json, parseJson, requireAdminMutation, requireSession } from '../../../lib/server/api';
 import type { ApiContext } from '../../../lib/server/api';
 import { getDatabasePool } from '../../../lib/server/database';
-import { buildProjectRevisionTransport } from '../../../lib/server/project-revision-adapter';
+import { buildProjectRevisionTransport, extractProjectMediaReferences } from '../../../lib/server/project-revision-adapter';
 import {
   deriveProjectRevisionTimestamps,
   projectOwnerSaveSchema,
@@ -39,11 +39,23 @@ export async function POST({ request }: ApiContext): Promise<Response> {
 
   const mutationTime = new Date().toISOString();
   const project = { ...input.value.project, updatedAt: mutationTime };
+
+  let mediaFileIds = input.value.mediaFileIds ?? [];
+  const references = extractProjectMediaReferences(project);
+  if (references.length > 0) {
+    const mediaResult = await database.query<{ readonly id: string }>(
+      'select id from miracon.media_files where relative_url = any($1::text[]) or relative_path = any($1::text[])',
+      [references],
+    );
+    const resolvedIds = mediaResult.rows.map((row) => String(row.id));
+    mediaFileIds = [...new Set([...mediaFileIds, ...resolvedIds])];
+  }
+
   const transport = buildProjectRevisionTransport({
     project,
     timestamps: deriveProjectRevisionTimestamps(project, head?.snapshot ?? null, mutationTime),
     expectedRevisionId: input.value.expectedRevisionId,
-    mediaFileIds: input.value.mediaFileIds,
+    mediaFileIds,
   });
   const isEditor = session.value.session.role === 'editor';
   try {
@@ -55,7 +67,14 @@ export async function POST({ request }: ApiContext): Promise<Response> {
     if (!result.ok) return revisionResultErrorResponse(result.error);
 
     if (isEditor) {
-      return json({ project, revision: result.value, isProposal: true }, { status: 201 });
+      return json({
+        project: {
+          ...project,
+          currentRevisionId,
+        },
+        revision: result.value,
+        isProposal: true,
+      }, { status: 201 });
     }
 
     const saved = await getAdminProjectRevisionTransport(database, project.id);

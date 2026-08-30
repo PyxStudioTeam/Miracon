@@ -183,8 +183,10 @@ export class RevisionService {
       throw new RevisionFailure({ kind: 'invalid_transition', revisionId: proposal.id, state: proposal.state });
     }
     const currentId = head?.currentRevisionId ?? null;
-    assertExpected(command.expectedCurrentRevisionId, currentId);
-    assertExpected(proposal.expectedRevisionId, currentId);
+    if (command.action === 'approve') {
+      assertExpected(command.expectedCurrentRevisionId, currentId);
+      assertExpected(proposal.expectedRevisionId, currentId);
+    }
     let revision: StoredRevision;
     try {
       revision = await repository.transitionProposal(proposal, command.action === 'approve' ? 'approved' : 'rejected', actor.actorId);

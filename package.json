@@ -29,7 +29,7 @@
     "release:package": "node scripts/package-release.mjs",
     "release:test": "node --test release-tests/*.test.mjs",
     "release:verify": "npm run check && npm run build && npm test",
-    "server:test": "vitest run server-tests/runtime-contracts.test.ts server-tests/revision-contracts.test.ts server-tests/project-revision-adapter.test.ts server-tests/project-revision-http.test.ts server-tests/homepage-site-settings-revisions.test.ts server-tests/revisions.test.ts",
+    "server:test": "vitest run server-tests/runtime-contracts.test.ts server-tests/revision-contracts.test.ts server-tests/project-revision-adapter.test.ts server-tests/project-revision-http.test.ts server-tests/homepage-site-settings-revisions.test.ts server-tests/revisions.test.ts server-tests/governance-revisions-e2e.test.ts",
     "server:test:db": "node scripts/require-database-test-config.mjs && vitest run --maxWorkers=1 server-tests/postgres-repositories.test.ts server-tests/revisions-postgres.test.ts",
     "standalone:test:db": "node scripts/require-database-test-config.mjs && node --test server-tests/standalone-build.test.mjs",
     "media:test": "vitest run --maxWorkers=1 media-tests/local-media-cleanup-unit.test.ts media-tests/media-hardening.test.ts media-tests/media-route-cache.test.ts",

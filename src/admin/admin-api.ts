@@ -16,6 +16,11 @@ const loginSchema = sessionSchema.extend({ csrfToken: z.string().min(1) });
 const canonicalProjectSchema = projectSchema.extend({
   updatedAt: z.iso.datetime(),
   currentRevisionId: z.string().optional(),
+  managedMedia: z.array(z.object({
+    id: z.string(),
+    relativeUrl: z.string(),
+    relativePath: z.string(),
+  })).optional(),
 });
 const projectsSchema = z.object({ projects: z.array(canonicalProjectSchema) });
 const projectResponseSchema = z.object({
@@ -125,12 +130,14 @@ export type SaveProjectResult = {
 
 export type SaveHomeHeroResult = {
   readonly videos: HomeHeroVideo[];
+  readonly currentRevisionId?: string | null;
   readonly revision?: unknown;
   readonly isProposal?: boolean;
 };
 
 export type SaveSiteSettingsResult = {
   readonly settings: SiteSettings;
+  readonly currentRevisionId?: string | null;
   readonly revision?: unknown;
   readonly isProposal?: boolean;
 };
@@ -307,6 +314,7 @@ export class AdminApi {
     const data = await this.#response(response, homeHeroResponseSchema);
     return {
       videos: data.videos,
+      currentRevisionId: data.currentRevisionId ?? null,
       revision: data.revision,
       isProposal: data.isProposal,
     };
@@ -335,6 +343,7 @@ export class AdminApi {
     const data = await this.#response(response, settingsResponseSchema);
     return {
       settings: data.settings,
+      currentRevisionId: data.currentRevisionId ?? null,
       revision: data.revision,
       isProposal: data.isProposal,
     };

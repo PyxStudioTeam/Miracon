@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { mapProjectRow } from '../projects';
 import type { Project } from '../project-types';
-import { getAdminProjects, type ProjectDatabase } from './projects';
+import type { ProjectDatabase } from './projects';
 import { parseStoredSnapshot } from './revision-materializers';
 import { projectSnapshotSchema, revisionIdSchema, type ProjectSnapshot } from './revision-contracts';
 
@@ -52,36 +53,73 @@ export function parseProjectRevisionMetadataRows(rows: readonly unknown[]): Read
   }));
 }
 
+const adminProjectsWithHeadSelect = `
+  select
+    project.*,
+    head.current_revision_id,
+    coalesce(
+      (
+        select jsonb_agg(to_jsonb(image) order by image.sort_order)
+        from miracon.project_images as image
+        where image.project_id = project.id
+      ),
+      '[]'::jsonb
+    ) as project_images,
+    coalesce(
+      (
+        select jsonb_agg(jsonb_build_object(
+          'id', media.id,
+          'relativeUrl', media.relative_url,
+          'relativePath', media.relative_path
+        ) order by media.id)
+        from miracon.revision_media as link
+        join miracon.media_files as media on media.id = link.media_file_id
+        where link.revision_id = head.current_revision_id
+      ),
+      '[]'::jsonb
+    ) as managed_media
+  from miracon.projects as project
+  join miracon.content_revision_heads as head
+    on head.aggregate_type = 'project' and head.aggregate_id = project.id
+`;
+
+type ProjectRevisionRow = Record<string, unknown> & {
+  current_revision_id: string;
+  managed_media: unknown[];
+  project_images?: Record<string, unknown>[];
+};
+
+function mapAdminProjectRevisionTransportRow(row: ProjectRevisionRow): AdminProjectRevisionTransport {
+  const project = mapProjectRow(row);
+  const currentRevisionId = revisionIdSchema.parse(row.current_revision_id);
+  const managedMedia = z.array(managedMediaSchema).parse(row.managed_media ?? []);
+  return {
+    ...project,
+    currentRevisionId,
+    managedMedia,
+  };
+}
+
 export async function getAdminProjectRevisionTransports(
   database: ProjectDatabase,
 ): Promise<AdminProjectRevisionTransport[]> {
-  const [projects, metadataResult] = await Promise.all([
-    getAdminProjects(database),
-    database.query(`select head.aggregate_id, head.current_revision_id,
-      coalesce(jsonb_agg(jsonb_build_object(
-        'id', media.id, 'relativeUrl', media.relative_url, 'relativePath', media.relative_path
-      ) order by media.id) filter (where media.id is not null), '[]'::jsonb) as managed_media
-      from miracon.content_revision_heads as head
-      join miracon.projects as project on project.id = head.aggregate_id
-      left join miracon.revision_media as link on link.revision_id = head.current_revision_id
-      left join miracon.media_files as media on media.id = link.media_file_id
-      where head.aggregate_type = 'project'
-      group by head.aggregate_id, head.current_revision_id`),
-  ]);
-  const metadata = parseProjectRevisionMetadataRows(metadataResult.rows);
-  return projects.map((project) => {
-    const revision = metadata.get(project.id);
-    if (!revision) throw new ProjectRevisionReadError();
-    return { ...project, ...revision };
-  });
+  const result = await database.query<ProjectRevisionRow>(`
+    ${adminProjectsWithHeadSelect}
+    order by project.sort_order
+  `);
+  return result.rows.map(mapAdminProjectRevisionTransportRow);
 }
 
 export async function getAdminProjectRevisionTransport(
   database: ProjectDatabase,
   projectId: string,
 ): Promise<AdminProjectRevisionTransport | null> {
-  const projects = await getAdminProjectRevisionTransports(database);
-  return projects.find((project) => project.id === projectId) ?? null;
+  const result = await database.query<ProjectRevisionRow>(`
+    ${adminProjectsWithHeadSelect}
+    where project.id = $1
+  `, [projectId]);
+  const row = result.rows[0];
+  return row ? mapAdminProjectRevisionTransportRow(row) : null;
 }
 
 export async function loadProjectRevisionHead(

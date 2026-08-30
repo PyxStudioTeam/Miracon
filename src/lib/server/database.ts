@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 
 export const DATABASE_POOL_MAX_CONNECTIONS = 10;
 
@@ -22,6 +22,28 @@ export function createDatabasePool(databaseUrl = process.env.DATABASE_URL): Pool
 export function getDatabasePool(): Pool {
   databasePool ??= createDatabasePool();
   return databasePool;
+}
+
+export async function withSnapshotTransaction<T>(
+  pool: Pool,
+  operation: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('begin transaction isolation level repeatable read read only');
+    const result = await operation(client);
+    await client.query('commit');
+    return result;
+  } catch (error) {
+    try {
+      await client.query('rollback');
+    } catch {
+      // ignore rollback failure
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export class DatabaseConfigurationError extends Error {

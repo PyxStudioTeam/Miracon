@@ -9,6 +9,11 @@ export interface SiteSettingsDatabase {
   ): Promise<QueryResult<Row>>;
 }
 
+export type SiteSettingsWithHead = {
+  readonly settings: SiteSettings;
+  readonly currentRevisionId: string | null;
+};
+
 const settingsColumns = `
   footer_terms_visible,
   footer_terms_pdf_url,
@@ -21,6 +26,31 @@ const settingsColumns = `
 export async function getSiteSettings(database: SiteSettingsDatabase): Promise<SiteSettings> {
   const result = await database.query(`select ${settingsColumns} from miracon.site_settings where id = 1`);
   return mapSiteSettings(result.rows[0]);
+}
+
+export async function getSiteSettingsWithHead(
+  database: SiteSettingsDatabase,
+): Promise<SiteSettingsWithHead> {
+  const result = await database.query(`
+    select
+      settings.footer_terms_visible,
+      settings.footer_terms_pdf_url,
+      settings.footer_privacy_visible,
+      settings.footer_privacy_pdf_url,
+      settings.footer_cookie_visible,
+      settings.footer_cookie_pdf_url,
+      head.current_revision_id
+    from miracon.site_settings as settings
+    left join miracon.content_revision_heads as head
+      on head.aggregate_type = 'site_settings' and head.aggregate_id = 'singleton'
+    where settings.id = 1
+  `);
+  const row = result.rows[0];
+  if (!row) throw new Error('Site settings record not found');
+  return {
+    settings: mapSiteSettings(row),
+    currentRevisionId: row['current_revision_id'] ? String(row['current_revision_id']) : null,
+  };
 }
 
 export async function updateSiteSettings(

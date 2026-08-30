@@ -43,7 +43,7 @@ import {
   UserX,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { AdminApi, type AdminUser, type PendingProposal, type RevisionHistoryItem, type SessionState } from './admin-api';
 import { isValidRemainingUnits, parseRemainingUnitsInput } from './remaining-units';
 import { seedProjects } from '../data/projects';
@@ -318,13 +318,78 @@ function Field({ label, hint, wide, children }: { label: string; hint?: string; 
   );
 }
 
-function SortableProjectRow({ project, onOpen }: { project: Project; onOpen: (project: Project) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+function collectProjectMediaUrls(project: Project): string[] {
+  const urls = new Set<string>();
+  const add = (val: unknown) => {
+    if (typeof val === 'string' && val.trim()) urls.add(val.trim());
+  };
+
+  add(project.coverUrl);
+  add(project.heroUrl);
+  add(project.heroMobileUrl);
+  add(project.heroPosterUrl);
+  add(project.walkthroughVideoDesktopUrl);
+  add(project.walkthroughVideoMobileUrl);
+  add(project.walkthroughVideoPosterUrl);
+  add(project.introImageUrl);
+  add(project.brochureUrl);
+
+  for (const v of project.heroVideos ?? []) {
+    add(v.desktopUrl);
+    add(v.mobileUrl);
+    add(v.posterUrl);
+  }
+  for (const v of project.walkthroughVideos ?? []) {
+    add(v.desktopUrl);
+    add(v.mobileUrl);
+    add(v.posterUrl);
+  }
+  for (const img of project.cardImages ?? []) {
+    add(img.url);
+    add(img.storagePath);
+  }
+  for (const img of project.gallery ?? []) {
+    add(img.url);
+    add(img.storagePath);
+  }
+  for (const b of project.benefits ?? []) {
+    add(b.icon);
+  }
+  for (const g of project.floorPlanGroups ?? []) {
+    for (const p of g.plans ?? []) {
+      add(p.imageUrl);
+    }
+  }
+  if (project.imageVariants?.images) {
+    for (const set of Object.values(project.imageVariants.images)) {
+      for (const c of set.avif ?? []) add(c.src);
+      for (const c of set.webp ?? []) add(c.src);
+    }
+  }
+
+  return Array.from(urls);
+}
+
+function SortableProjectRow({
+  project,
+  onOpen,
+  canReorder = true,
+}: {
+  project: Project;
+  onOpen: (project: Project) => void;
+  canReorder?: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: project.id,
+    disabled: !canReorder,
+  });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   return (
     <article ref={setNodeRef} style={style} className="project-row">
-      <button className="drag-handle" {...attributes} {...listeners} title="Drag to reorder"><GripVertical size={16} /></button>
+      {canReorder && (
+        <button className="drag-handle" {...attributes} {...listeners} title="Drag to reorder"><GripVertical size={16} /></button>
+      )}
       <div className="project-row-main" onClick={() => onOpen(project)}>
         {project.coverUrl ? <img src={project.coverUrl} alt={project.title} /> : <div className="project-row-cover-placeholder"><ImagePlus size={20} /></div>}
         <div className="project-row-copy">
@@ -353,6 +418,7 @@ function ProjectList({
   onReorder,
   onImport,
   canImport,
+  canReorder = true,
 }: {
   projects: Project[];
   onOpen: (project: Project) => void;
@@ -360,6 +426,7 @@ function ProjectList({
   onReorder: (event: DragEndEvent) => void;
   onImport: () => void;
   canImport: boolean;
+  canReorder?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
@@ -390,7 +457,7 @@ function ProjectList({
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onReorder}>
           <SortableContext items={filtered.map((p) => p.id)} strategy={verticalListSortingStrategy}>
             <div className="project-rows">
-              {filtered.map((p) => <SortableProjectRow key={p.id} project={p} onOpen={onOpen} />)}
+              {filtered.map((p) => <SortableProjectRow key={p.id} project={p} onOpen={onOpen} canReorder={canReorder} />)}
             </div>
           </SortableContext>
         </DndContext>
@@ -483,13 +550,14 @@ function HomeHeroManager({
   initialVideos: HomeHeroVideo[];
   projects: Project[];
   api: AdminApi;
-  onSaved: (videos: HomeHeroVideo[]) => void;
+  onSaved: (videos: HomeHeroVideo[], currentRevisionId?: string | null) => void;
   onToast: (toast: Toast) => void;
   role: 'owner' | 'editor';
   currentRevisionId?: string | null;
 }) {
   const [videos, setVideos] = useState<HomeHeroVideo[]>(() => structuredClone(initialVideos));
   const [savedVideos, setSavedVideos] = useState<HomeHeroVideo[]>(() => structuredClone(initialVideos));
+  const [revisionId, setRevisionId] = useState<string | null>(() => currentRevisionId ?? null);
   const [uploading, setUploading] = useState('');
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -500,6 +568,10 @@ function HomeHeroManager({
     setVideos(structuredClone(initialVideos));
     setSavedVideos(structuredClone(initialVideos));
   }, [initialVideos]);
+
+  useEffect(() => {
+    setRevisionId(currentRevisionId ?? null);
+  }, [currentRevisionId]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -559,10 +631,13 @@ function HomeHeroManager({
 
     setSaving(true);
     try {
-      const result = await api.saveHomeHeroVideos(normalized, { expectedRevisionId: currentRevisionId });
+      const result = await api.saveHomeHeroVideos(normalized, { expectedRevisionId: revisionId });
+      if (result.currentRevisionId !== undefined) {
+        setRevisionId(result.currentRevisionId);
+      }
       setVideos(normalized);
       setSavedVideos(structuredClone(normalized));
-      onSaved(normalized);
+      onSaved(normalized, result.currentRevisionId);
       onToast({
         tone: 'success',
         message: result.isProposal ? 'Playlist proposal submitted for owner review' : 'Homepage video playlist saved',
@@ -637,12 +712,13 @@ function HomeHeroManager({
           title="Homepage Hero Playlist"
           role={role}
           api={api}
-          currentRevisionId={currentRevisionId ?? null}
+          currentRevisionId={revisionId ?? null}
           onRollbackSuccess={async () => {
             const data = await api.listHomeHeroVideos();
+            setRevisionId(data.currentRevisionId);
             setVideos(data.videos);
             setSavedVideos(structuredClone(data.videos));
-            onSaved(data.videos);
+            onSaved(data.videos, data.currentRevisionId);
           }}
           onToast={onToast}
         />
@@ -676,13 +752,14 @@ function SiteSettingsManager({
 }: {
   initialSettings: SiteSettings;
   api: AdminApi;
-  onSaved: (settings: SiteSettings) => void;
+  onSaved: (settings: SiteSettings, currentRevisionId?: string | null) => void;
   onToast: (toast: Toast) => void;
   role: 'owner' | 'editor';
   currentRevisionId?: string | null;
 }) {
   const [settings, setSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
   const [savedSettings, setSavedSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
+  const [revisionId, setRevisionId] = useState<string | null>(() => currentRevisionId ?? null);
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState<LegalUrlKey | null>(null);
@@ -691,6 +768,10 @@ function SiteSettingsManager({
     setSettings({ ...initialSettings });
     setSavedSettings({ ...initialSettings });
   }, [initialSettings]);
+
+  useEffect(() => {
+    setRevisionId(currentRevisionId ?? null);
+  }, [currentRevisionId]);
 
   const documents = legalDocumentFields.map((document) => {
     const normalizedUrl = settings[document.urlKey].trim();
@@ -746,10 +827,13 @@ function SiteSettingsManager({
         footerPrivacyPdfUrl: settings.footerPrivacyPdfUrl.trim(),
         footerCookiePdfUrl: settings.footerCookiePdfUrl.trim(),
       };
-      const result = await api.saveSiteSettings(nextSettings, { expectedRevisionId: currentRevisionId });
+      const result = await api.saveSiteSettings(nextSettings, { expectedRevisionId: revisionId });
+      if (result.currentRevisionId !== undefined) {
+        setRevisionId(result.currentRevisionId);
+      }
       setSettings(result.settings);
       setSavedSettings({ ...result.settings });
-      onSaved(result.settings);
+      onSaved(result.settings, result.currentRevisionId);
       onToast({
         tone: 'success',
         message: result.isProposal ? 'Site settings proposal submitted for owner review' : 'Site settings saved',
@@ -816,12 +900,13 @@ function SiteSettingsManager({
           title="Site Settings & Legal PDFs"
           role={role}
           api={api}
-          currentRevisionId={currentRevisionId ?? null}
+          currentRevisionId={revisionId ?? null}
           onRollbackSuccess={async () => {
             const data = await api.getSiteSettings();
+            setRevisionId(data.currentRevisionId);
             setSettings(data.settings);
             setSavedSettings({ ...data.settings });
-            onSaved(data.settings);
+            onSaved(data.settings, data.currentRevisionId);
           }}
           onToast={onToast}
         />
@@ -1471,6 +1556,19 @@ function ProjectEditor({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<number | '100%'>(1440);
 
+  const mediaMapRef = useRef<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    const managed = (initialProject as Project & { managedMedia?: readonly { id: string; relativeUrl?: string; relativePath?: string }[] }).managedMedia ?? [];
+    for (const m of managed) {
+      if (m.id) {
+        mediaMapRef.current.set(m.id, m.id);
+        if (m.relativeUrl) mediaMapRef.current.set(m.relativeUrl, m.id);
+        if (m.relativePath) mediaMapRef.current.set(m.relativePath, m.id);
+      }
+    }
+  }, [initialProject]);
+
   const missingRequirements = useMemo(() => getPublishRequirements(project).filter((item) => !item.complete), [project]);
   const readiness = useMemo(() => projectReadiness(project), [project]);
   const isDirty = useMemo(() => JSON.stringify(project) !== savedSnapshot, [project, savedSnapshot]);
@@ -1526,11 +1624,34 @@ function ProjectEditor({
       seoDescription: project.seoDescription || project.shortDescription,
     })));
 
+    const referencedUrls = collectProjectMediaUrls(nextProject);
+    const mediaFileIdSet = new Set<string>();
+    const existingManaged = (project as Project & { managedMedia?: readonly { id: string; relativeUrl?: string; relativePath?: string }[] }).managedMedia ?? [];
+    for (const m of existingManaged) {
+      if (m.id && (referencedUrls.includes(m.relativeUrl ?? '') || referencedUrls.includes(m.relativePath ?? ''))) {
+        mediaFileIdSet.add(m.id);
+      }
+    }
+    for (const url of referencedUrls) {
+      const id = mediaMapRef.current.get(url);
+      if (id) mediaFileIdSet.add(id);
+    }
+    const mediaFileIds = Array.from(mediaFileIdSet);
+
     setSaving(true);
     try {
       const result = await api.saveProject(nextProject, {
         expectedRevisionId: (project as Project & { currentRevisionId?: string }).currentRevisionId ?? null,
+        mediaFileIds,
       });
+      const returnedManaged = (result.project as Project & { managedMedia?: readonly { id: string; relativeUrl?: string; relativePath?: string }[] }).managedMedia ?? [];
+      for (const m of returnedManaged) {
+        if (m.id) {
+          mediaMapRef.current.set(m.id, m.id);
+          if (m.relativeUrl) mediaMapRef.current.set(m.relativeUrl, m.id);
+          if (m.relativePath) mediaMapRef.current.set(m.relativePath, m.id);
+        }
+      }
       setProject(result.project);
       setSavedSnapshot(JSON.stringify(result.project));
       onSaved(result.project);
@@ -1578,6 +1699,9 @@ function ProjectEditor({
         try {
           const uploadFile = await optimizePhotoForDirectUpload(file);
           const media = await api.uploadMedia(uploadFile);
+          mediaMapRef.current.set(media.id, media.id);
+          mediaMapRef.current.set(media.relativeUrl, media.id);
+          mediaMapRef.current.set(media.relativePath, media.id);
           uploaded.push({ id: crypto.randomUUID(), url: media.relativeUrl, storagePath: media.relativePath, alt: file.name.replace(/\.[^.]+$/, ''), role: roleType, sortOrder: 0, width: media.width ?? null, height: media.height ?? null, focalX: 50, focalY: 50 });
         } catch (error) {
           showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process image' });
@@ -1603,6 +1727,9 @@ function ProjectEditor({
       if (!file.type.startsWith('image/')) throw new Error('This slot accepts images only');
       const uploadFile = await optimizePhotoForDirectUpload(file);
       const media = await api.uploadMedia(uploadFile);
+      mediaMapRef.current.set(media.id, media.id);
+      mediaMapRef.current.set(media.relativeUrl, media.id);
+      mediaMapRef.current.set(media.relativePath, media.id);
       setProject((current) => {
         const next = { ...current, [field]: media.relativeUrl } as Project;
         if (field === 'heroUrl') {
@@ -1637,6 +1764,9 @@ function ProjectEditor({
     setUploading('brochure');
     try {
       const media = await api.uploadMedia(file);
+      mediaMapRef.current.set(media.id, media.id);
+      mediaMapRef.current.set(media.relativeUrl, media.id);
+      mediaMapRef.current.set(media.relativePath, media.id);
       update('brochureUrl', media.relativeUrl);
       showToast({ tone: 'success', message: 'Brochure uploaded' });
     } catch (error) {
@@ -1771,6 +1901,9 @@ function ProjectEditor({
                       if (!file) return;
                       try {
                         const media = await api.uploadMedia(file);
+                        mediaMapRef.current.set(media.id, media.id);
+                        mediaMapRef.current.set(media.relativeUrl, media.id);
+                        mediaMapRef.current.set(media.relativePath, media.id);
                         update('benefits', project.benefits.map((item) => item.id === b.id ? { ...item, icon: media.relativeUrl } : item));
                         showToast({ tone: 'success', message: 'Benefit icon uploaded' });
                       } catch (err) {
@@ -1862,6 +1995,9 @@ function ProjectEditor({
                           if (!file) return;
                           try {
                             const media = await api.uploadMedia(file);
+                            mediaMapRef.current.set(media.id, media.id);
+                            mediaMapRef.current.set(media.relativeUrl, media.id);
+                            mediaMapRef.current.set(media.relativePath, media.id);
                             const newPlan = { id: crypto.randomUUID(), title: 'Ground Floor', imageUrl: media.relativeUrl, alt: 'Floor plan' };
                             update('floorPlanGroups', project.floorPlanGroups.map((g) => g.id === group.id ? { ...g, plans: [...g.plans, newPlan] } : g));
                             showToast({ tone: 'success', message: 'Plan layout uploaded' });
@@ -2035,7 +2171,7 @@ export default function AdminApp() {
   }
 
   async function reorder(event: DragEndEvent) {
-    if (!event.over || event.active.id === event.over.id) return;
+    if (!isOwner || !event.over || event.active.id === event.over.id) return;
     const oldIndex = projects.findIndex((project) => project.id === event.active.id);
     const newIndex = projects.findIndex((project) => project.id === event.over?.id);
     const reordered = arrayMove(projects, oldIndex, newIndex).map((project, index) => ({ ...project, sortOrder: index }));
@@ -2140,7 +2276,12 @@ export default function AdminApp() {
           initialVideos={homeHeroVideos}
           projects={projects}
           api={api}
-          onSaved={setHomeHeroVideos}
+          onSaved={(videos, revisionId) => {
+            setHomeHeroVideos(videos);
+            if (revisionId !== undefined) {
+              setHomeHeroRevisionId(revisionId);
+            }
+          }}
           onToast={setGlobalToast}
           role={userRole}
           currentRevisionId={homeHeroRevisionId}
@@ -2149,7 +2290,12 @@ export default function AdminApp() {
         <SiteSettingsManager
           initialSettings={siteSettings}
           api={api}
-          onSaved={setSiteSettings}
+          onSaved={(settings, revisionId) => {
+            setSiteSettings(settings);
+            if (revisionId !== undefined) {
+              setSiteSettingsRevisionId(revisionId);
+            }
+          }}
           onToast={setGlobalToast}
           role={userRole}
           currentRevisionId={siteSettingsRevisionId}
@@ -2174,6 +2320,7 @@ export default function AdminApp() {
           onReorder={reorder}
           onImport={importSeed}
           canImport={projects.length === 0}
+          canReorder={isOwner}
         />
       )}
 

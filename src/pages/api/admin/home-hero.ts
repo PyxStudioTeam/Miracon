@@ -4,7 +4,7 @@ import type { ApiContext } from '../../../lib/server/api';
 import { homepageVideosSchema } from '../../../lib/server/api-schemas';
 import { getDatabasePool } from '../../../lib/server/database';
 import { buildHomepageHeroRevisionTransport } from '../../../lib/server/homepage-revision-adapter';
-import { getHomepageVideos } from '../../../lib/server/homepage-videos';
+import { getHomepageVideosWithHead } from '../../../lib/server/homepage-videos';
 import {
   revisionExceptionResponse,
   revisionResultErrorResponse,
@@ -25,14 +25,10 @@ const homeHeroSaveInputSchema = z.object({
 export async function GET({ request }: ApiContext): Promise<Response> {
   const session = await requireSession(request);
   if (!session.ok) return session.response;
-  const database = getDatabasePool();
-  const [videos, head] = await Promise.all([
-    getHomepageVideos(database),
-    getAggregateHeadRevision(database, 'homepage_hero', SINGLETON_AGGREGATE_ID),
-  ]);
+  const { videos, currentRevisionId } = await getHomepageVideosWithHead(getDatabasePool());
   return json({
     videos,
-    currentRevisionId: head?.currentRevisionId ?? null,
+    currentRevisionId,
   });
 }
 
@@ -87,9 +83,10 @@ export async function PUT({ request }: ApiContext): Promise<Response> {
     const result = await new RevisionService(database).execute(session.value.sessionToken, command);
     if (!result.ok) return revisionResultErrorResponse(result.error);
 
-    const updatedVideos = await getHomepageVideos(database);
+    const updated = await getHomepageVideosWithHead(database);
     return json({
-      videos: updatedVideos,
+      videos: updated.videos,
+      currentRevisionId: updated.currentRevisionId,
       revision: result.value,
       isProposal: isEditor,
     });
