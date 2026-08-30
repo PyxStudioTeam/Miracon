@@ -1,4 +1,4 @@
-import { json, parseJson, requireAdminMutation, requireSession } from '../../../lib/server/api';
+import { json, jsonError, parseJson, requireAdminMutation, requireSession } from '../../../lib/server/api';
 import type { ApiContext } from '../../../lib/server/api';
 import { getDatabasePool } from '../../../lib/server/database';
 import { buildProjectRevisionTransport, extractProjectMediaReferences } from '../../../lib/server/project-revision-adapter';
@@ -40,16 +40,35 @@ export async function POST({ request }: ApiContext): Promise<Response> {
   const mutationTime = new Date().toISOString();
   const project = { ...input.value.project, updatedAt: mutationTime };
 
-  let mediaFileIds = input.value.mediaFileIds ?? [];
-  const references = extractProjectMediaReferences(project);
-  if (references.length > 0) {
-    const mediaResult = await database.query<{ readonly id: string }>(
-      'select id from miracon.media_files where relative_url = any($1::text[]) or relative_path = any($1::text[])',
-      [references],
+  const explicitMediaFileIds = input.value.mediaFileIds ?? [];
+  if (explicitMediaFileIds.length > 0) {
+    const explicitResult = await database.query<{ readonly id: string }>(
+      'select id from miracon.media_files where id = any($1::text[])',
+      [explicitMediaFileIds],
     );
-    const resolvedIds = mediaResult.rows.map((row) => String(row.id));
-    mediaFileIds = [...new Set([...mediaFileIds, ...resolvedIds])];
+    const foundExplicitIds = new Set(explicitResult.rows.map((row) => String(row.id)));
+    if (explicitMediaFileIds.some((id) => !foundExplicitIds.has(id))) {
+      return jsonError(400, 'invalid_media', 'Project references non-existent media files');
+    }
   }
+
+  const references = extractProjectMediaReferences(project);
+  const managedRefs = [...new Set(references.filter((ref) => ref.startsWith('/media/') || ref.startsWith('uploads/')))];
+  let resolvedIds: string[] = [];
+
+  if (managedRefs.length > 0) {
+    const mediaResult = await database.query<{ readonly id: string; readonly relative_url: string; readonly relative_path: string }>(
+      'select id, relative_url, relative_path from miracon.media_files where relative_url = any($1::text[]) or relative_path = any($1::text[])',
+      [managedRefs],
+    );
+    const foundRefs = new Set(mediaResult.rows.flatMap((row) => [row.relative_url, row.relative_path]));
+    if (managedRefs.some((ref) => !foundRefs.has(ref))) {
+      return jsonError(400, 'invalid_media', 'Project references non-existent media files');
+    }
+    resolvedIds = mediaResult.rows.map((row) => String(row.id));
+  }
+
+  const mediaFileIds = [...new Set([...explicitMediaFileIds, ...resolvedIds])];
 
   const transport = buildProjectRevisionTransport({
     project,

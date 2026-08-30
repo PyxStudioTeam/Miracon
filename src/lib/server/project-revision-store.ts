@@ -12,7 +12,7 @@ export type ManagedMediaTransport = {
 };
 
 export type AdminProjectRevisionTransport = Project & {
-  readonly currentRevisionId: string;
+  readonly currentRevisionId: string | null;
   readonly managedMedia: readonly ManagedMediaTransport[];
 };
 
@@ -79,19 +79,19 @@ const adminProjectsWithHeadSelect = `
       '[]'::jsonb
     ) as managed_media
   from miracon.projects as project
-  join miracon.content_revision_heads as head
+  left join miracon.content_revision_heads as head
     on head.aggregate_type = 'project' and head.aggregate_id = project.id
 `;
 
 type ProjectRevisionRow = Record<string, unknown> & {
-  current_revision_id: string;
+  current_revision_id?: string | null;
   managed_media: unknown[];
   project_images?: Record<string, unknown>[];
 };
 
 function mapAdminProjectRevisionTransportRow(row: ProjectRevisionRow): AdminProjectRevisionTransport {
   const project = mapProjectRow(row);
-  const currentRevisionId = revisionIdSchema.parse(row.current_revision_id);
+  const currentRevisionId = row.current_revision_id ? revisionIdSchema.parse(row.current_revision_id) : null;
   const managedMedia = z.array(managedMediaSchema).parse(row.managed_media ?? []);
   return {
     ...project,

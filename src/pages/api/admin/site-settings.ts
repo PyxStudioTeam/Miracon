@@ -84,15 +84,17 @@ export async function PUT({ request }: ApiContext): Promise<Response> {
 
   const mediaFileIds = [...new Set([...(input.value.mediaFileIds ?? []), ...resolvedMediaIds])];
 
+  const settings = {
+    footerTermsVisible: input.value.footerTermsVisible,
+    footerTermsPdfUrl: input.value.footerTermsPdfUrl,
+    footerPrivacyVisible: input.value.footerPrivacyVisible,
+    footerPrivacyPdfUrl: input.value.footerPrivacyPdfUrl,
+    footerCookieVisible: input.value.footerCookieVisible,
+    footerCookiePdfUrl: input.value.footerCookiePdfUrl,
+  };
+
   const transport = buildSiteSettingsRevisionTransport({
-    settings: {
-      footerTermsVisible: input.value.footerTermsVisible,
-      footerTermsPdfUrl: input.value.footerTermsPdfUrl,
-      footerPrivacyVisible: input.value.footerPrivacyVisible,
-      footerPrivacyPdfUrl: input.value.footerPrivacyPdfUrl,
-      footerCookieVisible: input.value.footerCookieVisible,
-      footerCookiePdfUrl: input.value.footerCookiePdfUrl,
-    },
+    settings,
     expectedRevisionId,
     mediaFileIds,
     mutationTime,
@@ -107,12 +109,21 @@ export async function PUT({ request }: ApiContext): Promise<Response> {
     const result = await new RevisionService(database).execute(session.value.sessionToken, command);
     if (!result.ok) return revisionResultErrorResponse(result.error);
 
+    if (isEditor) {
+      return json({
+        settings,
+        currentRevisionId,
+        revision: result.value,
+        isProposal: true,
+      });
+    }
+
     const { settings: updatedSettings, currentRevisionId: updatedRevisionId } = await getSiteSettingsWithHead(database);
     return json({
       settings: updatedSettings,
       currentRevisionId: updatedRevisionId,
       revision: result.value,
-      isProposal: isEditor,
+      isProposal: false,
     });
   } catch (error) {
     const response = revisionExceptionResponse(error);

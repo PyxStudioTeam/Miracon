@@ -935,7 +935,7 @@ function RevisionHistoryDrawer({
   role: 'owner' | 'editor';
   api: AdminApi;
   currentRevisionId: string | null;
-  onRollbackSuccess: () => void;
+  onRollbackSuccess: () => Promise<void> | void;
   onToast: (toast: Toast) => void;
 }) {
   const [revisions, setRevisions] = useState<RevisionHistoryItem[]>([]);
@@ -970,9 +970,9 @@ function RevisionHistoryDrawer({
     setRollingBack(true);
     try {
       await api.rollbackRevision(target.id, currentRevisionId);
+      await onRollbackSuccess();
       onToast({ tone: 'success', message: `Rolled back to revision #${target.revisionNumber}` });
       setConfirmRollbackTarget(null);
-      onRollbackSuccess();
       onClose();
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to rollback revision' });
@@ -1364,10 +1364,12 @@ function ProposalsManager({
   api,
   onToast,
   onRefreshProposalsCount,
+  onProposalApproved,
 }: {
   api: AdminApi;
   onToast: (toast: Toast) => void;
   onRefreshProposalsCount: () => void;
+  onProposalApproved?: () => Promise<void>;
 }) {
   const [proposals, setProposals] = useState<PendingProposal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1397,6 +1399,7 @@ function ProposalsManager({
       onToast({ tone: 'success', message: `Proposal #${proposal.revisionNumber} approved and published to live website` });
       setReviewingProposal(null);
       await loadProposals();
+      await onProposalApproved?.();
       onRefreshProposalsCount();
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to approve proposal' });
@@ -2305,6 +2308,9 @@ export default function AdminApp() {
           api={api}
           onToast={setGlobalToast}
           onRefreshProposalsCount={loadPendingProposalsCount}
+          onProposalApproved={async () => {
+            await Promise.all([loadProjects(), loadHomeHeroVideos(), loadSiteSettings()]);
+          }}
         />
       ) : view === 'users' && isOwner ? (
         <UsersManager
