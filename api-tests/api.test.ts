@@ -222,6 +222,13 @@ describe('Phase 2 server API', () => {
     // Given
     const auth = await loginAsAdmin();
     const videos = [{ id: 'api-hero', title: 'API hero', projectId: null, desktopUrl: '/media/api.mp4', desktopStoragePath: null, mobileUrl: null, mobileStoragePath: null, sortOrder: 0, isActive: true }];
+
+    // Seed a real media_files record for the legal PDF URL so the server-side PDF validation passes
+    await pool.query(
+      `insert into miracon.media_files (id, relative_url, relative_path, original_name, mime_type, size_bytes, sha256)
+       values ('test-terms-pdf', '/media/legal/terms.pdf', 'legal/terms.pdf', 'terms.pdf', 'application/pdf', 1024, 'a'.repeat(64))
+       on conflict (id) do nothing`,
+    );
     const settings = { footerTermsVisible: true, footerTermsPdfUrl: '/media/legal/terms.pdf', footerPrivacyVisible: false, footerPrivacyPdfUrl: '', footerCookieVisible: false, footerCookiePdfUrl: '' };
 
     // When
@@ -230,11 +237,27 @@ describe('Phase 2 server API', () => {
     const heroRead = await getHero(context('/api/admin/home-hero', { headers: auth.headers }));
     const settingsRead = await getSettings(context('/api/admin/site-settings', { headers: auth.headers }));
 
-    // Then
-    expect(heroUpdate.status).toBe(204);
+    // Then — hero PUT now returns JSON with revision metadata
+    expect(heroUpdate.status).toBe(200);
+    const heroBody = await heroUpdate.json() as Record<string, unknown>;
+    expect(heroBody.videos).toEqual(videos);
+    expect(heroBody).toHaveProperty('currentRevisionId');
+    expect(heroBody).toHaveProperty('revision');
+
+    // Settings PUT returns 200 with revision metadata
     expect(settingsUpdate.status).toBe(200);
-    expect(await heroRead.json()).toEqual({ videos });
-    expect(await settingsRead.json()).toEqual({ settings });
+    const settingsBody = await settingsUpdate.json() as Record<string, unknown>;
+    expect(settingsBody.settings).toEqual(settings);
+    expect(settingsBody).toHaveProperty('currentRevisionId');
+
+    // GET responses now include currentRevisionId alongside content
+    const heroReadBody = await heroRead.json() as Record<string, unknown>;
+    expect(heroReadBody.videos).toEqual(videos);
+    expect(heroReadBody).toHaveProperty('currentRevisionId');
+
+    const settingsReadBody = await settingsRead.json() as Record<string, unknown>;
+    expect(settingsReadBody.settings).toEqual(settings);
+    expect(settingsReadBody).toHaveProperty('currentRevisionId');
   });
 
   it('uploads and safely serves local media with GET, HEAD, and byte ranges', async () => {
