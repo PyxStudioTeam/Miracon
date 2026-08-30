@@ -93,7 +93,7 @@ const homeStructuredData = {
 </head>
 
 <body>
-  <header class="header">
+  <header class="header notranslate" translate="no">
     <div class="header-container">
       <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
         <img src="img/logo_mark.svg" alt="" class="logo-img">
@@ -186,7 +186,7 @@ const homeStructuredData = {
           </video>
           <video class="hero-video" muted playsinline preload="none" poster="/img/figma_hero.png" aria-hidden="true"></video>
         </div>
-        <div class="container hero-content">
+        <div class="container hero-content notranslate" translate="no">
           <p class="hero-subtitle">{m['home.heroLocation']}</p>
           <h1 class="hero-title">{m['home.heroTitleLine1']}<br>{m['home.heroTitleLine2']}</h1>
           <div class="hero-actions">
@@ -208,11 +208,11 @@ const homeStructuredData = {
         <h2 class="section-title">{m['home.projectsTitle']}</h2>
         <p class="section-subtitle">{m['home.projectsDescription']}</p>
 
-        <div class="filter-tabs" aria-label={m['home.projectFilters']}>
-          <button class="filter-tab active" type="button" data-filter="all" aria-pressed="true" aria-controls="projectsList"><span data-label={m['common.categoryAll']}>{m['common.categoryAll']}</span></button>
-          <button class="filter-tab" type="button" data-filter="coastal" aria-pressed="false" aria-controls="projectsList"><span data-label={m['common.categoryCoastal']}>{m['common.categoryCoastal']}</span></button>
-          <button class="filter-tab" type="button" data-filter="city" aria-pressed="false" aria-controls="projectsList"><span data-label={m['common.categoryCity']}>{m['common.categoryCity']}</span></button>
-          <button class="filter-tab" type="button" data-filter="golden-visa" aria-pressed="false" aria-controls="projectsList"><span data-label={m['common.categoryGoldenVisa']}>{m['common.categoryGoldenVisa']}</span></button>
+        <div class="filter-tabs notranslate" translate="no" aria-label={m['home.projectFilters']}>
+          <button class="filter-tab active" type="button" data-filter="all" aria-pressed="true" aria-controls="projectsList"><span>{m['common.categoryAll']}</span></button>
+          <button class="filter-tab" type="button" data-filter="coastal" aria-pressed="false" aria-controls="projectsList"><span>{m['common.categoryCoastal']}</span></button>
+          <button class="filter-tab" type="button" data-filter="city" aria-pressed="false" aria-controls="projectsList"><span>{m['common.categoryCity']}</span></button>
+          <button class="filter-tab" type="button" data-filter="golden-visa" aria-pressed="false" aria-controls="projectsList"><span>{m['common.categoryGoldenVisa']}</span></button>
         </div>
 
         <div class="projects-list" id="projectsList">

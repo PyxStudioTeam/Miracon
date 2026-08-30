@@ -1,104 +1,172 @@
 # MIRACON website and Project Desk
 
-The public MIRACON website and its custom project administration panel live in one Astro application.
+The public MIRACON website and its administration panel run as one standalone Astro Node application backed by PostgreSQL and local filesystem media.
 
-## Stack
+## Active stack
 
-- Astro in SSR mode with the Vercel adapter
-- React for `/admin`
-- Supabase PostgreSQL, Auth, and Storage
-- A separate Docker media worker using Sharp and FFmpeg
-- Existing MIRACON CSS and vanilla JavaScript for the public pages
+- Astro SSR with `@astrojs/node` standalone output
+- React for `/admin`; static CSS and vanilla JavaScript for the public site chrome
+- PostgreSQL migrations in `postgres/migrations/`
+- Server-side sessions, CSRF protection, and singleton administrator provisioning
+- Local media under an absolute `MEDIA_ROOT`, served from same-origin `/media/` URLs
+
+Supabase, its media worker, and Vercel are not active runtime dependencies. Their scripts and documentation remain only for migration, comparison, and rollback work; see [Legacy migration and rollback tooling](#legacy-migration-and-rollback-tooling).
 
 ## Local development
 
+Use Node `>=22.12.0`, a local PostgreSQL database, and an absolute writable media directory.
+
 ```bash
 npm install
+cp .env.example .env.local
+npm run postgres:migrate
 npm run dev
 ```
 
-Without Supabase environment variables, the public site and `/admin` use the local project seed. Admin changes in this mode are intentionally not persisted and uploads are disabled.
-
-## Supabase setup
-
-1. Create a Supabase project in an EU region.
-2. Run the SQL files from `supabase/migrations` in filename order in the Supabase SQL editor.
-3. Create the administrator under Authentication > Users.
-4. Add the new user's UUID to the admin allowlist:
-
-```sql
-insert into public.admin_users (user_id)
-values ('AUTH_USER_UUID');
-```
-
-5. Configure the application environment:
+The active runtime variables are server-only `DATABASE_URL`, absolute `MEDIA_ROOT`, and canonical `PUBLIC_SITE_URL`. Do not expose the database URL in a `PUBLIC_*` variable.
 
 ```dotenv
-PUBLIC_SUPABASE_URL=https://PROJECT.supabase.co
-PUBLIC_SUPABASE_ANON_KEY=PUBLIC_ANON_KEY
+DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/miracon_local
+MEDIA_ROOT=/absolute/path/to/miracon-media
+PUBLIC_SITE_URL=http://127.0.0.1:4321
 ```
 
-The service-role key is not required by the website and must never use the `PUBLIC_` prefix.
+On PowerShell, set environment variables with `$env:NAME = 'value'`. The `.env.example` Supabase values are legacy migration inputs, not requirements for development or production.
 
-The media worker is optional and disabled by default. Its database migration may be applied while the worker remains off; the walkthrough fields depend on the latest migrations, but direct media uploads do not require the worker container. Set `PUBLIC_MEDIA_WORKER_ENABLED=true` only after applying the media migration and deploying the worker.
+## Database and administrator
 
-On the first authenticated visit, an empty database shows an **Import current website projects** action. It imports the five projects bundled in `src/data/projects.ts`.
-
-## Content workflow
-
-- Draft projects are available only to the administrator.
-- Published projects appear in the catalog and at `/projects/[slug]`.
-- English is served without a URL prefix; Greek uses `/el/*`. The project editor's EN tab owns shared structure and media, while the ΕΛ tab stores translated text. Empty Greek fields fall back to English.
-- Unpublishing removes the public project without deleting its content.
-- Preview is rendered at `/preview/[slug]` or `/el/preview/[slug]`, requires the administrator session, has `noindex`, and is sent with `Cache-Control: private, no-store`.
-- Project and gallery ordering are stored explicitly and can be changed by drag and drop.
-- By default, JPEG/PNG images are resized to at most 2400px and converted to WebP in the administrator browser before direct Storage upload. Videos are uploaded directly.
-- Projects can optionally show ordered desktop/mobile walkthrough videos after the gallery and before floor plans. Public playback is muted, control-free, cropped to the frame, and crossfades between clips.
-- Image and video hero modes are selectable per project; video heroes support the same ordered desktop/mobile playlist, including immersive presentation and the optional sound control.
-- With `PUBLIC_MEDIA_WORKER_ENABLED=true`, originals use the private `media-sources` bucket and responsive AVIF/WebP images plus optimized MP4 videos are generated asynchronously.
-- PDF brochures and SVG benefit icons use their public project buckets. They join automatic cleanup only when worker mode is enabled.
-- Uploaded image sources are limited to 20 MB, 40 megapixels, and 10,000 px per side. Video sources are MP4 up to 50 MB and are validated again by the worker.
-- Unreferenced generated variants are retained for seven days before cleanup. Private originals use the configurable worker source-retention period.
-
-## Optional media worker
-
-Worker mode is off unless `PUBLIC_MEDIA_WORKER_ENABLED=true`. The website uses only the public anon key; the separately deployed worker is the only process that receives `SUPABASE_SERVICE_ROLE_KEY`.
+Apply `postgres/migrations/*.sql` in filename order through the migration runner:
 
 ```bash
-cp worker/.env.example worker/.env
-npm run worker:test
-docker compose -f docker-compose.worker.yml up --build
+npm run postgres:migrate
 ```
 
-Required worker secrets:
-
-```dotenv
-SUPABASE_URL=https://PROJECT.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=SERVER_ONLY_SERVICE_ROLE_KEY
-```
-
-The worker has no HTTP port. Deploy it as an always-on container with restart policy enabled. Suitable targets include Cloud Run worker pools, Fly.io, Railway, Render, or a managed VPS. Do not deploy it as a standard Cloud Run service or a short-lived Vercel function.
-
-The full worker configuration and profile contract are documented in `worker/README.md`.
-
-## Vercel deployment
-
-1. Import the GitHub repository into Vercel.
-2. Keep the detected framework preset set to Astro.
-3. Add `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` to the Production, Preview, and Development environments.
-4. Deploy using the default `npm run build` command.
-5. Add the production and preview URLs to the Supabase Auth redirect allowlist.
-
-The Vercel adapter runs public project pages and authenticated previews as serverless functions. Media uploads continue to go directly from the administrator browser to Supabase Storage.
-
-No worker configuration is required for the default Vercel deployment. When worker mode is enabled later, deploy it separately after the database migration. If an enabled worker is offline, queued jobs remain safe but admin media processing waits until the worker resumes.
-
-Keep the old website live until the Vercel build is approved, then attach `miracon.gr` in Vercel and update the DNS records in Papaki using the values shown by Vercel.
-
-## Verification
+After migrations, provision the singleton administrator. Supply the password over standard input so it is not stored in shell history:
 
 ```bash
-npm run check
+printf '%s' 'a-long-unique-password' | npm run admin:provision -- --email=admin@example.com --password-stdin
+```
+
+Provisioning refuses to replace an existing administrator. Credential rotation must be explicit:
+
+```bash
+printf '%s' 'a-new-long-unique-password' | npm run admin:provision -- --email=admin@example.com --password-stdin --rotate
+```
+
+The initial command provisions the sole owner at `id=1`. Editors receive database-generated IDs and can be provisioned without supplying one:
+
+```bash
+printf '%s' 'an-editor-password' | npm run admin:provision -- --role=editor --email=editor@example.com --password-stdin
+printf '%s' 'a-new-editor-password' | npm run admin:provision -- --rotate --admin-id=2 --email=editor@example.com --password-stdin
+npm run admin:provision -- --deactivate --admin-id=2
+npm run admin:provision -- --revoke-sessions --admin-id=2
+```
+
+Owner rotation omits `--admin-id`; editor rotation requires an editor ID. Deactivation is editor-only and idempotent. Rotation, deactivation, and explicit revocation immediately revoke the target's active sessions. Passwords are accepted only through `--password-stdin`.
+
+The schema and migration ledger contract are documented in [`postgres/README.md`](postgres/README.md).
+
+## Testing
+
+The default suite is deterministic and does not read `DATABASE_TEST_URL`:
+
+```bash
+npm test
+```
+
+Vitest receives only explicitly listed Vitest files. Node's test runner owns the PostgreSQL contracts, migration tooling, and release tests, so Node `.mjs` suites are not discovered by Vitest directory scans.
+
+### Disposable database suites
+
+Database suites are deliberately separate and always end in `:db`. They fail, rather than skip, unless both safeguards are present:
+
+- `DATABASE_TEST_ALLOW_RESET=1`
+- `DATABASE_TEST_URL` names a disposable database with a distinct `test`, `testing`, `ci`, `disposable`, or `tmp` segment
+
+Create a dedicated local database with your normal PostgreSQL administration tools, then run the complete database acceptance suite. These tests drop and recreate application-owned test schemas; never point them at development, staging, or production data.
+
+```bash
+createdb miracon_test
+DATABASE_TEST_ALLOW_RESET=1 \
+DATABASE_TEST_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/miracon_test \
+npm run test:db
+```
+
+PowerShell equivalent:
+
+```powershell
+createdb miracon_test
+$env:DATABASE_TEST_ALLOW_RESET = '1'
+$env:DATABASE_TEST_URL = 'postgresql://USER:PASSWORD@127.0.0.1:5432/miracon_test'
+npm run test:db
+```
+
+Individual guarded commands include `postgres:test:db`, `auth:test:db`, `api:test:db`, `api:test:http:db`, `server:test:db`, `media:test:db`, `migration:import:test:db`, `standalone:test:db`, and `browser:test:db`.
+
+### Browser acceptance
+
+Install the Playwright-managed Chromium browser once, then create a fresh standalone build before browser acceptance:
+
+```bash
+npm run browser:install
 npm run build
-npm run worker:test
 ```
+
+`npm run browser:test:db` uses the same destructive disposable-database safeguards as the other `:db` suites. Set `DATABASE_TEST_ALLOW_RESET=1` and a `DATABASE_TEST_URL` whose database name contains a distinct `test`, `testing`, `ci`, `disposable`, or `tmp` segment; never use development, staging, or production data.
+
+```bash
+DATABASE_TEST_ALLOW_RESET=1 \
+DATABASE_TEST_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/miracon_test \
+npm run browser:test:db
+```
+
+`npm run test:db` includes `npm run browser:test:db` after `npm run standalone:test:db`. `npm run release:verify` excludes all guarded database and browser acceptance suites; run it without database-test variables.
+
+## Release and staging acceptance
+
+The safe release gate needs no database and does not claim database acceptance:
+
+```bash
+npm run release:verify
+```
+
+It runs `astro check`, a standalone build, deterministic application tests, schema contracts, migration tooling tests, and release package tests. Database acceptance is separate and requires the guarded disposable database workflow above.
+
+Exact staging prerequisites:
+
+1. Use Node `>=22.12.0` and install the lockfile with `npm ci`.
+2. Run `npm run release:verify` without database-test variables.
+3. Run `npm run test:db` against a disposable database, never the staging database.
+4. Create the release with `npm run release:package -- release-output`; inspect `release-manifest.json`.
+5. On staging, provide server-only `DATABASE_URL`, an absolute writable non-symlinked `MEDIA_ROOT`, and the canonical HTTPS `PUBLIC_SITE_URL`.
+6. Run `npm run postgres:migrate` against staging, then provision the administrator if it does not exist.
+7. Start the packaged application through `app.js` or `npm start` and confirm `/api/health` reports HTTP 200 with database and media checks true.
+8. Verify English and Greek public routes, administrator login and preview, one write/read media flow, and static asset delivery before acceptance.
+
+The release package contract requires `app.js`, `dist/server/entry.mjs`, package manifests, ordered PostgreSQL migrations, the migration runner, administrator provisioner, and retained import/verification tools. It excludes secrets, tests, logs, local agent/browser state, QA/deploy output, temporary files, and workstation-only export tools.
+
+## Content and media operations
+
+- Draft projects and previews require an administrator session; published projects appear at `/projects/[slug]`.
+- English uses unprefixed routes and Greek uses `/el/*`.
+- Project, gallery, and homepage ordering are stored explicitly in PostgreSQL.
+- Uploads are written beneath `MEDIA_ROOT`; the database stores same-origin URLs and relative paths.
+- Preview responses remain private and non-indexable.
+
+Media cleanup defaults to dry-run:
+
+```bash
+npm run media:cleanup -- --grace-days=7
+```
+
+Apply mode requires the documented exclusive-writer assertion. Stop every process that can modify `MEDIA_ROOT` before running it and keep them stopped until completion:
+
+```bash
+npm run media:cleanup -- --apply --exclusive-writer --grace-days=7
+```
+
+## Legacy migration and rollback tooling
+
+The `supabase/`, `worker/`, migration export/import tests, and Supabase-named scripts are retained to transfer historical data, verify parity, or support rollback investigation. They do not define the active deployment architecture and must not be added to the standalone runtime.
+
+Vercel configuration and the old Supabase media worker are likewise legacy references, not supported release targets. Do not reintroduce `@astrojs/vercel`, public Supabase runtime variables, service-role credentials, storage buckets, or worker services into the standalone application. The release intentionally retains only the import and parity tools needed after migration; workstation-only export and media-transfer tools stay outside the package.

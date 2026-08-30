@@ -11,3 +11,15 @@ studio/
 !.env.example
 !worker/.env.example
 .slim/deepwork/
+postgres/backups/
+postgres/exports/
+postgres/tmp/
+release-output/
+.omo/
+.playwright-mcp/
+playwright-report/
+test-results/
+qa-artifacts/
+qa-output/
+deploy-artifacts/
+tmp/

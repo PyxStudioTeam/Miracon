@@ -1186,7 +1186,7 @@
 }
 
 /* The translated desktop navigation becomes compact before labels collide. */
-@media (min-width: 761px) and (max-width: 950px) {
+@media (min-width: 761px) and (max-width: 1279px) {
   .project-page .nav-menu,
   .project-page .header-actions,
   .golden-visa-page .nav-menu,
@@ -1361,81 +1361,6 @@
     height: 48px;
     min-height: 48px;
     box-sizing: border-box;
-  }
-}
-
-/* Bridge the tablet-to-desktop handoff without placing another control in the
-   already occupied navigation row. */
-@media (min-width: 951px) and (max-width: 1180px) {
-  .project-page .mobile-lang-selector,
-  .golden-visa-page .mobile-lang-selector {
-    position: absolute;
-    z-index: 32;
-    top: 59px;
-    right: 0;
-    display: inline-flex;
-    width: 46px;
-    height: 44px;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    color: #fff;
-    background: transparent;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: .08em;
-  }
-
-  .project-page .mobile-lang-selector span,
-  .golden-visa-page .mobile-lang-selector span {
-    display: inline-flex;
-    width: 46px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, .34);
-    border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .project-page .mobile-lang-selector:focus-visible,
-  .golden-visa-page .mobile-lang-selector:focus-visible {
-    border-radius: 999px;
-    outline: 2px solid #fff;
-    outline-offset: 2px;
-  }
-}
-
-@media (max-width: 950px) {
-  .project-page .mobile-lang-selector,
-  .golden-visa-page .mobile-lang-selector {
-    top: 4px;
-    width: 46px;
-    height: 44px;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  .project-page .mobile-lang-selector span,
-  .golden-visa-page .mobile-lang-selector span {
-    display: inline-flex;
-    width: 46px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, .34);
-    border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
   }
 }
 

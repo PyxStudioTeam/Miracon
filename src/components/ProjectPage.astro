@@ -175,6 +175,11 @@ const projectStructuredData = {
             <img src="/img/olympus-detail/icons/hero-location.svg" alt="" class="project-location-icon" aria-hidden="true">
             <span class="project-location-text">{project.address}</span>
           </a>
+          {project.remainingUnits !== null && (
+            <p class="project-availability" data-availability={project.remainingUnits === 0 ? 'sold-out' : 'available'}>
+              {project.remainingUnits === 0 ? m['project.soldOut'] : formatMessage(m['project.availableUnits'], { count: String(project.remainingUnits) })}
+            </p>
+          )}
           {project.brochureUrl && (
             <a href={project.brochureUrl} class="project-brochure-link" target="_blank" rel="noreferrer">
               <span class="project-brochure-icon" aria-hidden="true">

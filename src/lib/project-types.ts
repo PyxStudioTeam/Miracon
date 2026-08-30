@@ -98,6 +98,7 @@ export interface Project {
   address: string;
   cardAddress: string;
   price: string;
+  remainingUnits: number | null;
   shortDescription: string;
   fullDescription: string;
   introTitle: string;

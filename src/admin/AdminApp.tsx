@@ -9,7 +9,6 @@ import {
 } from '@dnd-kit/core';
 import {
   arrayMove,
-  rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -26,56 +25,53 @@ import {
   FileText,
   Film,
   GripVertical,
+  History,
   ImagePlus,
+  Inbox,
+  KeyRound,
   LayoutGrid,
   LoaderCircle,
   LogOut,
-  Monitor,
   Plus,
+  RotateCcw,
   Save,
   Search,
   Smartphone,
   Trash2,
   Upload,
+  Users,
+  UserX,
   X,
 } from 'lucide-react';
-import { useEffect, useState, type ChangeEvent, type MouseEvent, type ReactNode, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode, type SyntheticEvent } from 'react';
+import { AdminApi, type AdminUser, type PendingProposal, type RevisionHistoryItem, type SessionState } from './admin-api';
+import { isValidRemainingUnits, parseRemainingUnitsInput } from './remaining-units';
 import { seedProjects } from '../data/projects';
 import {
   optimizePhotoForDirectUpload,
-  processMediaUpload,
-  readImageDimensions,
-  registerPublicMediaAsset,
-  toImageVariantSet,
 } from '../lib/admin-media';
-import { fallbackHomeHeroVideos, mapHomeHeroVideo, type HomeHeroVideo } from '../lib/home-hero';
+import { type HomeHeroVideo } from '../lib/home-hero';
 import { normalizeMediaUrl } from '../lib/media';
-import { mapProjectRow } from '../lib/projects';
 import {
   PROJECT_CATEGORIES,
   categoryLabels,
-  type FloorPlanGroup,
-  type ImageVariantSet,
   type Project,
   type ProjectCategory,
   type ProjectImage,
   type ProjectLocaleTranslation,
-  type ProjectVideoItem,
 } from '../lib/project-types';
-import { getBrowserSupabaseClient } from '../lib/supabase-browser';
 import {
   defaultSiteSettings,
   isValidTermsPdfUrl,
-  mapSiteSettings,
   type SiteSettings,
-} from '../lib/site-settings';
+} from '../lib/site-settings-shared';
 
 type AdminSection = 'content' | 'specs' | 'media' | 'plans' | 'seo';
-type AdminView = 'projects' | 'home-hero' | 'site-settings';
+type AdminView = 'projects' | 'home-hero' | 'site-settings' | 'proposals' | 'users';
 type Toast = { tone: 'success' | 'error'; message: string } | null;
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const mediaWorkerEnabled = import.meta.env.PUBLIC_MEDIA_WORKER_ENABLED === 'true';
+const benefitIconAccept = 'image/svg+xml,image/jpeg,image/png,image/webp,image/avif,.svg,.jpg,.jpeg,.png,.webp,.avif';
 
 function normalizedSlug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -109,19 +105,6 @@ function projectReadiness(project: Project) {
   return Math.round((requirements.filter((item) => item.complete).length / requirements.length) * 100);
 }
 
-function withTimeout<T>(operation: PromiseLike<T>, timeoutMs = 10000): Promise<T> {
-  return Promise.race([
-    Promise.resolve(operation),
-    new Promise<T>((_, reject) => {
-      window.setTimeout(() => reject(new Error('Supabase request timed out')), timeoutMs);
-    }),
-  ]);
-}
-
-function emptyProjectVideo(): ProjectVideoItem {
-  return { id: crypto.randomUUID(), desktopUrl: '', mobileUrl: null, posterUrl: null };
-}
-
 function pauseOtherAdminVideos(event: SyntheticEvent<HTMLVideoElement>) {
   document.querySelectorAll<HTMLVideoElement>('.admin-app video').forEach((video) => {
     if (video !== event.currentTarget) video.pause();
@@ -152,6 +135,7 @@ const emptyProject = (sortOrder: number): Project => ({
   title: 'New project',
   address: '',
   price: '',
+  remainingUnits: null,
   shortDescription: '',
   fullDescription: '',
   introTitle: 'A New Place to Live',
@@ -200,83 +184,6 @@ const emptyProject = (sortOrder: number): Project => ({
   updatedAt: new Date().toISOString(),
 });
 
-function projectToRow(project: Project) {
-  return {
-    id: project.id,
-    slug: project.slug,
-    title: project.title,
-    address: project.address,
-    card_address: project.cardAddress,
-    price: project.price,
-    short_description: project.shortDescription,
-    full_description: project.fullDescription,
-    intro_title: project.introTitle,
-    categories: project.categories,
-    status: project.status,
-    sort_order: project.sortOrder,
-    cover_url: project.coverUrl,
-    cover_focal_x: project.coverFocalX,
-    cover_focal_y: project.coverFocalY,
-    hero_type: project.heroType,
-    hero_variant: project.heroVariant,
-    hero_sound_enabled: project.heroSoundEnabled,
-    hero_idle_ui: project.heroIdleUi,
-    hero_url: project.heroUrl,
-    hero_mobile_url: project.heroMobileUrl ?? null,
-    hero_poster_url: project.heroPosterUrl,
-    hero_videos: project.heroVideos,
-    walkthrough_video_enabled: project.walkthroughVideoEnabled,
-    walkthrough_video_title: project.walkthroughVideoTitle,
-    walkthrough_video_desktop_url: project.walkthroughVideoDesktopUrl,
-    walkthrough_video_mobile_url: project.walkthroughVideoMobileUrl,
-    walkthrough_video_poster_url: project.walkthroughVideoPosterUrl,
-    walkthrough_videos: project.walkthroughVideos,
-    hero_focal_x: project.heroFocalX,
-    hero_focal_y: project.heroFocalY,
-    intro_image_url: project.introImageUrl,
-    brochure_url: project.brochureUrl,
-    map_query: project.mapQuery,
-    map_url: project.mapUrl,
-    characteristics: project.characteristics,
-    benefits: project.benefits,
-    floor_plan_groups: project.floorPlanGroups,
-    image_variants: project.imageVariants ?? { version: 1, images: {} },
-    nearby_places: project.nearbyPlaces,
-    seo_title: project.seoTitle || `${project.title} — MIRACON`,
-    seo_description: project.seoDescription || project.shortDescription,
-    translations: project.translations ?? {},
-  };
-}
-
-function projectImagesToRows(project: Project) {
-  return [...project.cardImages, ...project.gallery].map((image, index) => ({
-    id: image.id,
-    url: image.url,
-    storage_path: image.storagePath ?? null,
-    alt: image.alt,
-    role: image.role,
-    sort_order: image.sortOrder ?? index,
-    width: image.width ?? null,
-    height: image.height ?? null,
-    focal_x: image.focalX ?? 50,
-    focal_y: image.focalY ?? 50,
-  }));
-}
-
-function homeHeroVideoToRow(video: HomeHeroVideo) {
-  return {
-    id: video.id,
-    title: video.title,
-    project_id: video.projectId,
-    desktop_url: video.desktopUrl,
-    desktop_storage_path: video.desktopStoragePath,
-    mobile_url: video.mobileUrl,
-    mobile_storage_path: video.mobileStoragePath,
-    sort_order: video.sortOrder,
-    is_active: video.isActive,
-  };
-}
-
 function emptyHomeHeroVideo(sortOrder: number): HomeHeroVideo {
   return {
     id: crypto.randomUUID(),
@@ -289,14 +196,6 @@ function emptyHomeHeroVideo(sortOrder: number): HomeHeroVideo {
     sortOrder,
     isActive: false,
   };
-}
-
-function addImageVariant(
-  images: Record<string, ImageVariantSet>,
-  url: string,
-  variants: ImageVariantSet,
-) {
-  return { ...images, [normalizeMediaUrl(url)]: variants };
 }
 
 function pruneImageVariants(project: Project): Project {
@@ -345,7 +244,6 @@ function pruneTranslations(project: Project): Project {
       ...project.translations,
       el: {
         ...translation,
-        nearbyPlaces: translation.nearbyPlaces?.slice(0, project.nearbyPlaces.length),
         characteristics: Object.fromEntries(Object.entries(translation.characteristics ?? {}).filter(([id]) => characteristicIds.has(id))),
         benefits: Object.fromEntries(Object.entries(translation.benefits ?? {}).filter(([id]) => benefitIds.has(id))),
         floorPlanGroups,
@@ -356,69 +254,106 @@ function pruneTranslations(project: Project): Project {
 }
 
 function BrandMark() {
-  return <span className="admin-brand-mark"><img src="/img/logo_mark.svg" alt="" /></span>;
+  return <div className="admin-brand-mark"><span>M</span></div>;
 }
 
 function BrandLockup() {
-  return <div className="admin-brand-lockup"><BrandMark /><span><strong>MIRACON</strong><small>Project desk</small></span></div>;
-}
-
-function LoadingScreen() {
-  return <div className="admin-loading"><BrandMark /><LoaderCircle className="spin" size={20} /></div>;
-}
-
-function LoginScreen({ onLogin, error, loading }: { onLogin: (email: string, password: string) => void; error: string; loading: boolean }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  function submit(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onLogin(email, password);
-  }
-
   return (
-    <main className="admin-login">
-      <section className="login-visual">
-        <div className="login-wordmark"><BrandLockup /></div>
-        <div className="login-statement">
-          <span className="eyebrow">Project Desk / 2026</span>
-          <h1>Architecture<br />deserves an<br /><em>editorial</em> workspace</h1>
-        </div>
-        <p>Private content system for MIRACON Constructions</p>
-      </section>
-      <section className="login-panel">
-        <form onSubmit={submit}>
-          <span className="login-index">01 / SECURE ACCESS</span>
-          <h2>Welcome back</h2>
-          <p>Sign in with the administrator account</p>
-          <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" /></label>
-          <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" /></label>
-          {error && <div className="login-error"><CircleAlert size={16} />{error}</div>}
-          <button className="primary-button login-button" disabled={loading}>{loading ? <LoaderCircle className="spin" size={18} /> : 'Enter project desk'}<ChevronRight size={18} /></button>
-        </form>
-      </section>
-    </main>
+    <div className="admin-brand-lockup">
+      <BrandMark />
+      <div><strong>MIRACON</strong><span>DESK</span></div>
+    </div>
   );
 }
 
-function SortableProjectRow({ project, onOpen, reorderEnabled }: { project: Project; onOpen: () => void; reorderEnabled: boolean }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id, disabled: !reorderEnabled });
+function LoadingScreen() {
   return (
-    <article ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`project-row ${isDragging ? 'is-dragging' : ''}`}>
-      <button className="drag-handle" {...attributes} {...listeners} disabled={!reorderEnabled} aria-label={`Reorder ${project.title}`}><GripVertical size={18} /></button>
-      <button className="project-row-main" onClick={onOpen}>
-        <img src={project.coverUrl || '/img/figma_hero.png'} alt="" />
-        <span className="project-row-copy"><strong>{project.title}</strong><small>{project.address || 'Address not set'}</small></span>
-        <span className="project-row-tags">{project.categories.map((category) => <i key={category}>{categoryLabels[category]}</i>)}</span>
-        <span className={`status-pill ${project.status}`}><b></b>{project.status === 'published' ? 'Published' : 'Draft'}</span>
-        <span className="project-updated"><b>{projectReadiness(project)}%</b>{new Date(project.updatedAt).toLocaleDateString('en-GB')}</span>
+    <div className="admin-loading">
+      <BrandMark />
+      <LoaderCircle className="spin" size={24} />
+      <span>Loading administration desk...</span>
+    </div>
+  );
+}
+
+function LoginScreen({ onLogin, error, loading }: { onLogin: (email: string, password: string) => Promise<void>; error: string; loading: boolean }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  return (
+    <div className="admin-login">
+      <div className="login-visual">
+        <BrandLockup />
+        <div>
+          <span className="login-index">01 / ADMINISTRATION</span>
+          <h2>A Place<br /><em>of Your Own</em></h2>
+          <p>Sign in to manage projects, available units, hero videos, site legal documents, and revision governance.</p>
+        </div>
+        <span className="rail-env">SECURE GOVERNANCE WORKSPACE</span>
+      </div>
+      <div className="login-panel">
+        <form onSubmit={(e) => { e.preventDefault(); onLogin(email, password); }}>
+          <header>
+            <span className="eyebrow">Sign in</span>
+            <h1>Administration</h1>
+            <p>Use your authorized owner or editor credentials.</p>
+          </header>
+          {error && <div className="login-error" role="alert"><CircleAlert size={17} />{error}</div>}
+          <label><span>Administrator email</span><input type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+          <label><span>Password</span><input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+          <button className="primary-button" type="submit" disabled={loading}>{loading ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}Sign in</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, hint, wide, children }: { label: string; hint?: string; wide?: boolean; children: ReactNode }) {
+  return (
+    <label className={`editor-field ${wide ? 'wide' : ''}`}>
+      <span>{label}</span>
+      {children}
+      {hint && <small>{hint}</small>}
+    </label>
+  );
+}
+
+function SortableProjectRow({ project, onOpen }: { project: Project; onOpen: (project: Project) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <article ref={setNodeRef} style={style} className="project-row">
+      <button className="drag-handle" {...attributes} {...listeners} title="Drag to reorder"><GripVertical size={16} /></button>
+      <div className="project-row-main" onClick={() => onOpen(project)}>
+        {project.coverUrl ? <img src={project.coverUrl} alt={project.title} /> : <div className="project-row-cover-placeholder"><ImagePlus size={20} /></div>}
+        <div className="project-row-copy">
+          <strong>{project.title}</strong>
+          <span>{project.address || 'Address not set'}</span>
+          {project.remainingUnits !== null && (
+            <span style={{ fontSize: '11px', color: 'var(--admin-gold)', marginLeft: '8px' }}>
+              ({project.remainingUnits === 0 ? 'Sold out' : `${project.remainingUnits} units left`})
+            </span>
+          )}
+        </div>
+        <div className="project-row-tags">
+          {project.categories.map((c) => <i key={c}>{categoryLabels[c]}</i>)}
+        </div>
+        <span className={`status-pill ${project.status}`}>{project.status}</span>
         <ChevronRight size={18} />
-      </button>
+      </div>
     </article>
   );
 }
 
-function ProjectList({ projects, onOpen, onCreate, onReorder, onImport, canImport }: {
+function ProjectList({
+  projects,
+  onOpen,
+  onCreate,
+  onReorder,
+  onImport,
+  canImport,
+}: {
   projects: Project[];
   onOpen: (project: Project) => void;
   onCreate: () => void;
@@ -427,41 +362,51 @@ function ProjectList({ projects, onOpen, onCreate, onReorder, onImport, canImpor
   canImport: boolean;
 }) {
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
-  const filtered = projects.filter((project) => (filter === 'all' || project.status === filter) && `${project.title} ${project.address}`.toLowerCase().includes(query.toLowerCase()));
-  const reorderEnabled = filter === 'all' && !query.trim();
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return projects;
+    return projects.filter((p) => p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q) || p.address.toLowerCase().includes(q));
+  }, [projects, query]);
 
   return (
     <main className="admin-main">
       <header className="list-header">
-        <div><span className="eyebrow">Portfolio / Projects</span><h1>Projects <sup>{projects.length.toString().padStart(2, '0')}</sup></h1></div>
-        <button className="primary-button" onClick={onCreate}><Plus size={18} />New project</button>
-      </header>
-      <section className="portfolio-metrics">
-        <div><span>Published</span><strong>{projects.filter((project) => project.status === 'published').length}</strong></div>
-        <div><span>In draft</span><strong>{projects.filter((project) => project.status === 'draft').length}</strong></div>
-        <div className="metric-wide"><span>Portfolio status</span><strong>{projects.length ? 'Active' : 'Awaiting content'}</strong><i></i></div>
-      </section>
-      <section className="project-table">
-        <div className="table-tools">
-          <div className="segmented-control">{(['all', 'published', 'draft'] as const).map((value) => <button key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div>
-          <label className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects" aria-label="Search projects" /></label>
+        <div>
+          <span className="eyebrow">Miracon portfolio</span>
+          <h1>Projects <sup>{projects.length.toString().padStart(2, '0')}</sup></h1>
+          <p>Organize, edit and publish real estate developments</p>
         </div>
-        {!reorderEnabled && <p className="reorder-note">Clear search and select All to reorder the portfolio</p>}
-        <div className="table-head"><span></span><span>Project</span><span>Categories</span><span>Status</span><span>Updated</span><span></span></div>
-        {filtered.length > 0 ? (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onReorder}>
-            <SortableContext items={filtered.map((project) => project.id)} strategy={verticalListSortingStrategy}>
-              <div className="project-rows">{filtered.map((project) => <SortableProjectRow key={project.id} project={project} reorderEnabled={reorderEnabled} onOpen={() => onOpen(project)} />)}</div>
-            </SortableContext>
-          </DndContext>
-        ) : (
-          <div className="empty-projects"><LayoutGrid size={28} /><h3>No projects here</h3><p>Create a project or change the current filter</p>{canImport && <button className="secondary-button" onClick={onImport}>Import current website projects</button>}</div>
-        )}
-      </section>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {canImport && <button className="secondary-button" onClick={onImport}><Download size={16} />Import defaults</button>}
+          <button className="primary-button" onClick={onCreate}><Plus size={18} />Create project</button>
+        </div>
+      </header>
+      <div className="list-search">
+        <Search size={17} />
+        <input placeholder="Search projects by name, address or slug..." value={query} onChange={(e) => setQuery(e.target.value)} />
+      </div>
+      {filtered.length > 0 ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onReorder}>
+          <SortableContext items={filtered.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+            <div className="project-rows">
+              {filtered.map((p) => <SortableProjectRow key={p.id} project={p} onOpen={onOpen} />)}
+            </div>
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <div className="empty-projects">
+          <ImagePlus size={36} />
+          <h3>No projects found</h3>
+          <p>{query ? 'No projects match your search query' : 'Create your first project to get started'}</p>
+        </div>
+      )}
     </main>
   );
+}
+
+function Download({ size = 16 }: { size?: number }) {
+  return <Upload size={size} style={{ transform: 'rotate(180deg)' }} />;
 }
 
 function SortableHomeHeroVideo({
@@ -482,30 +427,43 @@ function SortableHomeHeroVideo({
   onUpload: (kind: 'desktop' | 'mobile', event: ChangeEvent<HTMLInputElement>) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: video.id });
-  const desktopUploadKey = `${video.id}:desktop`;
-  const mobileUploadKey = `${video.id}:mobile`;
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   return (
-    <article ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`home-hero-card ${isDragging ? 'is-dragging' : ''}`}>
+    <article ref={setNodeRef} style={style} className="home-hero-card">
       <header>
-        <button className="home-hero-drag" {...attributes} {...listeners} aria-label={`Reorder ${video.title}`}><GripVertical size={18} /></button>
-        <span className="home-hero-order">{String(index + 1).padStart(2, '0')}</span>
-        <div><strong>{video.title || 'Untitled video'}</strong><small>{video.isActive ? 'Visible on homepage' : 'Hidden from homepage'}</small></div>
-        <label className="home-hero-toggle"><input type="checkbox" checked={video.isActive} onChange={(event) => onChange({ isActive: event.target.checked })} /><span></span>{video.isActive ? 'Active' : 'Hidden'}</label>
-        <button className="home-hero-remove" onClick={onRemove} aria-label={`Remove ${video.title}`}><Trash2 size={17} /></button>
+        <button className="drag-handle" {...attributes} {...listeners}><GripVertical size={16} /></button>
+        <span className="home-hero-index">{String(index + 1).padStart(2, '0')}</span>
+        <input value={video.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="Video title" />
+        <label className="home-hero-toggle">
+          <input type="checkbox" checked={video.isActive} onChange={(e) => onChange({ isActive: e.target.checked })} />
+          <span></span>{video.isActive ? 'Active' : 'Inactive'}
+        </label>
+        <button className="danger-button icon-text-button" onClick={onRemove} title="Remove video"><Trash2 size={16} /></button>
       </header>
-
       <div className="home-hero-card-body">
         <div className="home-hero-preview">
-          {video.desktopUrl ? <video key={video.desktopUrl} src={video.desktopUrl} muted loop playsInline controls preload="metadata" onPlay={pauseOtherAdminVideos} /> : <div><Film size={28} /><span>Upload a desktop video</span></div>}
+          {video.desktopUrl ? <video src={video.desktopUrl} muted playsInline onPlay={pauseOtherAdminVideos} controls /> : <div className="home-hero-video-placeholder"><Film size={24} /><span>Upload desktop video</span></div>}
         </div>
-
         <div className="home-hero-fields">
-          <Field label="Internal title"><input value={video.title} onChange={(event) => onChange({ title: event.target.value })} /></Field>
-          <Field label="Related project"><select value={video.projectId ?? ''} onChange={(event) => onChange({ projectId: event.target.value || null })}><option value="">General MIRACON video</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></Field>
-          <div className="home-hero-assets">
-            <div><Monitor size={20} /><span><strong>Desktop MP4</strong><small>{video.desktopUrl ? 'Uploaded' : 'Required for active videos'}</small></span><label><input type="file" accept="video/mp4" onChange={(event) => onUpload('desktop', event)} />{uploading === desktopUploadKey ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{video.desktopUrl ? 'Replace' : 'Upload'}</label></div>
-            <div><Smartphone size={20} /><span><strong>Mobile MP4</strong><small>{video.mobileUrl ? 'Uploaded' : 'Desktop version will be used'}</small></span><label><input type="file" accept="video/mp4" onChange={(event) => onUpload('mobile', event)} />{uploading === mobileUploadKey ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{video.mobileUrl ? 'Replace' : 'Upload'}</label></div>
+          <label>
+            <span>Linked project</span>
+            <select value={video.projectId ?? ''} onChange={(e) => onChange({ projectId: e.target.value || null })}>
+              <option value="">None (Homepage only)</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+            </select>
+          </label>
+          <div className="home-hero-upload-slots">
+            <label className="media-slot-button">
+              <input type="file" accept="video/mp4" onChange={(e) => onUpload('desktop', e)} />
+              {uploading === `${video.id}:desktop` ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}
+              {video.desktopUrl ? 'Replace desktop MP4' : 'Upload desktop MP4'}
+            </label>
+            <label className="media-slot-button">
+              <input type="file" accept="video/mp4" onChange={(e) => onUpload('mobile', e)} />
+              {uploading === `${video.id}:mobile` ? <LoaderCircle className="spin" size={15} /> : <Smartphone size={15} />}
+              {video.mobileUrl ? 'Replace mobile MP4' : 'Upload mobile MP4 (optional)'}
+            </label>
           </div>
         </div>
       </div>
@@ -516,23 +474,32 @@ function SortableHomeHeroVideo({
 function HomeHeroManager({
   initialVideos,
   projects,
-  demo,
+  api,
   onSaved,
   onToast,
+  role,
+  currentRevisionId,
 }: {
   initialVideos: HomeHeroVideo[];
   projects: Project[];
-  demo: boolean;
+  api: AdminApi;
   onSaved: (videos: HomeHeroVideo[]) => void;
   onToast: (toast: Toast) => void;
+  role: 'owner' | 'editor';
+  currentRevisionId?: string | null;
 }) {
   const [videos, setVideos] = useState<HomeHeroVideo[]>(() => structuredClone(initialVideos));
   const [savedVideos, setSavedVideos] = useState<HomeHeroVideo[]>(() => structuredClone(initialVideos));
   const [uploading, setUploading] = useState('');
   const [saving, setSaving] = useState(false);
-  const supabase = getBrowserSupabaseClient();
+  const [historyOpen, setHistoryOpen] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const isDirty = JSON.stringify(videos) !== JSON.stringify(savedVideos);
+
+  useEffect(() => {
+    setVideos(structuredClone(initialVideos));
+    setSavedVideos(structuredClone(initialVideos));
+  }, [initialVideos]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -542,15 +509,15 @@ function HomeHeroManager({
   }, [isDirty]);
 
   function updateVideo(id: string, patch: Partial<HomeHeroVideo>) {
-    setVideos((current) => current.map((video) => video.id === id ? { ...video, ...patch } : video));
+    setVideos((current) => current.map((v) => v.id === id ? { ...v, ...patch } : v));
   }
 
   function reorderVideos(event: DragEndEvent) {
     if (!event.over || event.active.id === event.over.id) return;
     setVideos((current) => {
-      const oldIndex = current.findIndex((video) => video.id === event.active.id);
-      const newIndex = current.findIndex((video) => video.id === event.over?.id);
-      return arrayMove(current, oldIndex, newIndex).map((video, index) => ({ ...video, sortOrder: index }));
+      const oldIndex = current.findIndex((v) => v.id === event.active.id);
+      const newIndex = current.findIndex((v) => v.id === event.over?.id);
+      return arrayMove(current, oldIndex, newIndex).map((v, i) => ({ ...v, sortOrder: i }));
     });
   }
 
@@ -570,45 +537,11 @@ function HomeHeroManager({
     const uploadKey = `${id}:${kind}`;
     setUploading(uploadKey);
     try {
-      if (demo || !supabase) {
-        const localUrl = URL.createObjectURL(file);
-        updateVideo(id, kind === 'desktop'
-          ? { desktopUrl: localUrl, desktopStoragePath: null }
-          : { mobileUrl: localUrl, mobileStoragePath: null });
-        return;
-      }
-
-      let publicUrl: string;
-      let storagePath: string;
-      if (mediaWorkerEnabled) {
-        const media = await processMediaUpload(supabase, file, {
-          kind: 'video',
-          outputBucket: 'site-media',
-          context: { target: 'home-hero', videoId: id, rendition: kind },
-          profile: {
-            video: kind === 'mobile'
-              ? { max_width: 1080, max_height: 1920, crf: 25, preset: 'medium', audio_bitrate: '96k' }
-              : { max_width: 1920, max_height: 1080, crf: 23, preset: 'medium', audio_bitrate: '128k' },
-            poster: { width: kind === 'mobile' ? 720 : 1280, quality: 82, at_seconds: 1 },
-          },
-        });
-        publicUrl = media.primaryUrl;
-        storagePath = media.primaryPath;
-      } else {
-        const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
-        storagePath = `home-hero/${id}/${kind}-${crypto.randomUUID()}-${safeName}`;
-        const { error } = await supabase.storage.from('site-media').upload(storagePath, file, {
-          cacheControl: '31536000',
-          contentType: 'video/mp4',
-          upsert: false,
-        });
-        if (error) throw error;
-        publicUrl = supabase.storage.from('site-media').getPublicUrl(storagePath).data.publicUrl;
-      }
+      const media = await api.uploadMedia(file);
       updateVideo(id, kind === 'desktop'
-        ? { desktopUrl: publicUrl, desktopStoragePath: storagePath }
-        : { mobileUrl: publicUrl, mobileStoragePath: storagePath });
-      onToast({ tone: 'success', message: `${kind === 'desktop' ? 'Desktop' : 'Mobile'} video ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
+        ? { desktopUrl: media.relativeUrl, desktopStoragePath: media.relativePath }
+        : { mobileUrl: media.relativeUrl, mobileStoragePath: media.relativePath });
+      onToast({ tone: 'success', message: `${kind === 'desktop' ? 'Desktop' : 'Mobile'} video uploaded` });
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload video' });
     } finally {
@@ -617,39 +550,23 @@ function HomeHeroManager({
   }
 
   async function savePlaylist() {
-    const normalized = videos.map((video, index) => ({ ...video, sortOrder: index }));
-    const invalidActiveVideo = normalized.find((video) => video.isActive && !video.desktopUrl);
-    if (invalidActiveVideo) {
-      onToast({ tone: 'error', message: `Upload a desktop video for “${invalidActiveVideo.title}” before activating it` });
+    const normalized = videos.map((v, i) => ({ ...v, sortOrder: i }));
+    const invalidActive = normalized.find((v) => v.isActive && !v.desktopUrl);
+    if (invalidActive) {
+      onToast({ tone: 'error', message: `Upload a desktop video for “${invalidActive.title}” before activating it` });
       return;
     }
 
     setSaving(true);
     try {
-      if (!demo && supabase) {
-        const { error } = await supabase.rpc('replace_homepage_videos', {
-          p_items: normalized.map(homeHeroVideoToRow),
-        });
-        if (error) throw error;
-
-        const nextPaths = new Set(normalized.flatMap((video) => [video.desktopStoragePath, video.mobileStoragePath]).filter((path): path is string => typeof path === 'string' && path.length > 0));
-        const stalePaths = savedVideos
-          .flatMap((video) => [video.desktopStoragePath, video.mobileStoragePath])
-          .filter((path): path is string => typeof path === 'string' && path.length > 0)
-          .filter((path) => !nextPaths.has(path));
-        const legacyPaths = stalePaths.filter((path) => !path.startsWith('processed/'));
-        if (legacyPaths.length) {
-          const { error: cleanupError } = await supabase.storage.from('site-media').remove(legacyPaths);
-          if (cleanupError) throw cleanupError;
-        }
-      } else {
-        await new Promise((resolve) => window.setTimeout(resolve, 250));
-      }
-
+      const result = await api.saveHomeHeroVideos(normalized, { expectedRevisionId: currentRevisionId });
       setVideos(normalized);
       setSavedVideos(structuredClone(normalized));
       onSaved(normalized);
-      onToast({ tone: 'success', message: 'Homepage video order saved' });
+      onToast({
+        tone: 'success',
+        message: result.isProposal ? 'Playlist proposal submitted for owner review' : 'Homepage video playlist saved',
+      });
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to save homepage videos' });
     } finally {
@@ -660,13 +577,76 @@ function HomeHeroManager({
   return (
     <main className="admin-main home-hero-manager">
       <header className="list-header">
-        <div><span className="eyebrow">Homepage / Hero playlist</span><h1>Hero videos <sup>{videos.length.toString().padStart(2, '0')}</sup></h1><p>Videos play from top to bottom and repeat after the last item</p></div>
-        <div className="home-hero-actions"><button className="secondary-button" onClick={() => setVideos((current) => [...current, emptyHomeHeroVideo(current.length)])}><Plus size={18} />Add video</button><button className="primary-button" onClick={savePlaylist} disabled={saving || !isDirty}>{saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Save playlist</button></div>
+        <div>
+          <span className="eyebrow">Homepage / Hero playlist</span>
+          <h1>Hero videos <sup>{videos.length.toString().padStart(2, '0')}</sup></h1>
+          <p>Videos play in sequence from top to bottom and loop continuously</p>
+        </div>
+        <div className="home-hero-actions" style={{ display: 'flex', gap: '8px' }}>
+          <button className="secondary-button" onClick={() => setHistoryOpen(true)} title="View revision history"><History size={17} />History</button>
+          <button className="secondary-button" onClick={() => setVideos((current) => [...current, emptyHomeHeroVideo(current.length)])}><Plus size={18} />Add video</button>
+          <button className="primary-button" onClick={savePlaylist} disabled={saving || !isDirty}>
+            {saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+            {role === 'owner' ? 'Save playlist' : 'Submit proposal'}
+          </button>
+        </div>
       </header>
 
-      <section className="home-hero-help"><Film size={22} /><div><strong>Playback rules</strong><p>Desktop is required. Mobile is optional and automatically replaces desktop below 600 px. Only the current and next videos are loaded</p></div></section>
+      <section className="home-hero-help">
+        <Film size={22} />
+        <div>
+          <strong>Playback rules</strong>
+          <p>Desktop video is required. Mobile is optional and automatically displayed on narrow screens.</p>
+        </div>
+      </section>
 
-      {videos.length ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorderVideos}><SortableContext items={videos.map((video) => video.id)} strategy={verticalListSortingStrategy}><section className="home-hero-list">{videos.map((video, index) => <SortableHomeHeroVideo key={video.id} video={video} index={index} projects={projects} uploading={uploading} onChange={(patch) => updateVideo(video.id, patch)} onRemove={() => setVideos((current) => current.filter((item) => item.id !== video.id).map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })))} onUpload={(kind, event) => uploadVideo(video.id, kind, event)} />)}</section></SortableContext></DndContext> : <section className="home-hero-empty"><Film size={30} /><h2>No hero videos</h2><p>Add a video to create the homepage playlist. Until then the built-in fallback remains visible</p><button className="primary-button" onClick={() => setVideos([emptyHomeHeroVideo(0)])}><Plus size={18} />Add first video</button></section>}
+      {videos.length ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorderVideos}>
+          <SortableContext items={videos.map((v) => v.id)} strategy={verticalListSortingStrategy}>
+            <section className="home-hero-list">
+              {videos.map((v, i) => (
+                <SortableHomeHeroVideo
+                  key={v.id}
+                  video={v}
+                  index={i}
+                  projects={projects}
+                  uploading={uploading}
+                  onChange={(patch) => updateVideo(v.id, patch)}
+                  onRemove={() => setVideos((current) => current.filter((item) => item.id !== v.id).map((item, idx) => ({ ...item, sortOrder: idx })))}
+                  onUpload={(kind, event) => uploadVideo(v.id, kind, event)}
+                />
+              ))}
+            </section>
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <section className="home-hero-empty">
+          <Film size={30} />
+          <h2>No hero videos</h2>
+          <p>Add a video to configure the homepage playlist.</p>
+          <button className="primary-button" onClick={() => setVideos([emptyHomeHeroVideo(0)])}><Plus size={18} />Add first video</button>
+        </section>
+      )}
+
+      {historyOpen && (
+        <RevisionHistoryDrawer
+          isOpen={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          aggregateType="homepage_hero"
+          aggregateId="singleton"
+          title="Homepage Hero Playlist"
+          role={role}
+          api={api}
+          currentRevisionId={currentRevisionId ?? null}
+          onRollbackSuccess={async () => {
+            const data = await api.listHomeHeroVideos();
+            setVideos(data.videos);
+            setSavedVideos(structuredClone(data.videos));
+            onSaved(data.videos);
+          }}
+          onToast={onToast}
+        />
+      )}
     </main>
   );
 }
@@ -688,20 +668,30 @@ const legalDocumentFields: Array<{
 
 function SiteSettingsManager({
   initialSettings,
-  demo,
+  api,
   onSaved,
   onToast,
+  role,
+  currentRevisionId,
 }: {
   initialSettings: SiteSettings;
-  demo: boolean;
+  api: AdminApi;
   onSaved: (settings: SiteSettings) => void;
   onToast: (toast: Toast) => void;
+  role: 'owner' | 'editor';
+  currentRevisionId?: string | null;
 }) {
   const [settings, setSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
   const [savedSettings, setSavedSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
   const [saving, setSaving] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState<LegalUrlKey | null>(null);
-  const supabase = getBrowserSupabaseClient();
+
+  useEffect(() => {
+    setSettings({ ...initialSettings });
+    setSavedSettings({ ...initialSettings });
+  }, [initialSettings]);
+
   const documents = legalDocumentFields.map((document) => {
     const normalizedUrl = settings[document.urlKey].trim();
     const validUrl = isValidTermsPdfUrl(normalizedUrl);
@@ -731,37 +721,11 @@ function SiteSettingsManager({
     }
 
     setUploadingDocument(document.urlKey);
-    let uploadedPath = '';
     try {
-      let publicUrl: string;
-      if (demo || !supabase) {
-        publicUrl = `https://demo.miracon.local/${document.storageDirectory}/${encodeURIComponent(file.name)}`;
-        await new Promise((resolve) => window.setTimeout(resolve, 250));
-      } else {
-        const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '') || 'document.pdf';
-        uploadedPath = `legal-documents/${document.storageDirectory}/${crypto.randomUUID()}-${safeName}`;
-        const { error } = await supabase.storage.from('project-documents').upload(uploadedPath, file, {
-          upsert: false,
-          cacheControl: '31536000',
-          contentType: 'application/pdf',
-        });
-        if (error) throw error;
-        publicUrl = supabase.storage.from('project-documents').getPublicUrl(uploadedPath).data.publicUrl;
-        if (mediaWorkerEnabled) {
-          await registerPublicMediaAsset(supabase, {
-            bucketId: 'project-documents',
-            objectPath: uploadedPath,
-            publicUrl,
-            mimeType: 'application/pdf',
-            sizeBytes: file.size,
-          });
-        }
-      }
-
-      setSettings((current) => ({ ...current, [document.urlKey]: publicUrl }));
-      onToast({ tone: 'success', message: `${document.label} PDF uploaded, save settings to apply it` });
+      const media = await api.uploadMedia(file);
+      setSettings((current) => ({ ...current, [document.urlKey]: media.relativeUrl }));
+      onToast({ tone: 'success', message: `${document.label} PDF uploaded. Save settings to apply.` });
     } catch (error) {
-      if (uploadedPath && supabase) await supabase.storage.from('project-documents').remove([uploadedPath]);
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload PDF document' });
     } finally {
       setUploadingDocument(null);
@@ -770,7 +734,7 @@ function SiteSettingsManager({
 
   async function saveSettings() {
     if (hasInvalidDocument) {
-      onToast({ tone: 'error', message: 'Upload a PDF before showing a legal document' });
+      onToast({ tone: 'error', message: 'Upload a PDF before enabling a legal document link' });
       return;
     }
 
@@ -782,31 +746,14 @@ function SiteSettingsManager({
         footerPrivacyPdfUrl: settings.footerPrivacyPdfUrl.trim(),
         footerCookiePdfUrl: settings.footerCookiePdfUrl.trim(),
       };
-      if (!demo && supabase) {
-        const { data, error } = await supabase
-          .from('site_settings')
-          .update({
-            footer_terms_visible: nextSettings.footerTermsVisible,
-            footer_terms_pdf_url: nextSettings.footerTermsPdfUrl,
-            footer_privacy_visible: nextSettings.footerPrivacyVisible,
-            footer_privacy_pdf_url: nextSettings.footerPrivacyPdfUrl,
-            footer_cookie_visible: nextSettings.footerCookieVisible,
-            footer_cookie_pdf_url: nextSettings.footerCookiePdfUrl,
-          })
-          .eq('id', 1)
-          .select('footer_terms_visible, footer_terms_pdf_url, footer_privacy_visible, footer_privacy_pdf_url, footer_cookie_visible, footer_cookie_pdf_url')
-          .single();
-        if (error) throw error;
-        Object.assign(nextSettings, mapSiteSettings(data));
-      } else {
-        await new Promise((resolve) => window.setTimeout(resolve, 250));
-      }
-
-      setSettings(nextSettings);
-      setSavedSettings({ ...nextSettings });
-      onSaved(nextSettings);
-      const visibleCount = documents.filter((document) => nextSettings[document.visibilityKey]).length;
-      onToast({ tone: 'success', message: visibleCount ? `${visibleCount} legal ${visibleCount === 1 ? 'link is' : 'links are'} visible in the footer` : 'All legal links are hidden' });
+      const result = await api.saveSiteSettings(nextSettings, { expectedRevisionId: currentRevisionId });
+      setSettings(result.settings);
+      setSavedSettings({ ...result.settings });
+      onSaved(result.settings);
+      onToast({
+        tone: 'success',
+        message: result.isProposal ? 'Site settings proposal submitted for owner review' : 'Site settings saved',
+      });
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to save site settings' });
     } finally {
@@ -817,8 +764,18 @@ function SiteSettingsManager({
   return (
     <main className="admin-main site-settings-manager">
       <header className="list-header">
-        <div><span className="eyebrow">Website / Legal documents</span><h1>Site settings</h1><p>Control optional legal links displayed in the public footer</p></div>
-        <button className="primary-button" onClick={saveSettings} disabled={saving || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument}>{saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Save settings</button>
+        <div>
+          <span className="eyebrow">Website / Legal documents</span>
+          <h1>Site settings</h1>
+          <p>Control legal PDFs displayed in the public footer</p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="secondary-button" onClick={() => setHistoryOpen(true)} title="View revision history"><History size={17} />History</button>
+          <button className="primary-button" onClick={saveSettings} disabled={saving || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument}>
+            {saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
+            {role === 'owner' ? 'Save settings' : 'Submit proposal'}
+          </button>
+        </div>
       </header>
 
       <div className="site-settings-list">
@@ -827,263 +784,714 @@ function SiteSettingsManager({
             <header>
               <span className="site-settings-icon"><FileText size={22} /></span>
               <div><strong>{document.label}</strong><small>{document.description}</small></div>
-              <label className="home-hero-toggle site-settings-toggle"><input type="checkbox" checked={document.visible} onChange={(event) => setSettings((current) => ({ ...current, [document.visibilityKey]: event.target.checked }))} /><span></span>{document.visible ? 'Visible' : 'Hidden'}</label>
+              <label className="home-hero-toggle site-settings-toggle">
+                <input type="checkbox" checked={document.visible} onChange={(e) => setSettings((current) => ({ ...current, [document.visibilityKey]: e.target.checked }))} />
+                <span></span>{document.visible ? 'Visible' : 'Hidden'}
+              </label>
             </header>
             <div className="site-settings-document">
               <div><strong>{document.validUrl ? 'PDF uploaded' : 'No PDF uploaded'}</strong><small>Choose a PDF file up to 25 MB from your computer</small></div>
               <div className="site-settings-document-actions">
                 {document.validUrl && <a href={document.normalizedUrl} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a>}
-                <label><input type="file" accept="application/pdf,.pdf" onChange={(event) => uploadLegalDocument(document, event)} />{uploadingDocument === document.urlKey ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}{document.validUrl ? 'Replace PDF' : 'Upload PDF'}</label>
+                <label>
+                  <input type="file" accept="application/pdf,.pdf" onChange={(e) => uploadLegalDocument(document, e)} />
+                  {uploadingDocument === document.urlKey ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
+                  {document.validUrl ? 'Replace PDF' : 'Upload PDF'}
+                </label>
               </div>
             </div>
             <div className={`site-settings-state ${document.invalid ? 'error' : ''}`}>
-              {document.invalid
-                ? <><CircleAlert size={17} /><span>Upload a PDF before this document can be shown</span></>
-                : document.validUrl
-                  ? <><Check size={17} /><span>PDF is ready to use</span></>
-                  : <><Eye size={17} /><span>This document is hidden by default</span></>}
+              {document.invalid ? <><CircleAlert size={17} /><span>Upload a PDF before this document can be shown</span></> : document.validUrl ? <><Check size={17} /><span>PDF is ready to use</span></> : <><Eye size={17} /><span>This document is hidden by default</span></>}
             </div>
           </section>
         ))}
       </div>
+
+      {historyOpen && (
+        <RevisionHistoryDrawer
+          isOpen={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          aggregateType="site_settings"
+          aggregateId="singleton"
+          title="Site Settings & Legal PDFs"
+          role={role}
+          api={api}
+          currentRevisionId={currentRevisionId ?? null}
+          onRollbackSuccess={async () => {
+            const data = await api.getSiteSettings();
+            setSettings(data.settings);
+            setSavedSettings({ ...data.settings });
+            onSaved(data.settings);
+          }}
+          onToast={onToast}
+        />
+      )}
     </main>
   );
 }
 
-function Field({ label, children, hint, wide = false }: { label: string; children: ReactNode; hint?: string; wide?: boolean }) {
-  return <label className={`editor-field ${wide ? 'wide' : ''}`}><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>;
-}
-
-function FocalPointEditor({ label, imageUrl, x, y, onChange }: { label: string; imageUrl: string; x: number; y: number; onChange: (x: number, y: number) => void }) {
-  function setPoint(event: MouseEvent<HTMLButtonElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    onChange(
-      Math.round(((event.clientX - rect.left) / rect.width) * 100),
-      Math.round(((event.clientY - rect.top) / rect.height) * 100),
-    );
-  }
-
-  return (
-    <div className="focal-editor">
-      <div><strong>{label}</strong><span>Click the important part of the image · {x}% / {y}%</span></div>
-      <button type="button" onClick={setPoint} disabled={!imageUrl}>
-        {imageUrl ? <img src={imageUrl} alt="" style={{ objectPosition: `${x}% ${y}%` }} /> : <ImagePlus size={24} />}
-        {imageUrl && <i style={{ left: `${x}%`, top: `${y}%` }}></i>}
-      </button>
-    </div>
-  );
-}
-
-function SortableImage({ image, onRemove, onAlt, onFocal }: { image: ProjectImage; onRemove: () => void; onAlt: (alt: string) => void; onFocal: (x: number, y: number) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.id });
-  function selectFocus(event: MouseEvent<HTMLDivElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    onFocal(Math.round(((event.clientX - rect.left) / rect.width) * 100), Math.round(((event.clientY - rect.top) / rect.height) * 100));
-  }
-  return (
-    <article ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`media-card ${isDragging ? 'is-dragging' : ''}`}>
-      <div className="media-card-crop" onClick={selectFocus} title="Click to set the card focal point">
-        <img src={image.url} alt={image.alt} style={{ objectPosition: `${image.focalX ?? 50}% ${image.focalY ?? 50}%` }} />
-        <i style={{ left: `${image.focalX ?? 50}%`, top: `${image.focalY ?? 50}%` }}></i>
-      </div>
-      <button className="media-drag" {...attributes} {...listeners}><GripVertical size={17} /></button>
-      <button className="media-remove" onClick={onRemove}><X size={15} /></button>
-      <div className="media-card-meta"><input value={image.alt} onChange={(event) => onAlt(event.target.value)} placeholder="Alt text" /><span>{image.width && image.height ? `${image.width} × ${image.height}` : 'Original ratio'}</span></div>
-    </article>
-  );
-}
-
-function ImageCollection({ title, images, onChange, onUpload, uploading }: { title: string; images: ProjectImage[]; onChange: (images: ProjectImage[]) => void; onUpload: (files: FileList) => void; uploading: boolean }) {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
-  function dragEnd(event: DragEndEvent) {
-    if (!event.over || event.active.id === event.over.id) return;
-    const oldIndex = images.findIndex((image) => image.id === event.active.id);
-    const newIndex = images.findIndex((image) => image.id === event.over?.id);
-    onChange(arrayMove(images, oldIndex, newIndex).map((image, index) => ({ ...image, sortOrder: index })));
-  }
-  return (
-    <div className="image-collection">
-      <div className="collection-heading"><div><h3>{title}</h3><span>{images.length} files · drag to reorder</span></div><label className="upload-button"><input type="file" accept="image/*" multiple onChange={(event) => event.target.files && onUpload(event.target.files)} />{uploading ? <LoaderCircle className="spin" size={17} /> : <ImagePlus size={17} />}Add images</label></div>
-      {images.length ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}><SortableContext items={images.map((image) => image.id)} strategy={rectSortingStrategy}><div className="media-grid">{images.map((image) => <SortableImage key={image.id} image={image} onRemove={() => onChange(images.filter((item) => item.id !== image.id))} onAlt={(alt) => onChange(images.map((item) => item.id === image.id ? { ...item, alt } : item))} onFocal={(focalX, focalY) => onChange(images.map((item) => item.id === image.id ? { ...item, focalX, focalY } : item))} />)}</div></SortableContext></DndContext> : <div className="media-empty">No images uploaded</div>}
-    </div>
-  );
-}
-
-function TranslationImageAlts({ title, images, values, onChange }: { title: string; images: ProjectImage[]; values: Record<string, string>; onChange: (id: string, value: string) => void }) {
-  return (
-    <div className="image-collection translation-image-alts">
-      <div className="collection-heading"><div><h3>{title}</h3><span>Greek alt text · media and order are shared with English</span></div></div>
-      {images.length ? <div className="media-grid">{images.map((image) => <article className="media-card" key={image.id}><div className="media-card-crop"><img src={image.url} alt="" style={{ objectPosition: `${image.focalX ?? 50}% ${image.focalY ?? 50}%` }} /></div><div className="media-card-meta"><input value={values[image.id] ?? ''} onChange={(event) => onChange(image.id, event.target.value)} placeholder={image.alt || 'English alt text'} /><span>EL alt</span></div></article>)}</div> : <div className="media-empty">Add images in the English tab first</div>}
-    </div>
-  );
-}
-
-type ProjectVideoField = 'desktopUrl' | 'mobileUrl' | 'posterUrl';
-
-function SortableProjectVideo({
-  video,
-  index,
-  uploading,
-  onChange,
-  onRemove,
-  onUpload,
+function RevisionHistoryDrawer({
+  isOpen,
+  onClose,
+  aggregateType,
+  aggregateId,
+  title,
+  role,
+  api,
+  currentRevisionId,
+  onRollbackSuccess,
+  onToast,
 }: {
-  video: ProjectVideoItem;
-  index: number;
-  uploading: string;
-  onChange: (video: ProjectVideoItem) => void;
-  onRemove: () => void;
-  onUpload: (field: ProjectVideoField, event: ChangeEvent<HTMLInputElement>) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  aggregateType: 'project' | 'homepage_hero' | 'site_settings';
+  aggregateId: string;
+  title: string;
+  role: 'owner' | 'editor';
+  api: AdminApi;
+  currentRevisionId: string | null;
+  onRollbackSuccess: () => void;
+  onToast: (toast: Toast) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: video.id });
-  const assets: { field: ProjectVideoField; label: string; hint: string; accept: string }[] = [
-    { field: 'desktopUrl', label: 'Desktop MP4', hint: 'Required', accept: 'video/mp4' },
-    { field: 'mobileUrl', label: 'Mobile MP4', hint: 'Desktop fallback', accept: 'video/mp4' },
-    { field: 'posterUrl', label: 'Poster', hint: 'Optional image', accept: 'image/*' },
-  ];
+  const [revisions, setRevisions] = useState<RevisionHistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [confirmRollbackTarget, setConfirmRollbackTarget] = useState<RevisionHistoryItem | null>(null);
+  const [rollingBack, setRollingBack] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    setLoading(true);
+    api.getRevisionHistory(aggregateType, aggregateId)
+      .then((items) => {
+        if (active) setRevisions(items);
+      })
+      .catch((error) => {
+        if (active) onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to load history' });
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [isOpen, aggregateType, aggregateId, api, onToast]);
+
+  if (!isOpen) return null;
+
+  async function handleRollback(target: RevisionHistoryItem) {
+    if (!currentRevisionId) {
+      onToast({ tone: 'error', message: 'Current head revision is missing' });
+      return;
+    }
+    setRollingBack(true);
+    try {
+      await api.rollbackRevision(target.id, currentRevisionId);
+      onToast({ tone: 'success', message: `Rolled back to revision #${target.revisionNumber}` });
+      setConfirmRollbackTarget(null);
+      onRollbackSuccess();
+      onClose();
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to rollback revision' });
+    } finally {
+      setRollingBack(false);
+    }
+  }
+
+  function formatDateTime(iso: string): string {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return iso;
+    }
+  }
 
   return (
-    <article ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`project-video-card ${isDragging ? 'is-dragging' : ''}`}>
-      <header><button type="button" className="project-video-drag" {...attributes} {...listeners}><GripVertical size={17} /></button><span>{String(index + 1).padStart(2, '0')}</span><strong>Video {index + 1}</strong><button type="button" className="project-video-remove" onClick={onRemove}><Trash2 size={16} /></button></header>
-      <div className="project-video-card-body">
-        <div className="project-video-preview">
-          {video.desktopUrl ? <video key={video.desktopUrl} src={video.desktopUrl} poster={video.posterUrl ?? undefined} muted loop playsInline controls preload="metadata" onPlay={pauseOtherAdminVideos} /> : <div><Film size={28} /><span>Upload desktop MP4</span></div>}
+    <div className="history-drawer" role="dialog" aria-modal="true" aria-labelledby="history-title">
+      <div className="history-panel">
+        <header className="history-header">
+          <div>
+            <span className="eyebrow">{aggregateType.replace('_', ' ')} history</span>
+            <h2 id="history-title">{title}</h2>
+          </div>
+          <button className="preview-close" onClick={onClose} aria-label="Close history"><X size={19} /></button>
+        </header>
+        <div className="history-content">
+          {loading ? (
+            <div className="admin-loading" style={{ minHeight: '200px', background: 'transparent', color: 'var(--admin-navy)' }}>
+              <LoaderCircle className="spin" size={24} />
+            </div>
+          ) : revisions.length === 0 ? (
+            <p style={{ color: 'var(--admin-muted)', textAlign: 'center', padding: '32px' }}>No recorded revisions yet</p>
+          ) : (
+            <div className="history-timeline">
+              {revisions.map((item) => {
+                const isHead = item.id === currentRevisionId;
+                const canRollback = role === 'owner' && item.state === 'approved' && !isHead && currentRevisionId;
+                return (
+                  <div key={item.id} className={`history-entry ${isHead ? 'current-head' : ''}`}>
+                    <div className="history-node">#{item.revisionNumber}</div>
+                    <div className="history-entry-card">
+                      <div className="history-entry-top">
+                        <span className={`history-action-badge ${item.action}`}>{item.action}</span>
+                        {isHead && <span className="status-pill published" style={{ fontSize: '10px' }}>Current Live</span>}
+                      </div>
+                      <div className="history-entry-meta">
+                        <div><strong>By:</strong> {item.creatorEmail ?? 'System'} {item.creatorRole ? `(${item.creatorRole})` : ''}</div>
+                        <div><strong>Date:</strong> {formatDateTime(item.createdAt)}</div>
+                        {item.approvedBy && (
+                          <div style={{ marginTop: '4px', color: 'var(--admin-green)' }}>
+                            <strong>Approved by:</strong> {item.approverEmail ?? 'Owner'} {item.approvedAt ? `at ${formatDateTime(item.approvedAt)}` : ''}
+                          </div>
+                        )}
+                        {item.state === 'rejected' && (
+                          <div style={{ marginTop: '4px', color: 'var(--admin-red)' }}>
+                            <strong>Status:</strong> Rejected
+                          </div>
+                        )}
+                        {item.state === 'pending' && (
+                          <div style={{ marginTop: '4px', color: 'var(--admin-gold)' }}>
+                            <strong>Status:</strong> Pending review
+                          </div>
+                        )}
+                      </div>
+                      {canRollback && (
+                        <button className="rollback-btn" onClick={() => setConfirmRollbackTarget(item)}>
+                          <RotateCcw size={14} />Rollback to #{item.revisionNumber}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-        <div className="project-video-assets">
-          {assets.map(({ field, label, hint, accept }) => {
-            const value = video[field];
-            const uploadKey = `${video.id}-${field}`;
-            return <div key={field}>{field === 'posterUrl' ? value ? <img src={value} alt="" /> : <ImagePlus size={20} /> : <Film size={20} />}<span><strong>{label}</strong><small>{value ? 'Selected' : hint}</small></span><div><label><input type="file" accept={accept} onChange={(event) => onUpload(field, event)} />{uploading.endsWith(uploadKey) ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}{value ? 'Replace' : 'Upload'}</label>{value && <button type="button" onClick={() => onChange({ ...video, [field]: field === 'desktopUrl' ? '' : null })}><X size={14} />Clear</button>}</div></div>;
+      </div>
+
+      {confirmRollbackTarget && (
+        <div className="modal-backdrop" style={{ zIndex: 1001 }}>
+          <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="rollback-title">
+            <span><RotateCcw size={20} /></span>
+            <h3 id="rollback-title">Rollback to revision #{confirmRollbackTarget.revisionNumber}?</h3>
+            <p>A new approved revision will restore content from this version live immediately.</p>
+            <div>
+              <button className="secondary-button" onClick={() => setConfirmRollbackTarget(null)} disabled={rollingBack}>Cancel</button>
+              <button className="primary-button" onClick={() => handleRollback(confirmRollbackTarget)} disabled={rollingBack}>
+                {rollingBack ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}Confirm Rollback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UsersManager({
+  api,
+  currentUserEmail,
+  onToast,
+}: {
+  api: AdminApi;
+  currentUserEmail?: string;
+  onToast: (toast: Toast) => void;
+}) {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createEmail, setCreateEmail] = useState('');
+  const [createPassword, setCreatePassword] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [rotateUserTarget, setRotateUserTarget] = useState<AdminUser | null>(null);
+  const [rotatePassword, setRotatePassword] = useState('');
+  const [rotating, setRotating] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<AdminUser | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<AdminUser | null>(null);
+  const [revoking, setRevoking] = useState(false);
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await api.listUsers();
+      setUsers(list);
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to load users' });
+    } finally {
+      setLoading(false);
+    }
+  }, [api, onToast]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  async function handleCreateUser() {
+    if (!createEmail.trim() || !createPassword) {
+      onToast({ tone: 'error', message: 'Email and password are required' });
+      return;
+    }
+    const nonWs = [...createPassword].filter((c) => !/\s/u.test(c)).length;
+    if (nonWs < 16) {
+      onToast({ tone: 'error', message: 'Password must have at least 16 non-whitespace characters' });
+      return;
+    }
+    setCreating(true);
+    try {
+      await api.createUser(createEmail.trim(), createPassword);
+      onToast({ tone: 'success', message: `Editor account ${createEmail.trim()} created` });
+      setCreateModalOpen(false);
+      setCreateEmail('');
+      setCreatePassword('');
+      await loadUsers();
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to create user' });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleRotatePassword() {
+    if (!rotateUserTarget || !rotatePassword) return;
+    const nonWs = [...rotatePassword].filter((c) => !/\s/u.test(c)).length;
+    if (nonWs < 16) {
+      onToast({ tone: 'error', message: 'Password must have at least 16 non-whitespace characters' });
+      return;
+    }
+    setRotating(true);
+    try {
+      await api.rotateUser(rotateUserTarget.id, { password: rotatePassword });
+      onToast({ tone: 'success', message: `Password updated for ${rotateUserTarget.email}. Active sessions revoked.` });
+      setRotateUserTarget(null);
+      setRotatePassword('');
+      await loadUsers();
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to update password' });
+    } finally {
+      setRotating(false);
+    }
+  }
+
+  async function handleDeactivate() {
+    if (!deactivateTarget) return;
+    setDeactivating(true);
+    try {
+      await api.deactivateUser(deactivateTarget.id);
+      onToast({ tone: 'success', message: `Account ${deactivateTarget.email} deactivated` });
+      setDeactivateTarget(null);
+      await loadUsers();
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to deactivate user' });
+    } finally {
+      setDeactivating(false);
+    }
+  }
+
+  async function handleRevokeSessions() {
+    if (!revokeTarget) return;
+    setRevoking(true);
+    try {
+      await api.revokeUserSessions(revokeTarget.id);
+      onToast({ tone: 'success', message: `All active sessions revoked for ${revokeTarget.email}` });
+      setRevokeTarget(null);
+      await loadUsers();
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to revoke sessions' });
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  return (
+    <main className="admin-main users-manager">
+      <header className="list-header">
+        <div>
+          <span className="eyebrow">Governance / Access control</span>
+          <h1>Team &amp; Users <sup>{users.length.toString().padStart(2, '0')}</sup></h1>
+          <p>Manage administrator accounts. Editors create proposals; the Owner approves and publishes.</p>
+        </div>
+        <button className="primary-button" onClick={() => setCreateModalOpen(true)}>
+          <Plus size={17} />Add Editor
+        </button>
+      </header>
+
+      {loading ? (
+        <div className="admin-loading" style={{ minHeight: '300px', background: 'transparent', color: 'var(--admin-navy)' }}>
+          <LoaderCircle className="spin" size={28} />
+        </div>
+      ) : (
+        <div className="users-table-card">
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Last Active</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => {
+                const isCurrent = user.email.toLowerCase() === currentUserEmail?.toLowerCase();
+                const isOwner = user.role === 'owner';
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <strong>{user.email}</strong>
+                      {isCurrent && <span style={{ marginLeft: '8px', fontSize: '11px', color: 'var(--admin-gold)' }}>(You)</span>}
+                    </td>
+                    <td>
+                      <span className={`role-badge ${user.role}`}>{user.role}</span>
+                    </td>
+                    <td>
+                      <span className={`user-status ${user.isActive ? 'active' : 'deactivated'}`}>
+                        <span className={`status-dot ${user.isActive ? 'published' : ''}`}></span>
+                        {user.isActive ? 'Active' : 'Deactivated'}
+                      </span>
+                    </td>
+                    <td style={{ color: 'var(--admin-muted)', fontSize: '12px' }}>
+                      {new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td style={{ color: 'var(--admin-muted)', fontSize: '12px' }}>
+                      {user.lastSeenAt ? new Date(user.lastSeenAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                    </td>
+                    <td>
+                      <div className="user-actions">
+                        {!isOwner && (
+                          <>
+                            <button className="action-btn" onClick={() => setRotateUserTarget(user)} title="Change password">
+                              <KeyRound size={14} /> Password
+                            </button>
+                            <button className="action-btn" onClick={() => setRevokeTarget(user)} title="Revoke all active sessions">
+                              <LogOut size={14} /> Revoke
+                            </button>
+                            {user.isActive && (
+                              <button className="action-btn danger" onClick={() => setDeactivateTarget(user)} title="Deactivate account">
+                                <UserX size={14} /> Deactivate
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Add Editor Modal */}
+      {createModalOpen && (
+        <div className="modal-backdrop">
+          <div className="confirm-modal" style={{ maxWidth: '460px', textAlign: 'left' }} role="dialog" aria-modal="true">
+            <h3 style={{ margin: '0 0 16px', fontFamily: 'Georgia, serif', fontSize: '22px' }}>Add Editor Account</h3>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--admin-muted)' }}>
+              Editors can create and edit projects, home hero videos, and site settings as proposals for owner review.
+            </p>
+            <div style={{ display: 'grid', gap: '14px', width: '100%', marginBottom: '24px' }}>
+              <div className="editor-field">
+                <span>Email Address</span>
+                <input type="email" placeholder="editor@miracon.gr" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} />
+              </div>
+              <div className="editor-field">
+                <span>Password (min 16 characters)</span>
+                <input type="password" placeholder="••••••••••••••••" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} />
+                <small>{[...createPassword].filter((c) => !/\s/u.test(c)).length}/16 characters</small>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button className="secondary-button" onClick={() => setCreateModalOpen(false)} disabled={creating}>Cancel</button>
+              <button className="primary-button" onClick={handleCreateUser} disabled={creating}>
+                {creating ? <LoaderCircle className="spin" size={17} /> : <Plus size={17} />}Create Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {rotateUserTarget && (
+        <div className="modal-backdrop">
+          <div className="confirm-modal" style={{ maxWidth: '460px', textAlign: 'left' }} role="dialog" aria-modal="true">
+            <h3 style={{ margin: '0 0 16px', fontFamily: 'Georgia, serif', fontSize: '22px' }}>Reset Password</h3>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--admin-muted)' }}>
+              Set a new password for <strong>{rotateUserTarget.email}</strong>. All active sessions will be revoked.
+            </p>
+            <div style={{ display: 'grid', gap: '14px', width: '100%', marginBottom: '24px' }}>
+              <div className="editor-field">
+                <span>New Password (min 16 characters)</span>
+                <input type="password" placeholder="••••••••••••••••" value={rotatePassword} onChange={(e) => setRotatePassword(e.target.value)} />
+                <small>{[...rotatePassword].filter((c) => !/\s/u.test(c)).length}/16 characters</small>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button className="secondary-button" onClick={() => setRotateUserTarget(null)} disabled={rotating}>Cancel</button>
+              <button className="primary-button" onClick={handleRotatePassword} disabled={rotating}>
+                {rotating ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}Update Password
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Confirm Modal */}
+      {deactivateTarget && (
+        <div className="modal-backdrop">
+          <div className="confirm-modal" role="dialog" aria-modal="true">
+            <span><UserX size={20} /></span>
+            <h3>Deactivate {deactivateTarget.email}?</h3>
+            <p>This editor will immediately lose access and cannot sign in.</p>
+            <div>
+              <button className="secondary-button" onClick={() => setDeactivateTarget(null)} disabled={deactivating}>Cancel</button>
+              <button className="danger-button" onClick={handleDeactivate} disabled={deactivating}>
+                {deactivating ? <LoaderCircle className="spin" size={17} /> : <UserX size={17} />}Deactivate Editor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revoke Sessions Confirm Modal */}
+      {revokeTarget && (
+        <div className="modal-backdrop">
+          <div className="confirm-modal" role="dialog" aria-modal="true">
+            <span><LogOut size={20} /></span>
+            <h3>Revoke all sessions for {revokeTarget.email}?</h3>
+            <p>The user will be immediately logged out of all active browser sessions.</p>
+            <div>
+              <button className="secondary-button" onClick={() => setRevokeTarget(null)} disabled={revoking}>Cancel</button>
+              <button className="danger-button" onClick={handleRevokeSessions} disabled={revoking}>
+                {revoking ? <LoaderCircle className="spin" size={17} /> : <LogOut size={17} />}Revoke Sessions
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
+
+function ProposalsManager({
+  api,
+  onToast,
+  onRefreshProposalsCount,
+}: {
+  api: AdminApi;
+  onToast: (toast: Toast) => void;
+  onRefreshProposalsCount: () => void;
+}) {
+  const [proposals, setProposals] = useState<PendingProposal[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [reviewingProposal, setReviewingProposal] = useState<PendingProposal | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const loadProposals = useCallback(async () => {
+    setLoading(true);
+    try {
+      const items = await api.listPendingProposals();
+      setProposals(items);
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to load proposals' });
+    } finally {
+      setLoading(false);
+    }
+  }, [api, onToast]);
+
+  useEffect(() => {
+    loadProposals();
+  }, [loadProposals]);
+
+  async function handleApprove(proposal: PendingProposal) {
+    setProcessingId(proposal.id);
+    try {
+      await api.approveProposal(proposal.id, proposal.expectedRevisionId);
+      onToast({ tone: 'success', message: `Proposal #${proposal.revisionNumber} approved and published to live website` });
+      setReviewingProposal(null);
+      await loadProposals();
+      onRefreshProposalsCount();
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to approve proposal' });
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function handleReject(proposal: PendingProposal) {
+    setProcessingId(proposal.id);
+    try {
+      await api.rejectProposal(proposal.id, proposal.expectedRevisionId);
+      onToast({ tone: 'success', message: `Proposal #${proposal.revisionNumber} rejected` });
+      setReviewingProposal(null);
+      await loadProposals();
+      onRefreshProposalsCount();
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to reject proposal' });
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  function getProposalTitle(proposal: PendingProposal): string {
+    const snap = proposal.snapshot as Record<string, unknown>;
+    if (proposal.aggregateType === 'project') {
+      const proj = snap['project'] as Record<string, unknown> | null;
+      return proj ? String(proj['title'] ?? 'Project') : `Deleted project (${proposal.aggregateId})`;
+    }
+    if (proposal.aggregateType === 'homepage_hero') return 'Homepage Hero Playlist';
+    if (proposal.aggregateType === 'site_settings') return 'Site Settings';
+    return proposal.aggregateType;
+  }
+
+  function formatDateTime(iso: string): string {
+    try {
+      return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return iso;
+    }
+  }
+
+  return (
+    <main className="admin-main proposals-manager">
+      <header className="list-header">
+        <div>
+          <span className="eyebrow">Governance / Approvals</span>
+          <h1>Pending Proposals <sup>{proposals.length.toString().padStart(2, '0')}</sup></h1>
+          <p>Review and approve change proposals submitted by editors before publishing live</p>
+        </div>
+      </header>
+
+      {loading ? (
+        <div className="admin-loading" style={{ minHeight: '300px', background: 'transparent', color: 'var(--admin-navy)' }}>
+          <LoaderCircle className="spin" size={28} />
+        </div>
+      ) : proposals.length === 0 ? (
+        <div className="empty-projects">
+          <Check size={36} style={{ color: 'var(--admin-green)' }} />
+          <h3>All caught up!</h3>
+          <p>No pending change proposals waiting for your review</p>
+        </div>
+      ) : (
+        <div className="proposals-list">
+          {proposals.map((proposal) => {
+            const isProcessing = processingId === proposal.id;
+            return (
+              <section key={proposal.id} className="proposal-card">
+                <div className="proposal-info">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span className="eyebrow">{proposal.aggregateType.replace('_', ' ')}</span>
+                    <span className="history-action-badge proposal">Proposal #{proposal.revisionNumber}</span>
+                  </div>
+                  <h3>{getProposalTitle(proposal)}</h3>
+                  <div className="proposal-meta">
+                    <span><strong>Proposed by:</strong> {proposal.creatorEmail} ({proposal.creatorRole})</span>
+                    <span><strong>Date:</strong> {formatDateTime(proposal.createdAt)}</span>
+                  </div>
+                </div>
+                <div className="proposal-actions">
+                  <button className="secondary-button" onClick={() => setReviewingProposal(proposal)}>
+                    <Eye size={16} />Review
+                  </button>
+                  <button className="action-btn danger" onClick={() => handleReject(proposal)} disabled={isProcessing}>
+                    {isProcessing ? <LoaderCircle className="spin" size={15} /> : <X size={15} />}Reject
+                  </button>
+                  <button className="primary-button" onClick={() => handleApprove(proposal)} disabled={isProcessing}>
+                    {isProcessing ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />}Approve &amp; Publish
+                  </button>
+                </div>
+              </section>
+            );
           })}
         </div>
-      </div>
-    </article>
+      )}
+
+      {/* Review & Diff Modal */}
+      {reviewingProposal && (
+        <div className="modal-backdrop">
+          <div className="confirm-modal" style={{ maxWidth: '640px', textAlign: 'left' }} role="dialog" aria-modal="true">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <span className="eyebrow">{reviewingProposal.aggregateType.replace('_', ' ')} proposal #{reviewingProposal.revisionNumber}</span>
+                <h3 style={{ margin: '4px 0 0', fontFamily: 'Georgia, serif', fontSize: '22px' }}>{getProposalTitle(reviewingProposal)}</h3>
+              </div>
+              <button className="preview-close" onClick={() => setReviewingProposal(null)}><X size={19} /></button>
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--admin-muted)', marginBottom: '16px' }}>
+              Proposed by <strong>{reviewingProposal.creatorEmail}</strong> on {formatDateTime(reviewingProposal.createdAt)}
+            </div>
+            <div style={{ maxHeight: '360px', overflowY: 'auto', background: 'var(--admin-paper)', padding: '16px', borderRadius: '4px', border: '1px solid var(--admin-line)', marginBottom: '24px' }}>
+              <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                {JSON.stringify(reviewingProposal.snapshot, null, 2)}
+              </pre>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button className="danger-button" onClick={() => handleReject(reviewingProposal)} disabled={Boolean(processingId)}>
+                <X size={16} />Reject proposal
+              </button>
+              <button className="primary-button" onClick={() => handleApprove(reviewingProposal)} disabled={Boolean(processingId)}>
+                {processingId === reviewingProposal.id ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}Approve &amp; Publish to live
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }
 
-function ProjectVideoPlaylist({
-  title,
-  hint,
-  videos,
-  uploading,
-  onChange,
-  onUpload,
+function ProjectEditor({
+  initialProject,
+  onBack,
+  onSaved,
+  onDeleted,
+  api,
+  role,
 }: {
-  title: string;
-  hint: string;
-  videos: ProjectVideoItem[];
-  uploading: string;
-  onChange: (videos: ProjectVideoItem[]) => void;
-  onUpload: (itemId: string, field: ProjectVideoField, event: ChangeEvent<HTMLInputElement>) => void;
+  initialProject: Project;
+  onBack: () => void;
+  onSaved: (project: Project) => void;
+  onDeleted: (id: string) => void;
+  api: AdminApi;
+  role: 'owner' | 'editor';
 }) {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
-  function dragEnd(event: DragEndEvent) {
-    if (!event.over || event.active.id === event.over.id) return;
-    const oldIndex = videos.findIndex((video) => video.id === event.active.id);
-    const newIndex = videos.findIndex((video) => video.id === event.over?.id);
-    onChange(arrayMove(videos, oldIndex, newIndex));
-  }
-
-  return (
-    <div className="project-video-playlist">
-      <div className="project-video-playlist-heading"><div><h3>{title}</h3><span>{videos.length ? `${videos.length} video${videos.length === 1 ? '' : 's'} · drag to reorder` : hint}</span></div><button type="button" onClick={() => onChange([...videos, emptyProjectVideo()])}><Plus size={16} />Add video</button></div>
-      {videos.length ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}><SortableContext items={videos.map((video) => video.id)} strategy={verticalListSortingStrategy}><div className="project-video-list">{videos.map((video, index) => <SortableProjectVideo key={video.id} video={video} index={index} uploading={uploading} onChange={(nextVideo) => onChange(videos.map((item) => item.id === video.id ? nextVideo : item))} onRemove={() => onChange(videos.filter((item) => item.id !== video.id))} onUpload={(field, event) => onUpload(video.id, field, event)} />)}</div></SortableContext></DndContext> : <div className="media-empty">No videos added</div>}
-    </div>
-  );
-}
-
-function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { initialProject: Project; onBack: () => void; onSaved: (project: Project) => void; onDeleted: (id: string) => void; demo: boolean }) {
-  const [project, setProject] = useState<Project>(() => structuredClone(initialProject));
+  const [project, setProject] = useState<Project>(() => ({ ...initialProject }));
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialProject));
   const [section, setSection] = useState<AdminSection>('content');
   const [editingLocale, setEditingLocale] = useState<'en' | 'el'>('en');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState('');
   const [toast, setToast] = useState<Toast>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState<Project['status'] | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<number | '100%'>(1440);
-  const supabase = getBrowserSupabaseClient();
-  const isDirty = JSON.stringify(project) !== savedSnapshot;
-  const requirements = getPublishRequirements(project);
-  const missingRequirements = requirements.filter((item) => !item.complete);
-  const readiness = projectReadiness(project);
-  const greek = project.translations?.el ?? {};
+
+  const missingRequirements = useMemo(() => getPublishRequirements(project).filter((item) => !item.complete), [project]);
+  const readiness = useMemo(() => projectReadiness(project), [project]);
+  const isDirty = useMemo(() => JSON.stringify(project) !== savedSnapshot, [project, savedSnapshot]);
 
   useEffect(() => {
     if (!isDirty) return;
-    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener('beforeunload', warnBeforeUnload);
     return () => window.removeEventListener('beforeunload', warnBeforeUnload);
   }, [isDirty]);
 
-  function update<K extends keyof Project>(key: K, value: Project[K]) {
+  function update<Key extends keyof Project>(key: Key, value: Project[Key]) {
     setProject((current) => ({ ...current, [key]: value }));
   }
 
+  const greek = project.translations?.el ?? {};
   function updateGreek(patch: Partial<ProjectLocaleTranslation>) {
     setProject((current) => ({
       ...current,
-      translations: {
-        ...current.translations,
-        el: { ...current.translations?.el, ...patch },
-      },
+      translations: { ...current.translations, el: { ...current.translations?.el, ...patch } },
     }));
-  }
-
-  function updateGreekCharacteristic(id: string, patch: { label?: string; value?: string }) {
-    const characteristics = greek.characteristics ?? {};
-    updateGreek({ characteristics: { ...characteristics, [id]: { ...characteristics[id], ...patch } } });
-  }
-
-  function updateGreekBenefit(id: string, title: string) {
-    updateGreek({ benefits: { ...greek.benefits, [id]: { ...greek.benefits?.[id], title } } });
-  }
-
-  function updateGreekFloorGroup(id: string, patch: { title?: string }) {
-    updateGreek({ floorPlanGroups: { ...greek.floorPlanGroups, [id]: { ...greek.floorPlanGroups?.[id], ...patch } } });
-  }
-
-  function updateGreekFloorPlan(groupId: string, planId: string, patch: { title?: string; alt?: string }) {
-    const group = greek.floorPlanGroups?.[groupId] ?? {};
-    updateGreek({
-      floorPlanGroups: {
-        ...greek.floorPlanGroups,
-        [groupId]: { ...group, plans: { ...group.plans, [planId]: { ...group.plans?.[planId], ...patch } } },
-      },
-    });
-  }
-
-  function updateGreekImageAlt(id: string, value: string) {
-    updateGreek({ imageAlts: { ...greek.imageAlts, [id]: value } });
-  }
-
-  function updateGreekNearbyPlace(index: number, value: string) {
-    const nearbyPlaces = Array.from({ length: project.nearbyPlaces.length }, (_, itemIndex) => greek.nearbyPlaces?.[itemIndex] ?? '');
-    nearbyPlaces[index] = value;
-    updateGreek({ nearbyPlaces });
-  }
-
-  function updateProjectVideos(collection: 'heroVideos' | 'walkthroughVideos', videos: ProjectVideoItem[]) {
-    setProject((current) => ({
-      ...current,
-      [collection]: videos,
-      ...(collection === 'walkthroughVideos' && videos.length === 0 ? { walkthroughVideoEnabled: false } : {}),
-    }));
-  }
-
-  function setHeroMediaType(heroType: Project['heroType']) {
-    setProject((current) => {
-      if (heroType === 'video') {
-        return { ...current, heroType, heroVariant: 'immersive', heroIdleUi: true, heroVideos: current.heroVideos.length ? current.heroVideos : [emptyProjectVideo()] };
-      }
-      const heroUrl = current.heroUrl.toLowerCase().includes('.mp4') ? current.coverUrl : current.heroUrl;
-      return { ...current, heroType, heroVariant: 'standard', heroUrl, heroMobileUrl: null, heroSoundEnabled: false, heroIdleUi: false };
-    });
   }
 
   function showToast(nextToast: Toast) {
@@ -1098,34 +1506,38 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
       setSection(project.title.trim() ? 'seo' : 'content');
       return false;
     }
-    if (status === 'published' && missingRequirements.length > 0) {
+    if (!isValidRemainingUnits(project.remainingUnits)) {
+      showToast({ tone: 'error', message: 'Remaining units must be a nonnegative whole number' });
+      setSection('content');
+      return false;
+    }
+    if (status === 'published' && missingRequirements.length > 0 && role === 'owner') {
       showToast({ tone: 'error', message: `Complete ${missingRequirements.length} required item${missingRequirements.length === 1 ? '' : 's'} before publishing` });
       setSection(missingRequirements[0].section);
       return false;
     }
 
-    const nextProject = pruneTranslations(pruneImageVariants(syncLegacyVideoFields({ ...project, slug, status, updatedAt: new Date().toISOString(), seoTitle: project.seoTitle || `${project.title} — MIRACON`, seoDescription: project.seoDescription || project.shortDescription })));
+    const nextProject = pruneTranslations(pruneImageVariants(syncLegacyVideoFields({
+      ...project,
+      slug,
+      status,
+      updatedAt: new Date().toISOString(),
+      seoTitle: project.seoTitle || `${project.title} — MIRACON`,
+      seoDescription: project.seoDescription || project.shortDescription,
+    })));
+
     setSaving(true);
     try {
-      if (demo || !supabase) {
-        await new Promise((resolve) => window.setTimeout(resolve, 350));
-        setProject(nextProject);
-        setSavedSnapshot(JSON.stringify(nextProject));
-        onSaved(nextProject);
-        showToast({ tone: 'success', message: status === 'published' ? 'Published in local demo' : 'Draft saved in local demo' });
-        return true;
-      }
-
-      const { error } = await withTimeout(supabase.rpc('save_project_with_images', {
-        p_project: projectToRow(nextProject),
-        p_images: projectImagesToRows(nextProject),
-      }), 20000);
-      if (error) throw error;
-
-      setProject(nextProject);
-      setSavedSnapshot(JSON.stringify(nextProject));
-      onSaved(nextProject);
-      showToast({ tone: 'success', message: status === 'published' ? 'Project is live' : 'Draft saved' });
+      const result = await api.saveProject(nextProject, {
+        expectedRevisionId: (project as Project & { currentRevisionId?: string }).currentRevisionId ?? null,
+      });
+      setProject(result.project);
+      setSavedSnapshot(JSON.stringify(result.project));
+      onSaved(result.project);
+      showToast({
+        tone: 'success',
+        message: result.isProposal ? 'Proposal submitted for owner review' : status === 'published' ? 'Project is live' : 'Draft saved',
+      });
       return true;
     } catch (error) {
       showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to save the project' });
@@ -1158,72 +1570,25 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     setPreviewOpen(true);
   }
 
-  async function uploadFiles(files: FileList, role: 'card' | 'gallery') {
-    if (!supabase) {
-      showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
-      return;
-    }
-    setUploading(role);
-    const uploaded: { image: ProjectImage; variants?: ImageVariantSet }[] = [];
+  async function uploadFiles(files: FileList, roleType: 'card' | 'gallery') {
+    setUploading(roleType);
+    const uploaded: ProjectImage[] = [];
     try {
       for (const file of Array.from(files)) {
         try {
-          if (mediaWorkerEnabled) {
-            const media = await processMediaUpload(supabase, file, {
-              kind: 'image',
-              outputBucket: 'project-media',
-              context: { target: 'project-image', projectId: project.id, role },
-              profile: { image: { widths: [480, 768, 1280, 1920, 2400], avif_quality: 52, webp_quality: 82, primary_format: 'webp' } },
-            });
-            uploaded.push({
-              image: {
-                id: crypto.randomUUID(), url: media.primaryUrl, storagePath: media.primaryPath,
-                alt: file.name.replace(/\.[^.]+$/, ''), role, sortOrder: 0,
-                width: media.width, height: media.height, focalX: 50, focalY: 50,
-              },
-              variants: toImageVariantSet(media),
-            });
-          } else {
-            const uploadFile = await optimizePhotoForDirectUpload(file);
-            const dimensions = await readImageDimensions(uploadFile);
-            const safeName = uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
-            const path = `${project.id}/${crypto.randomUUID()}-${safeName}`;
-            const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
-              upsert: false,
-              cacheControl: '31536000',
-              contentType: uploadFile.type || undefined,
-            });
-            if (error) throw error;
-            uploaded.push({ image: {
-              id: crypto.randomUUID(),
-              url: supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl,
-              storagePath: path,
-              alt: file.name.replace(/\.[^.]+$/, ''),
-              role,
-              sortOrder: 0,
-              width: dimensions.width || null,
-              height: dimensions.height || null,
-              focalX: 50,
-              focalY: 50,
-            } });
-          }
+          const uploadFile = await optimizePhotoForDirectUpload(file);
+          const media = await api.uploadMedia(uploadFile);
+          uploaded.push({ id: crypto.randomUUID(), url: media.relativeUrl, storagePath: media.relativePath, alt: file.name.replace(/\.[^.]+$/, ''), role: roleType, sortOrder: 0, width: media.width ?? null, height: media.height ?? null, focalX: 50, focalY: 50 });
         } catch (error) {
           showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process image' });
         }
       }
-      const key = role === 'card' ? 'cardImages' : 'gallery';
+      const key = roleType === 'card' ? 'cardImages' : 'gallery';
       setProject((current) => ({
         ...current,
-        [key]: [...current[key], ...uploaded.map((item) => item.image)].map((image, index) => ({ ...image, sortOrder: index })),
-        imageVariants: {
-          version: 1,
-          images: uploaded.reduce(
-            (images, item) => item.variants ? addImageVariant(images, item.image.url, item.variants) : images,
-            current.imageVariants?.images ?? {},
-          ),
-        },
+        [key]: [...current[key], ...uploaded].map((image, index) => ({ ...image, sortOrder: index })),
       }));
-      if (uploaded.length) showToast({ tone: 'success', message: `${uploaded.length} image${uploaded.length === 1 ? '' : 's'} ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
+      if (uploaded.length) showToast({ tone: 'success', message: `${uploaded.length} image${uploaded.length === 1 ? '' : 's'} uploaded` });
     } finally {
       setUploading('');
     }
@@ -1232,43 +1597,14 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
   async function uploadSingle(event: ChangeEvent<HTMLInputElement>, field: 'coverUrl' | 'heroUrl' | 'introImageUrl') {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || !supabase) {
-      showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
-      return;
-    }
+    if (!file) return;
     setUploading(field);
     try {
       if (!file.type.startsWith('image/')) throw new Error('This slot accepts images only');
-      let primaryUrl: string;
-      let variants: ImageVariantSet | null = null;
-      if (mediaWorkerEnabled) {
-        const media = await processMediaUpload(supabase, file, {
-          kind: 'image',
-          outputBucket: 'project-media',
-          context: { target: field, projectId: project.id },
-          profile: { image: { widths: [480, 768, 1280, 1920, 2400], avif_quality: 52, webp_quality: 82, primary_format: 'webp' } },
-        });
-        primaryUrl = media.primaryUrl;
-        variants = toImageVariantSet(media);
-      } else {
-        const uploadFile = await optimizePhotoForDirectUpload(file);
-        const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-        const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
-          upsert: false,
-          cacheControl: '31536000',
-          contentType: uploadFile.type || undefined,
-        });
-        if (error) throw error;
-        primaryUrl = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
-      }
+      const uploadFile = await optimizePhotoForDirectUpload(file);
+      const media = await api.uploadMedia(uploadFile);
       setProject((current) => {
-        const next = { ...current, [field]: primaryUrl } as Project;
-        if (variants) {
-          next.imageVariants = {
-            version: 1,
-            images: addImageVariant(current.imageVariants?.images ?? {}, primaryUrl, variants),
-          };
-        }
+        const next = { ...current, [field]: media.relativeUrl } as Project;
         if (field === 'heroUrl') {
           next.heroType = 'image';
           next.heroVariant = 'standard';
@@ -1278,84 +1614,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
         }
         return next;
       });
-      showToast({ tone: 'success', message: `Image ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
-    } catch (error) {
-      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process media' });
-    } finally {
-      setUploading('');
-    }
-  }
-
-  async function uploadProjectVideo(
-    event: ChangeEvent<HTMLInputElement>,
-    collection: 'heroVideos' | 'walkthroughVideos',
-    itemId: string,
-    field: ProjectVideoField,
-  ) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file || !supabase) {
-      showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
-      return;
-    }
-
-    const kind = field === 'posterUrl' ? 'image' : 'video';
-    const uploadKey = `${collection}-${itemId}-${field}`;
-    setUploading(uploadKey);
-    try {
-      if (kind === 'video' && file.type !== 'video/mp4') throw new Error('This slot accepts MP4 video only');
-      if (kind === 'image' && !file.type.startsWith('image/')) throw new Error('This slot accepts images only');
-
-      let primaryUrl: string;
-      let generatedPosterUrl: string | null = null;
-      let variants: ImageVariantSet | null = null;
-      if (mediaWorkerEnabled) {
-        const mobileVideo = field === 'mobileUrl';
-        const media = await processMediaUpload(supabase, file, {
-          kind,
-          outputBucket: 'project-media',
-          context: { target: collection, projectId: project.id, itemId, rendition: field },
-          profile: kind === 'image'
-            ? { image: { widths: [480, 768, 1280, 1920, 2400], avif_quality: 52, webp_quality: 82, primary_format: 'webp' } }
-            : {
-                video: mobileVideo
-                  ? { max_width: 1080, max_height: 1920, crf: 25, preset: 'medium', audio_bitrate: '96k' }
-                  : { max_width: 1920, max_height: 1080, crf: 23, preset: 'medium', audio_bitrate: '128k' },
-                poster: { width: mobileVideo ? 720 : 1280, quality: 82, at_seconds: 1 },
-              },
-        });
-        primaryUrl = media.primaryUrl;
-        generatedPosterUrl = media.posterUrl;
-        if (kind === 'image') variants = toImageVariantSet(media);
-      } else {
-        if (kind === 'video' && file.size > 50 * 1024 * 1024) throw new Error('Video must be smaller than 50 MB');
-        const uploadFile = kind === 'image' ? await optimizePhotoForDirectUpload(file) : file;
-        const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-        const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
-          upsert: false,
-          cacheControl: '31536000',
-          contentType: uploadFile.type || undefined,
-        });
-        if (error) throw error;
-        primaryUrl = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
-      }
-
-      setProject((current) => {
-        const nextVideos = current[collection].map((video) => video.id === itemId ? {
-          ...video,
-          [field]: primaryUrl,
-          ...(field === 'desktopUrl' && generatedPosterUrl && !video.posterUrl ? { posterUrl: generatedPosterUrl } : {}),
-        } : video);
-        const next = { ...current, [collection]: nextVideos } as Project;
-        if (kind === 'image' && variants) {
-          next.imageVariants = {
-            version: 1,
-            images: addImageVariant(current.imageVariants?.images ?? {}, primaryUrl, variants),
-          };
-        }
-        return next;
-      });
-      showToast({ tone: 'success', message: `${kind === 'video' ? 'Video' : 'Poster'} ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
+      showToast({ tone: 'success', message: 'Image uploaded' });
     } catch (error) {
       showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process media' });
     } finally {
@@ -1366,10 +1625,7 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
   async function uploadBrochure(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || !supabase) {
-      showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
-      return;
-    }
+    if (!file) return;
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       showToast({ tone: 'error', message: 'Brochure must be a PDF file' });
       return;
@@ -1380,24 +1636,8 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     }
     setUploading('brochure');
     try {
-      const path = `${project.id}/${crypto.randomUUID()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-      const { error } = await supabase.storage.from('project-documents').upload(path, file, {
-        upsert: false,
-        cacheControl: '31536000',
-        contentType: 'application/pdf',
-      });
-      if (error) throw error;
-      const publicUrl = supabase.storage.from('project-documents').getPublicUrl(path).data.publicUrl;
-      if (mediaWorkerEnabled) {
-        await registerPublicMediaAsset(supabase, {
-          bucketId: 'project-documents',
-          objectPath: path,
-          publicUrl,
-          mimeType: 'application/pdf',
-          sizeBytes: file.size,
-        });
-      }
-      update('brochureUrl', publicUrl);
+      const media = await api.uploadMedia(file);
+      update('brochureUrl', media.relativeUrl);
       showToast({ tone: 'success', message: 'Brochure uploaded' });
     } catch (error) {
       showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload brochure' });
@@ -1406,131 +1646,21 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     }
   }
 
-  async function uploadBenefitIcon(benefitId: string, event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file || !supabase) {
-      showToast({ tone: 'error', message: 'Connect Supabase to upload SVG icons' });
-      return;
-    }
-    if (file.type !== 'image/svg+xml' && !file.name.toLowerCase().endsWith('.svg')) {
-      showToast({ tone: 'error', message: 'Benefit icons must be SVG files' });
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      showToast({ tone: 'error', message: 'SVG icon must be smaller than 2 MB' });
-      return;
-    }
-
-    const uploadKey = `benefit-${benefitId}`;
-    setUploading(uploadKey);
-    const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
-    const path = `${project.id}/${crypto.randomUUID()}-${safeName}`;
-    try {
-      const { error } = await supabase.storage.from('project-media').upload(path, file, {
-        contentType: 'image/svg+xml',
-        cacheControl: '31536000',
-        upsert: false,
-      });
-      if (error) throw error;
-      const icon = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
-      if (mediaWorkerEnabled) {
-        await registerPublicMediaAsset(supabase, {
-          bucketId: 'project-media',
-          objectPath: path,
-          publicUrl: icon,
-          mimeType: 'image/svg+xml',
-          sizeBytes: file.size,
-        });
-      }
-      setProject((current) => ({ ...current, benefits: current.benefits.map((benefit) => benefit.id === benefitId ? { ...benefit, icon } : benefit) }));
-      showToast({ tone: 'success', message: 'Benefit icon uploaded' });
-    } catch (error) {
-      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload benefit icon' });
-    } finally {
-      setUploading('');
-      event.target.value = '';
-    }
-  }
-
-  async function uploadPlanImage(groupId: string, planId: string, event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file || !supabase) {
-      showToast({ tone: 'error', message: 'Connect Supabase to upload files' });
-      return;
-    }
-    setUploading(planId);
-    try {
-      let imageUrl: string;
-      let variants: ImageVariantSet | null = null;
-      if (mediaWorkerEnabled) {
-        const media = await processMediaUpload(supabase, file, {
-          kind: 'image',
-          outputBucket: 'project-media',
-          context: { target: 'floor-plan', projectId: project.id, groupId, planId },
-          profile: { image: { widths: [768, 1280, 1920, 2400, 3000], avif_quality: 60, webp_quality: 88, primary_format: 'webp' } },
-        });
-        imageUrl = media.primaryUrl;
-        variants = toImageVariantSet(media);
-      } else {
-        const uploadFile = await optimizePhotoForDirectUpload(file);
-        const path = `${project.id}/${crypto.randomUUID()}-${uploadFile.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')}`;
-        const { error } = await supabase.storage.from('project-media').upload(path, uploadFile, {
-          upsert: false,
-          cacheControl: '31536000',
-          contentType: uploadFile.type || undefined,
-        });
-        if (error) throw error;
-        imageUrl = supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl;
-      }
-      setProject((current) => ({
-        ...current,
-        floorPlanGroups: current.floorPlanGroups.map((group) => group.id === groupId
-          ? { ...group, plans: group.plans.map((plan) => plan.id === planId ? { ...plan, imageUrl } : plan) }
-          : group),
-        ...(variants ? { imageVariants: {
-          version: 1,
-          images: addImageVariant(current.imageVariants?.images ?? {}, imageUrl, variants),
-        } } : {}),
-      }));
-      showToast({ tone: 'success', message: `Floor plan ${mediaWorkerEnabled ? 'processed' : 'uploaded'}` });
-    } catch (error) {
-      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to process floor plan' });
-    } finally {
-      setUploading('');
-    }
-  }
-
   async function removeProject() {
-    if (!supabase || demo) {
+    setSaving(true);
+    try {
+      await api.deleteProject(project.id, (project as Project & { currentRevisionId?: string }).currentRevisionId);
       onDeleted(project.id);
-      return;
+    } catch (error) {
+      showToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to delete project' });
+    } finally {
+      setSaving(false);
+      setConfirmDelete(false);
     }
-    let { error } = await supabase.rpc('delete_project', { p_project_id: project.id });
-    if (error && (error.code === 'PGRST202' || /delete_project|schema cache/i.test(error.message))) {
-      ({ error } = await supabase.from('projects').delete().eq('id', project.id));
-    }
-    if (error) {
-      showToast({ tone: 'error', message: error.message });
-      return;
-    }
-    for (const bucket of ['project-media', 'project-documents']) {
-      const { data } = await supabase.storage.from(bucket).list(project.id, { limit: 1000 });
-      if (data?.length) await supabase.storage.from(bucket).remove(data.map((file) => `${project.id}/${file.name}`));
-    }
-    onDeleted(project.id);
   }
 
   function toggleCategory(category: ProjectCategory) {
     update('categories', project.categories.includes(category) ? project.categories.filter((item) => item !== category) : [...project.categories, category]);
-  }
-
-  function addPlanGroup() {
-    update('floorPlanGroups', [...project.floorPlanGroups, { id: crypto.randomUUID(), title: 'New plan type', plans: [] }]);
-  }
-
-  function updatePlanGroup(id: string, patch: Partial<FloorPlanGroup>) {
-    update('floorPlanGroups', project.floorPlanGroups.map((group) => group.id === id ? { ...group, ...patch } : group));
   }
 
   const sections: { id: AdminSection; label: string }[] = [
@@ -1541,246 +1671,367 @@ function ProjectEditor({ initialProject, onBack, onSaved, onDeleted, demo }: { i
     <main className="editor-shell">
       <header className="editor-topbar">
         <button className="icon-text-button" onClick={requestBack}><ArrowLeft size={17} />Projects</button>
-        <div className="editor-context"><BrandMark /><div className="editor-title"><span className={`status-dot ${project.status}`}></span><strong>{project.title}</strong><small>{project.status}</small>{isDirty && <em>Unsaved</em>}</div></div>
+        <div className="editor-context">
+          <BrandMark />
+          <div className="editor-title">
+            <span className={`status-dot ${project.status}`}></span>
+            <strong>{project.title}</strong>
+            <small>{project.status}</small>
+            {isDirty && <em>Unsaved</em>}
+          </div>
+        </div>
         <div className="editor-actions">
+          <button className="secondary-button" onClick={() => setHistoryOpen(true)} title="View revision history"><History size={17} />History</button>
           <button className="secondary-button" onClick={openPreview}><Eye size={17} />Preview</button>
-          <button className="secondary-button" onClick={() => save(project.status)} disabled={saving}><Save size={17} />{project.status === 'published' ? 'Save changes' : 'Save draft'}</button>
-          <button className="primary-button" onClick={requestStatusChange} disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{project.status === 'published' ? 'Unpublish' : 'Publish'}</button>
+          {role === 'owner' ? (
+            <>
+              <button className="secondary-button" onClick={() => save(project.status)} disabled={saving}><Save size={17} />{project.status === 'published' ? 'Save changes' : 'Save draft'}</button>
+              <button className="primary-button" onClick={requestStatusChange} disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{project.status === 'published' ? 'Unpublish' : 'Publish'}</button>
+            </>
+          ) : (
+            <button className="primary-button" onClick={() => save(project.status)} disabled={saving}>
+              {saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}Submit proposal
+            </button>
+          )}
         </div>
       </header>
+
       <div className="editor-layout">
         <aside className="editor-nav">
           <span className="eyebrow">Project editor</span>
           <div className="editor-readiness"><div><span>Content readiness</span><strong>{readiness}%</strong></div><i><b style={{ width: `${readiness}%` }}></b></i><small>{missingRequirements.length ? `${missingRequirements.length} required items left` : 'Ready to publish'}</small></div>
           {sections.map((item, index) => <button key={item.id} className={section === item.id ? 'active' : ''} onClick={() => setSection(item.id)}><i>{String(index + 1).padStart(2, '0')}</i>{item.label}<ChevronRight size={15} /></button>)}
-          <button className="delete-project" onClick={() => setConfirmDelete(true)}><Trash2 size={16} />Delete project</button>
+          {role === 'owner' && <button className="delete-project" onClick={() => setConfirmDelete(true)}><Trash2 size={16} />Delete project</button>}
         </aside>
+
         <section className="editor-canvas">
           <div className="editor-locale-toolbar">
             <div><strong>Content language</strong><span>{editingLocale === 'el' ? 'Greek fields are optional; empty values fall back to English' : 'English is the source content and controls shared structure'}</span></div>
             <div className="presentation-switch" role="group" aria-label="Content language"><button type="button" className={editingLocale === 'en' ? 'active' : ''} onClick={() => setEditingLocale('en')}>EN</button><button type="button" className={editingLocale === 'el' ? 'active' : ''} onClick={() => setEditingLocale('el')}>ΕΛ</button></div>
           </div>
+
           {section === 'content' && editingLocale === 'en' && <>
             <div className="section-heading"><span>01 / Content</span><h2>Project identity</h2><p>The information used in the catalog card and the project page</p></div>
             <div className="editor-form-grid">
-              <Field label="Project name"><input value={project.title} onChange={(event) => update('title', event.target.value)} /></Field>
-              <Field label="Project page address"><input value={project.address} onChange={(event) => update('address', event.target.value)} /></Field>
-              <Field label="Homepage card location"><input value={project.cardAddress} onChange={(event) => update('cardAddress', event.target.value)} /></Field>
-              <Field label="Price label"><input value={project.price} onChange={(event) => update('price', event.target.value)} placeholder="from 250 000 €" /></Field>
-              <Field label="Map coordinates or search query"><input value={project.mapQuery} onChange={(event) => update('mapQuery', event.target.value)} /></Field>
-              <Field label="Google Maps link"><input value={project.mapUrl} onChange={(event) => update('mapUrl', event.target.value)} /></Field>
+              <Field label="Project name"><input value={project.title} onChange={(e) => update('title', e.target.value)} /></Field>
+              <Field label="Project page address"><input value={project.address} onChange={(e) => update('address', e.target.value)} /></Field>
+              <Field label="Homepage card location"><input value={project.cardAddress} onChange={(e) => update('cardAddress', e.target.value)} /></Field>
+              <Field label="Price label"><input value={project.price} onChange={(e) => update('price', e.target.value)} placeholder="from 250 000 €" /></Field>
+              <Field label="Remaining units" hint="Shared availability (leave blank if unspecified, 0 for sold out)"><input type="number" min={0} step={1} value={project.remainingUnits ?? ''} onChange={(e) => { const remainingUnits = parseRemainingUnitsInput(e.target.value); if (remainingUnits === undefined) { showToast({ tone: 'error', message: 'Remaining units must be a nonnegative whole number' }); return; } update('remainingUnits', remainingUnits); }} /></Field>
+              <Field label="Map coordinates or search query"><input value={project.mapQuery} onChange={(e) => update('mapQuery', e.target.value)} /></Field>
+              <Field label="Google Maps link"><input value={project.mapUrl} onChange={(e) => update('mapUrl', e.target.value)} /></Field>
               <Field label="Categories" wide><div className="category-select">{PROJECT_CATEGORIES.map((category) => <button type="button" key={category} className={project.categories.includes(category) ? 'active' : ''} onClick={() => toggleCategory(category)}>{project.categories.includes(category) && <Check size={14} />}{categoryLabels[category]}</button>)}</div></Field>
-              <Field label="Short card description" wide hint={`${project.shortDescription.length}/420`}><textarea rows={4} maxLength={420} value={project.shortDescription} onChange={(event) => update('shortDescription', event.target.value)} /></Field>
-              <Field label="Page intro heading" wide><input value={project.introTitle} onChange={(event) => update('introTitle', event.target.value)} /></Field>
-              <Field label="Full project description" wide><textarea rows={10} value={project.fullDescription} onChange={(event) => update('fullDescription', event.target.value)} /></Field>
-              <Field label="Nearby places / running line" wide hint="One item per line"><textarea rows={5} value={project.nearbyPlaces.join('\n')} onChange={(event) => update('nearbyPlaces', event.target.value.split('\n').filter(Boolean))} /></Field>
+              <Field label="Short card description" wide hint={`${project.shortDescription.length}/420`}><textarea rows={4} maxLength={420} value={project.shortDescription} onChange={(e) => update('shortDescription', e.target.value)} /></Field>
+              <Field label="Page intro heading" wide><input value={project.introTitle} onChange={(e) => update('introTitle', e.target.value)} /></Field>
+              <Field label="Full project description" wide><textarea rows={10} value={project.fullDescription} onChange={(e) => update('fullDescription', e.target.value)} /></Field>
+              <Field label="Nearby places / running line" wide hint="One item per line"><textarea rows={5} value={project.nearbyPlaces.join('\n')} onChange={(e) => update('nearbyPlaces', e.target.value.split('\n').filter(Boolean))} /></Field>
             </div>
           </>}
+
           {section === 'content' && editingLocale === 'el' && <>
             <div className="section-heading"><span>01 / Ελληνικά</span><h2>Project identity</h2><p>Translate visitor-facing content. Leave a field empty to use its English value</p></div>
             <div className="editor-form-grid">
-              <Field label="Project name"><input value={greek.title ?? ''} placeholder={project.title} onChange={(event) => updateGreek({ title: event.target.value })} /></Field>
-              <Field label="Project page address"><input value={greek.address ?? ''} placeholder={project.address} onChange={(event) => updateGreek({ address: event.target.value })} /></Field>
-              <Field label="Homepage card location"><input value={greek.cardAddress ?? ''} placeholder={project.cardAddress || project.address} onChange={(event) => updateGreek({ cardAddress: event.target.value })} /></Field>
-              <Field label="Price label"><input value={greek.price ?? ''} placeholder={project.price || 'from 250 000 €'} onChange={(event) => updateGreek({ price: event.target.value })} /></Field>
-              <Field label="Short card description" wide hint={`${(greek.shortDescription ?? '').length}/420`}><textarea rows={4} maxLength={420} value={greek.shortDescription ?? ''} placeholder={project.shortDescription} onChange={(event) => updateGreek({ shortDescription: event.target.value })} /></Field>
-              <Field label="Page intro heading" wide><input value={greek.introTitle ?? ''} placeholder={project.introTitle} onChange={(event) => updateGreek({ introTitle: event.target.value })} /></Field>
-              <Field label="Full project description" wide><textarea rows={10} value={greek.fullDescription ?? ''} placeholder={project.fullDescription} onChange={(event) => updateGreek({ fullDescription: event.target.value })} /></Field>
+              <Field label="Project name"><input value={greek.title ?? ''} placeholder={project.title} onChange={(e) => updateGreek({ title: e.target.value })} /></Field>
+              <Field label="Project page address"><input value={greek.address ?? ''} placeholder={project.address} onChange={(e) => updateGreek({ address: e.target.value })} /></Field>
+              <Field label="Homepage card location"><input value={greek.cardAddress ?? ''} placeholder={project.cardAddress} onChange={(e) => updateGreek({ cardAddress: e.target.value })} /></Field>
+              <Field label="Price label"><input value={greek.price ?? ''} placeholder={project.price} onChange={(e) => updateGreek({ price: e.target.value })} /></Field>
+              <Field label="Short card description" wide hint={`${(greek.shortDescription ?? '').length}/420`}><textarea rows={4} maxLength={420} value={greek.shortDescription ?? ''} placeholder={project.shortDescription} onChange={(e) => updateGreek({ shortDescription: e.target.value })} /></Field>
+              <Field label="Page intro heading" wide><input value={greek.introTitle ?? ''} placeholder={project.introTitle} onChange={(e) => updateGreek({ introTitle: e.target.value })} /></Field>
+              <Field label="Full project description" wide><textarea rows={10} value={greek.fullDescription ?? ''} placeholder={project.fullDescription} onChange={(e) => updateGreek({ fullDescription: e.target.value })} /></Field>
+              <Field label="Nearby places / running line" wide hint="One item per line"><textarea rows={5} value={(greek.nearbyPlaces ?? []).join('\n')} placeholder={project.nearbyPlaces.join('\n')} onChange={(e) => updateGreek({ nearbyPlaces: e.target.value.split('\n').filter(Boolean) })} /></Field>
             </div>
-            <div className="repeat-section translation-list"><div className="repeat-heading"><div><h3>Nearby places</h3><span>Order and item count come from English</span></div></div>{project.nearbyPlaces.length ? project.nearbyPlaces.map((place, index) => <div className="translation-pair" key={`${index}-${place}`}><span>{place}</span><input value={greek.nearbyPlaces?.[index] ?? ''} placeholder={place} onChange={(event) => updateGreekNearbyPlace(index, event.target.value)} /></div>) : <div className="media-empty">Add nearby places in the English tab first</div>}</div>
           </>}
+
           {section === 'specs' && editingLocale === 'en' && <>
-            <div className="section-heading"><span>02 / Features</span><h2>Characteristics & benefits</h2><p>Structured facts used in the page highlights</p></div>
-            <div className="repeat-section"><div className="repeat-heading"><h3>Characteristics</h3><button onClick={() => update('characteristics', [...project.characteristics, { id: crypto.randomUUID(), label: 'Characteristic', value: '', icon: 'area' }])}><Plus size={16} />Add</button></div>{project.characteristics.map((item) => <div className="repeat-row" key={item.id}><select value={item.icon} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, icon: event.target.value as typeof item.icon } : current))}><option value="bed">Bed</option><option value="bath">Bath</option><option value="area">Area</option><option value="levels">Levels</option></select><input value={item.label} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, label: event.target.value } : current))} /><input value={item.value} onChange={(event) => update('characteristics', project.characteristics.map((current) => current.id === item.id ? { ...current, value: event.target.value } : current))} /><button onClick={() => update('characteristics', project.characteristics.filter((current) => current.id !== item.id))}><Trash2 size={16} /></button></div>)}</div>
-            <div className="repeat-section"><div className="repeat-heading"><h3>Benefits</h3><button onClick={() => update('benefits', [...project.benefits, { id: crypto.randomUUID(), title: 'New benefit', icon: '/img/olympus-detail/icons/amenity-finish.svg' }])}><Plus size={16} />Add</button></div>{project.benefits.map((item) => <div className="repeat-row benefit-row" key={item.id}><div className="benefit-icon-preview"><img src={item.icon} alt="" /></div><input value={item.title} onChange={(event) => update('benefits', project.benefits.map((current) => current.id === item.id ? { ...current, title: event.target.value } : current))} /><label className="benefit-icon-upload"><input type="file" accept="image/svg+xml,.svg" onChange={(event) => uploadBenefitIcon(item.id, event)} />{uploading === `benefit-${item.id}` ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Replace SVG</label><button onClick={() => update('benefits', project.benefits.filter((current) => current.id !== item.id))}><Trash2 size={16} /></button></div>)}</div>
+            <div className="section-heading"><span>02 / Features</span><h2>Characteristics &amp; Benefits</h2><p>Numeric parameters and qualitative advantages of the property</p></div>
+            <section className="repeat-section">
+              <header className="repeat-heading"><h3>Characteristics</h3></header>
+              {project.characteristics.map((char) => (
+                <div key={char.id} className="repeat-row">
+                  <select value={char.icon} onChange={(e) => update('characteristics', project.characteristics.map((c) => c.id === char.id ? { ...c, icon: e.target.value as any } : c))}>
+                    <option value="bed">Bedrooms</option><option value="bath">Bathrooms</option><option value="area">Area</option><option value="levels">Levels</option>
+                  </select>
+                  <input value={char.label} placeholder="Label" onChange={(e) => update('characteristics', project.characteristics.map((c) => c.id === char.id ? { ...c, label: e.target.value } : c))} />
+                  <input value={char.value} placeholder="Value (e.g. 4 beds)" onChange={(e) => update('characteristics', project.characteristics.map((c) => c.id === char.id ? { ...c, value: e.target.value } : c))} />
+                </div>
+              ))}
+            </section>
+            <section className="repeat-section">
+              <header className="repeat-heading">
+                <h3>Benefits</h3>
+                <button type="button" onClick={() => update('benefits', [...project.benefits, { id: crypto.randomUUID(), title: 'New benefit', icon: '' }])}><Plus size={15} />Add benefit</button>
+              </header>
+              {project.benefits.map((b) => (
+                <div key={b.id} className="benefit-row">
+                  {b.icon ? <img src={b.icon} alt="" className="benefit-icon-preview" /> : <div className="benefit-icon-preview"><ImagePlus size={18} /></div>}
+                  <input value={b.title} onChange={(e) => update('benefits', project.benefits.map((item) => item.id === b.id ? { ...item, title: e.target.value } : item))} />
+                  <label className="benefit-icon-upload">
+                    <input type="file" accept={benefitIconAccept} onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const media = await api.uploadMedia(file);
+                        update('benefits', project.benefits.map((item) => item.id === b.id ? { ...item, icon: media.relativeUrl } : item));
+                        showToast({ tone: 'success', message: 'Benefit icon uploaded' });
+                      } catch (err) {
+                        showToast({ tone: 'error', message: err instanceof Error ? err.message : 'Upload failed' });
+                      }
+                    }} />
+                    {uploading === `benefit-${b.id}` ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}Upload icon
+                  </label>
+                  <button type="button" onClick={() => update('benefits', project.benefits.filter((item) => item.id !== b.id))}><Trash2 size={16} /></button>
+                </div>
+              ))}
+            </section>
           </>}
+
           {section === 'specs' && editingLocale === 'el' && <>
-            <div className="section-heading"><span>02 / Ελληνικά</span><h2>Characteristics & benefits</h2><p>Translate labels and values; icons and order are shared with English</p></div>
-            <div className="repeat-section"><div className="repeat-heading"><h3>Characteristics</h3></div>{project.characteristics.length ? project.characteristics.map((item) => <div className="translation-structured-row" key={item.id}><span>{item.label}: {item.value}</span><input value={greek.characteristics?.[item.id]?.label ?? ''} placeholder={item.label} onChange={(event) => updateGreekCharacteristic(item.id, { label: event.target.value })} /><input value={greek.characteristics?.[item.id]?.value ?? ''} placeholder={item.value} onChange={(event) => updateGreekCharacteristic(item.id, { value: event.target.value })} /></div>) : <div className="media-empty">Add characteristics in the English tab first</div>}</div>
-            <div className="repeat-section"><div className="repeat-heading"><h3>Benefits</h3></div>{project.benefits.length ? project.benefits.map((item) => <div className="translation-pair translation-benefit" key={item.id}><span><img src={item.icon} alt="" />{item.title}</span><input value={greek.benefits?.[item.id]?.title ?? ''} placeholder={item.title} onChange={(event) => updateGreekBenefit(item.id, event.target.value)} /></div>) : <div className="media-empty">Add benefits in the English tab first</div>}</div>
+            <div className="section-heading"><span>02 / Ελληνικά</span><h2>Characteristics &amp; Benefits</h2><p>Greek translations for property features</p></div>
+            <section className="repeat-section">
+              <header className="repeat-heading"><h3>Characteristics</h3></header>
+              {project.characteristics.map((char) => (
+                <div key={char.id} className="repeat-row">
+                  <span>{char.icon}</span>
+                  <input value={greek.characteristics?.[char.id]?.label ?? ''} placeholder={char.label} onChange={(e) => updateGreek({ characteristics: { ...greek.characteristics, [char.id]: { ...greek.characteristics?.[char.id], label: e.target.value } } })} />
+                  <input value={greek.characteristics?.[char.id]?.value ?? ''} placeholder={char.value} onChange={(e) => updateGreek({ characteristics: { ...greek.characteristics, [char.id]: { ...greek.characteristics?.[char.id], value: e.target.value } } })} />
+                </div>
+              ))}
+            </section>
+            <section className="repeat-section">
+              <header className="repeat-heading"><h3>Benefits</h3></header>
+              {project.benefits.map((b) => (
+                <div key={b.id} className="benefit-row">
+                  {b.icon ? <img src={b.icon} alt="" className="benefit-icon-preview" /> : <div className="benefit-icon-preview"><ImagePlus size={18} /></div>}
+                  <input value={greek.benefits?.[b.id]?.title ?? ''} placeholder={b.title} onChange={(e) => updateGreek({ benefits: { ...greek.benefits, [b.id]: { title: e.target.value } } })} />
+                </div>
+              ))}
+            </section>
           </>}
-          {section === 'media' && editingLocale === 'en' && <>
-            <div className="section-heading"><span>03 / Media</span><h2>Visual materials</h2><p>Cover, page imagery, gallery, walkthrough and brochure</p></div>
-            <div className="hero-presentation-panel">
-              <div className="presentation-heading"><div><span>Hero presentation</span><strong>{project.heroType === 'video' || project.heroVariant === 'immersive' ? 'Immersive viewport' : 'Standard editorial'}</strong></div><div className="presentation-switch">{project.heroType !== 'video' && <button type="button" className={project.heroVariant === 'standard' ? 'active' : ''} onClick={() => setProject((current) => ({ ...current, heroVariant: 'standard', heroIdleUi: false }))}>Standard</button>}<button type="button" className={project.heroType === 'video' || project.heroVariant === 'immersive' ? 'active' : ''} onClick={() => update('heroVariant', 'immersive')}>Immersive</button></div></div>
-              <div className="hero-media-mode"><span>Hero media</span><div className="presentation-switch"><button type="button" className={project.heroType === 'image' ? 'active' : ''} onClick={() => setHeroMediaType('image')}>Image</button><button type="button" className={project.heroType === 'video' ? 'active' : ''} onClick={() => setHeroMediaType('video')}>Video playlist</button></div></div>
-              <div className="presentation-options">
-                <label className={project.heroType !== 'video' ? 'disabled' : ''}><input type="checkbox" checked={project.heroSoundEnabled} disabled={project.heroType !== 'video'} onChange={(event) => update('heroSoundEnabled', event.target.checked)} /><span></span><div><strong>Sound control</strong><small>Allow visitors to enable video sound</small></div></label>
-              </div>
-            </div>
+
+          {section === 'media' && <>
+            <div className="section-heading"><span>03 / Media</span><h2>Photos, Hero &amp; Videos</h2><p>Catalog cover, page hero media, and image gallery</p></div>
             <div className="media-slots">
-              {([['coverUrl', 'Catalog cover'], ['heroUrl', 'Page hero image'], ['introImageUrl', 'Intro image']] as const).filter(([field]) => field !== 'heroUrl' || project.heroType === 'image').map(([field, label]) => <div className="media-slot" key={field}>{project[field] ? <img src={project[field]} alt="" /> : <ImagePlus size={24} />}<div><strong>{label}</strong><span>{project[field] ? 'Image selected' : 'No media'}</span></div><label><input type="file" accept="image/*" onChange={(event) => uploadSingle(event, field)} />{uploading === field ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Replace</label></div>)}
-              <div className="media-slot document-slot"><FileText size={26} /><div><strong>PDF brochure</strong><span>{project.brochureUrl ? 'Document attached' : 'No document'}</span></div><label><input type="file" accept="application/pdf" onChange={uploadBrochure} />{uploading === 'brochure' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}Upload</label></div>
-            </div>
-            {project.heroType === 'video' && <ProjectVideoPlaylist title="Hero video sequence" hint="Add the first hero video" videos={project.heroVideos} uploading={uploading} onChange={(videos) => updateProjectVideos('heroVideos', videos)} onUpload={(itemId, field, event) => uploadProjectVideo(event, 'heroVideos', itemId, field)} />}
-            <div className="focal-grid">
-              <FocalPointEditor label="Hero focal point" imageUrl={project.heroType === 'image' ? project.heroUrl : project.heroVideos[0]?.posterUrl ?? ''} x={project.heroFocalX} y={project.heroFocalY} onChange={(heroFocalX, heroFocalY) => setProject((current) => ({ ...current, heroFocalX, heroFocalY }))} />
-              <FocalPointEditor label="Cover focal point" imageUrl={project.coverUrl} x={project.coverFocalX} y={project.coverFocalY} onChange={(coverFocalX, coverFocalY) => setProject((current) => ({ ...current, coverFocalX, coverFocalY }))} />
-            </div>
-            <ImageCollection title="Catalog card images" images={project.cardImages} onChange={(images) => update('cardImages', images)} onUpload={(files) => uploadFiles(files, 'card')} uploading={uploading === 'card'} />
-            <ImageCollection title="Project gallery · original proportions" images={project.gallery} onChange={(images) => update('gallery', images)} onUpload={(files) => uploadFiles(files, 'gallery')} uploading={uploading === 'gallery'} />
-            <div className="walkthrough-admin-panel">
-              <div className="walkthrough-admin-heading">
-                <div><span>Optional page section</span><strong>Virtual walkthrough</strong><small>Displayed after the gallery and before floor plans</small></div>
-                <label className="walkthrough-toggle"><input type="checkbox" checked={project.walkthroughVideoEnabled} onChange={(event) => update('walkthroughVideoEnabled', event.target.checked)} /><span></span><em>{project.walkthroughVideoEnabled ? 'Visible' : 'Hidden'}</em></label>
+              <div className="media-slot">
+                {project.coverUrl ? <img src={project.coverUrl} alt="Cover" /> : <div className="media-slot-placeholder"><ImagePlus size={24} /></div>}
+                <div><strong>Catalog cover image</strong><p>Shown in project listings and cards</p></div>
+                <label className="action-btn"><input type="file" accept="image/*" onChange={(e) => uploadSingle(e, 'coverUrl')} />{uploading === 'coverUrl' ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Change</label>
               </div>
-              <label className="walkthrough-title-field"><span>Section heading</span><input value={project.walkthroughVideoTitle} placeholder="Virtual walkthrough" onChange={(event) => update('walkthroughVideoTitle', event.target.value)} /></label>
-              <ProjectVideoPlaylist title="Walkthrough sequence" hint="Add the first walkthrough video" videos={project.walkthroughVideos} uploading={uploading} onChange={(videos) => updateProjectVideos('walkthroughVideos', videos)} onUpload={(itemId, field, event) => uploadProjectVideo(event, 'walkthroughVideos', itemId, field)} />
+              <div className="media-slot">
+                {project.introImageUrl ? <img src={project.introImageUrl} alt="Intro" /> : <div className="media-slot-placeholder"><ImagePlus size={24} /></div>}
+                <div><strong>Intro banner image</strong><p>Used in the introductory section</p></div>
+                <label className="action-btn"><input type="file" accept="image/*" onChange={(e) => uploadSingle(e, 'introImageUrl')} />{uploading === 'introImageUrl' ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Change</label>
+              </div>
+              <div className="media-slot">
+                <div className="media-slot-placeholder"><FileText size={24} /></div>
+                <div><strong>PDF Brochure</strong><p>{project.brochureUrl ? 'Brochure uploaded' : 'No brochure PDF uploaded'}</p></div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {project.brochureUrl && <a href={project.brochureUrl} target="_blank" rel="noreferrer" className="action-btn">Open PDF</a>}
+                  <label className="action-btn"><input type="file" accept="application/pdf,.pdf" onChange={uploadBrochure} />{uploading === 'brochure' ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Upload</label>
+                </div>
+              </div>
+            </div>
+
+            <section className="repeat-section" style={{ marginTop: '36px' }}>
+              <header className="repeat-heading">
+                <h3>Gallery photos ({project.gallery.length})</h3>
+                <label className="primary-button" style={{ cursor: 'pointer' }}><input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files && uploadFiles(e.target.files, 'gallery')} /><Upload size={16} />Upload photos</label>
+              </header>
+              <div className="media-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px', marginTop: '16px' }}>
+                {project.gallery.map((img) => (
+                  <div key={img.id} style={{ position: 'relative', border: '1px solid var(--admin-line)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <img src={img.url} alt={img.alt} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                    <button type="button" onClick={() => update('gallery', project.gallery.filter((item) => item.id !== img.id))} style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.65)', color: 'white', border: 0, borderRadius: '50%', width: '28px', height: '28px', display: 'grid', placeItems: 'center', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>}
+
+          {section === 'plans' && <>
+            <div className="section-heading"><span>04 / Floor plans</span><h2>Floor plan layouts</h2><p>Group layouts by type and upload floor plan schematics</p></div>
+            <button type="button" className="secondary-button" onClick={() => update('floorPlanGroups', [...project.floorPlanGroups, { id: crypto.randomUUID(), title: 'Standard Villas', plans: [] }])}><Plus size={16} />Add floor plan group</button>
+            <div style={{ display: 'grid', gap: '24px', marginTop: '20px' }}>
+              {project.floorPlanGroups.map((group) => (
+                <section key={group.id} className="repeat-section" style={{ border: '1px solid var(--admin-line)', padding: '20px', borderRadius: '4px', background: 'white' }}>
+                  <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <input value={group.title} onChange={(e) => update('floorPlanGroups', project.floorPlanGroups.map((g) => g.id === group.id ? { ...g, title: e.target.value } : g))} style={{ fontSize: '18px', fontWeight: 600, border: '1px solid var(--admin-line)', padding: '6px 10px', borderRadius: '3px' }} />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <label className="secondary-button" style={{ cursor: 'pointer' }}>
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const media = await api.uploadMedia(file);
+                            const newPlan = { id: crypto.randomUUID(), title: 'Ground Floor', imageUrl: media.relativeUrl, alt: 'Floor plan' };
+                            update('floorPlanGroups', project.floorPlanGroups.map((g) => g.id === group.id ? { ...g, plans: [...g.plans, newPlan] } : g));
+                            showToast({ tone: 'success', message: 'Plan layout uploaded' });
+                          } catch (err) {
+                            showToast({ tone: 'error', message: err instanceof Error ? err.message : 'Upload failed' });
+                          }
+                        }} />
+                        <Plus size={15} />Add plan schematic
+                      </label>
+                      <button type="button" className="danger-button icon-text-button" onClick={() => update('floorPlanGroups', project.floorPlanGroups.filter((g) => g.id !== group.id))}><Trash2 size={16} /></button>
+                    </div>
+                  </header>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                    {group.plans.map((plan) => (
+                      <div key={plan.id} style={{ border: '1px solid var(--admin-line)', borderRadius: '4px', padding: '10px', background: 'var(--admin-paper)' }}>
+                        <img src={plan.imageUrl} alt={plan.alt} style={{ width: '100%', height: '120px', objectFit: 'contain', background: 'white', border: '1px solid #eee' }} />
+                        <input value={plan.title} onChange={(e) => update('floorPlanGroups', project.floorPlanGroups.map((g) => g.id === group.id ? { ...g, plans: g.plans.map((p) => p.id === plan.id ? { ...p, title: e.target.value } : p) } : g))} style={{ marginTop: '8px', width: '100%', padding: '4px 8px', fontSize: '13px' }} />
+                        <button type="button" onClick={() => update('floorPlanGroups', project.floorPlanGroups.map((g) => g.id === group.id ? { ...g, plans: g.plans.filter((p) => p.id !== plan.id) } : g))} style={{ marginTop: '6px', color: 'var(--admin-red)', background: 'none', border: 0, cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}><Trash2 size={12} />Remove plan</button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
           </>}
-          {section === 'media' && editingLocale === 'el' && <>
-            <div className="section-heading"><span>03 / Ελληνικά</span><h2>Media text</h2><p>Translate alt text and the optional walkthrough heading; media files remain shared</p></div>
-            <div className="editor-form-grid"><Field label="Walkthrough section heading" wide><input value={greek.walkthroughVideoTitle ?? ''} placeholder={project.walkthroughVideoTitle} onChange={(event) => updateGreek({ walkthroughVideoTitle: event.target.value })} /></Field></div>
-            <TranslationImageAlts title="Catalog card images" images={project.cardImages} values={greek.imageAlts ?? {}} onChange={updateGreekImageAlt} />
-            <TranslationImageAlts title="Project gallery" images={project.gallery} values={greek.imageAlts ?? {}} onChange={updateGreekImageAlt} />
-          </>}
-          {section === 'plans' && editingLocale === 'en' && <>
-            <div className="section-heading"><span>04 / Floor plans</span><h2>Plan collections</h2><p>Group plan images by apartment or villa type</p></div>
-            <div className="plan-groups">{project.floorPlanGroups.map((group) => <article className="plan-group-editor" key={group.id}><div className="plan-group-head"><input value={group.title} onChange={(event) => updatePlanGroup(group.id, { title: event.target.value })} /><button onClick={() => update('floorPlanGroups', project.floorPlanGroups.filter((item) => item.id !== group.id))}><Trash2 size={16} /></button></div>{group.plans.map((plan) => <div className="plan-row" key={plan.id}>{plan.imageUrl ? <img src={plan.imageUrl} alt="" /> : <ImagePlus size={20} />}<input value={plan.title} onChange={(event) => updatePlanGroup(group.id, { plans: group.plans.map((item) => item.id === plan.id ? { ...item, title: event.target.value } : item) })} /><label className="plan-upload"><input type="file" accept="image/*" onChange={(event) => uploadPlanImage(group.id, plan.id, event)} />{uploading === plan.id ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}Upload plan</label><button onClick={() => updatePlanGroup(group.id, { plans: group.plans.filter((item) => item.id !== plan.id) })}><X size={15} /></button></div>)}<button className="add-plan" onClick={() => updatePlanGroup(group.id, { plans: [...group.plans, { id: crypto.randomUUID(), title: 'Floor plan', imageUrl: '', alt: `${project.title} floor plan` }] })}><Plus size={16} />Add plan</button></article>)}</div>
-            <button className="secondary-button" onClick={addPlanGroup}><Plus size={17} />Add plan collection</button>
-          </>}
-          {section === 'plans' && editingLocale === 'el' && <>
-            <div className="section-heading"><span>04 / Ελληνικά</span><h2>Plan collections</h2><p>Translate group names, plan names and image alt text; plan media and order are shared</p></div>
-            <div className="plan-groups translation-plan-groups">{project.floorPlanGroups.length ? project.floorPlanGroups.map((group) => <article className="plan-group-editor" key={group.id}><div className="translation-source"><strong>{group.title}</strong><span>English group name</span></div><input value={greek.floorPlanGroups?.[group.id]?.title ?? ''} placeholder={group.title} onChange={(event) => updateGreekFloorGroup(group.id, { title: event.target.value })} />{group.plans.map((plan) => <div className="translation-plan-row" key={plan.id}>{plan.imageUrl ? <img src={plan.imageUrl} alt="" /> : <ImagePlus size={20} />}<div><span>{plan.title}</span><input value={greek.floorPlanGroups?.[group.id]?.plans?.[plan.id]?.title ?? ''} placeholder={plan.title} onChange={(event) => updateGreekFloorPlan(group.id, plan.id, { title: event.target.value })} /><input value={greek.floorPlanGroups?.[group.id]?.plans?.[plan.id]?.alt ?? ''} placeholder={plan.alt || `${project.title} floor plan`} onChange={(event) => updateGreekFloorPlan(group.id, plan.id, { alt: event.target.value })} /></div></div>)}</article>) : <div className="media-empty">Add floor plans in the English tab first</div>}</div>
-          </>}
-          {section === 'seo' && editingLocale === 'en' && <>
-            <div className="section-heading"><span>05 / SEO & URL</span><h2>Search appearance</h2><p>Control the public URL and search engine snippet</p></div>
-            <div className="editor-form-grid"><Field label="Page slug" wide hint={`Public URL: /projects/${normalizedSlug(project.slug)}`}><div className="slug-input"><span>/projects/</span><input value={project.slug} onBlur={() => update('slug', normalizedSlug(project.slug))} onChange={(event) => update('slug', event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'))} /></div></Field><Field label="SEO title" wide hint={`${project.seoTitle.length}/60`}><input value={project.seoTitle} maxLength={60} onChange={(event) => update('seoTitle', event.target.value)} /></Field><Field label="SEO description" wide hint={`${project.seoDescription.length}/160`}><textarea rows={5} value={project.seoDescription} maxLength={160} onChange={(event) => update('seoDescription', event.target.value)} /></Field></div>
-            <div className="search-preview"><span>miracon.gr › projects › {project.slug}</span><h3>{project.seoTitle || `${project.title} — MIRACON`}</h3><p>{project.seoDescription || project.shortDescription || 'Add a description to preview the search result'}</p></div>
-          </>}
-          {section === 'seo' && editingLocale === 'el' && <>
-            <div className="section-heading"><span>05 / Ελληνικά</span><h2>Search appearance</h2><p>The slug is shared; translate the search title and description</p></div>
-            <div className="editor-form-grid"><Field label="SEO title" wide hint={`${(greek.seoTitle ?? '').length}/60`}><input value={greek.seoTitle ?? ''} placeholder={project.seoTitle || `${project.title} — MIRACON`} maxLength={60} onChange={(event) => updateGreek({ seoTitle: event.target.value })} /></Field><Field label="SEO description" wide hint={`${(greek.seoDescription ?? '').length}/160`}><textarea rows={5} value={greek.seoDescription ?? ''} placeholder={project.seoDescription || project.shortDescription} maxLength={160} onChange={(event) => updateGreek({ seoDescription: event.target.value })} /></Field></div>
-            <div className="search-preview"><span>miracon.gr › el › projects › {project.slug}</span><h3>{greek.seoTitle || project.seoTitle || greek.title || `${project.title} — MIRACON`}</h3><p>{greek.seoDescription || project.seoDescription || greek.shortDescription || project.shortDescription || 'English fallback will be used'}</p></div>
+
+          {section === 'seo' && <>
+            <div className="section-heading"><span>05 / SEO &amp; URL</span><h2>Search engine optimization</h2><p>Custom URL slug, meta tags and search preview</p></div>
+            <div className="editor-form-grid">
+              <Field label="URL slug" wide hint="Unique lowercase path segment"><input value={project.slug} onChange={(e) => update('slug', normalizedSlug(e.target.value))} /></Field>
+              <Field label="SEO meta title" wide hint={`${project.seoTitle.length}/60`}><input maxLength={60} value={project.seoTitle} placeholder={`${project.title} — MIRACON`} onChange={(e) => update('seoTitle', e.target.value)} /></Field>
+              <Field label="SEO meta description" wide hint={`${project.seoDescription.length}/160`}><textarea rows={4} maxLength={160} value={project.seoDescription} placeholder={project.shortDescription} onChange={(e) => update('seoDescription', e.target.value)} /></Field>
+            </div>
+            <div className="search-preview">
+              <span>miracon.gr › projects › {project.slug}</span>
+              <h3>{project.seoTitle || `${project.title} — MIRACON`}</h3>
+              <p>{project.seoDescription || project.shortDescription || 'Exclusive modern villas and residences in Greece by MIRACON.'}</p>
+            </div>
           </>}
         </section>
       </div>
+
       {toast && <div className={`admin-toast ${toast.tone}`} role="status" aria-live="polite">{toast.tone === 'success' ? <Check size={17} /> : <CircleAlert size={17} />}{toast.message}</div>}
-      {confirmDelete && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title"><span><Trash2 size={20} /></span><h3 id="delete-title">Delete “{project.title}”?</h3><p>The project and its uploaded files will be permanently removed</p><div><button className="secondary-button" onClick={() => setConfirmDelete(false)}>Cancel</button><button className="danger-button" onClick={removeProject}>Delete permanently</button></div></div></div>}
-      {confirmLeave && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="leave-title"><span><CircleAlert size={20} /></span><h3 id="leave-title">Discard unsaved changes?</h3><p>Your latest edits have not been saved and cannot be restored</p><div><button className="secondary-button" onClick={() => setConfirmLeave(false)}>Continue editing</button><button className="danger-button" onClick={onBack}>Discard changes</button></div></div></div>}
-      {confirmStatus && <div className="modal-backdrop"><div className="confirm-modal status-confirm" role="dialog" aria-modal="true" aria-labelledby="status-title"><span><Check size={20} /></span><h3 id="status-title">{confirmStatus === 'published' ? 'Publish this project?' : 'Remove project from the website?'}</h3><p>{confirmStatus === 'published' ? 'The saved project will become visible to every website visitor' : 'The project will remain in the desk as a draft and its public page will be unavailable'}</p><div><button className="secondary-button" onClick={() => setConfirmStatus(null)}>Cancel</button><button className="primary-button" disabled={saving} onClick={async () => { if (await save(confirmStatus)) setConfirmStatus(null); }}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{confirmStatus === 'published' ? 'Publish project' : 'Unpublish'}</button></div></div></div>}
-      {previewOpen && <div className="responsive-preview"><header><div><strong>Responsive preview · {editingLocale.toUpperCase()}</strong><span>Save changes to refresh database content</span></div><div className="preview-sizes"><button className={previewWidth === 1440 ? 'active' : ''} onClick={() => setPreviewWidth(1440)}>Desktop</button><button className={previewWidth === 768 ? 'active' : ''} onClick={() => setPreviewWidth(768)}>Tablet</button><button className={previewWidth === 390 ? 'active' : ''} onClick={() => setPreviewWidth(390)}>Mobile</button><button className={previewWidth === '100%' ? 'active' : ''} onClick={() => setPreviewWidth('100%')}>Full</button></div><button className="preview-close" onClick={() => setPreviewOpen(false)}><X size={19} /></button></header><div className="preview-stage"><iframe title={`${project.title} responsive preview`} src={`${editingLocale === 'el' ? '/el' : ''}/preview/${project.slug}`} style={{ width: previewWidth === '100%' ? '100%' : `${previewWidth}px` }} /></div></div>}
+      {confirmDelete && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true"><span><Trash2 size={20} /></span><h3>Delete “{project.title}”?</h3><p>The project will be permanently marked deleted.</p><div><button className="secondary-button" onClick={() => setConfirmDelete(false)}>Cancel</button><button className="danger-button" onClick={removeProject}>Delete permanently</button></div></div></div>}
+      {confirmLeave && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true"><span><CircleAlert size={20} /></span><h3>Discard unsaved changes?</h3><p>Your latest edits have not been saved.</p><div><button className="secondary-button" onClick={() => setConfirmLeave(false)}>Continue editing</button><button className="danger-button" onClick={onBack}>Discard changes</button></div></div></div>}
+      {confirmStatus && <div className="modal-backdrop"><div className="confirm-modal status-confirm" role="dialog" aria-modal="true"><span><Check size={20} /></span><h3>{confirmStatus === 'published' ? 'Publish this project?' : 'Unpublish this project?'}</h3><p>{confirmStatus === 'published' ? 'The saved project will be live for all website visitors.' : 'The project will be moved back to draft status.'}</p><div><button className="secondary-button" onClick={() => setConfirmStatus(null)}>Cancel</button><button className="primary-button" disabled={saving} onClick={async () => { if (await save(confirmStatus)) setConfirmStatus(null); }}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{confirmStatus === 'published' ? 'Publish project' : 'Unpublish'}</button></div></div></div>}
+      {previewOpen && <div className="responsive-preview"><header><div><strong>Responsive preview · {editingLocale.toUpperCase()}</strong><span>Save changes to refresh preview</span></div><div className="preview-sizes"><button className={previewWidth === 1440 ? 'active' : ''} onClick={() => setPreviewWidth(1440)}>Desktop</button><button className={previewWidth === 768 ? 'active' : ''} onClick={() => setPreviewWidth(768)}>Tablet</button><button className={previewWidth === 390 ? 'active' : ''} onClick={() => setPreviewWidth(390)}>Mobile</button><button className={previewWidth === '100%' ? 'active' : ''} onClick={() => setPreviewWidth('100%')}>Full</button></div><button className="preview-close" onClick={() => setPreviewOpen(false)}><X size={19} /></button></header><div className="preview-stage"><iframe title={`${project.title} responsive preview`} src={`${editingLocale === 'el' ? '/el' : ''}/preview/${project.slug}`} style={{ width: previewWidth === '100%' ? '100%' : `${previewWidth}px` }} /></div></div>}
+      {historyOpen && <RevisionHistoryDrawer isOpen={historyOpen} onClose={() => setHistoryOpen(false)} aggregateType="project" aggregateId={project.id} title={project.title} role={role} api={api} currentRevisionId={(project as Project & { currentRevisionId?: string }).currentRevisionId ?? null} onRollbackSuccess={async () => { const list = await api.listProjects(); const updated = list.find((p) => p.id === project.id); if (updated) { setProject(updated); setSavedSnapshot(JSON.stringify(updated)); onSaved(updated); } }} onToast={showToast} />}
     </main>
   );
 }
 
 export default function AdminApp() {
-  const supabase = getBrowserSupabaseClient();
-  const demo = !supabase && import.meta.env.DEV;
-  const configurationMissing = !supabase && !import.meta.env.DEV;
   const [ready, setReady] = useState(false);
-  const [authenticated, setAuthenticated] = useState(demo);
-  const [authorized, setAuthorized] = useState(demo);
+  const [sessionState, setSessionState] = useState<SessionState>({ authenticated: false });
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
-  const [projects, setProjects] = useState<Project[]>(demo ? structuredClone(seedProjects) : []);
-  const [homeHeroVideos, setHomeHeroVideos] = useState<HomeHeroVideo[]>(demo ? structuredClone(fallbackHomeHeroVideos) : []);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [homeHeroVideos, setHomeHeroVideos] = useState<HomeHeroVideo[]>([]);
+  const [homeHeroRevisionId, setHomeHeroRevisionId] = useState<string | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({ ...defaultSiteSettings });
+  const [siteSettingsRevisionId, setSiteSettingsRevisionId] = useState<string | null>(null);
+  const [pendingProposalsCount, setPendingProposalsCount] = useState(0);
   const [view, setView] = useState<AdminView>('projects');
   const [selected, setSelected] = useState<Project | null>(null);
   const [globalToast, setGlobalToast] = useState<Toast>(null);
 
-  useEffect(() => {
-    if (!supabase) {
-      setReady(true);
-      return;
-    }
+  const clearSession = useCallback(() => {
+    setSessionState({ authenticated: false });
+    setProjects([]);
+    setHomeHeroVideos([]);
+    setSiteSettings({ ...defaultSiteSettings });
+    setSelected(null);
+    setPendingProposalsCount(0);
+  }, []);
 
-    const client = supabase;
+  const api = useMemo(() => new AdminApi({ onUnauthorized: clearSession }), [clearSession]);
+
+  const loadPendingProposalsCount = useCallback(async () => {
+    try {
+      const proposals = await api.listPendingProposals();
+      setPendingProposalsCount(proposals.length);
+    } catch {
+      // ignore
+    }
+  }, [api]);
+
+  const loadProjects = useCallback(async () => {
+    try {
+      setProjects(await api.listProjects());
+    } catch (error) {
+      setGlobalToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to load projects' });
+    }
+  }, [api]);
+
+  const loadHomeHeroVideos = useCallback(async () => {
+    try {
+      const data = await api.listHomeHeroVideos();
+      setHomeHeroVideos(data.videos);
+      setHomeHeroRevisionId(data.currentRevisionId);
+    } catch (error) {
+      setGlobalToast({ tone: 'error', message: `Hero playlist: ${error instanceof Error ? error.message : 'Unable to load'}` });
+    }
+  }, [api]);
+
+  const loadSiteSettings = useCallback(async () => {
+    try {
+      const data = await api.getSiteSettings();
+      setSiteSettings(data.settings);
+      setSiteSettingsRevisionId(data.currentRevisionId);
+    } catch (error) {
+      setGlobalToast({ tone: 'error', message: `Site settings: ${error instanceof Error ? error.message : 'Unable to load'}` });
+    }
+  }, [api]);
+
+  useEffect(() => {
     let active = true;
 
     async function initializeSession() {
       try {
-        const { data: sessionData } = await withTimeout(client.auth.getSession());
-        if (!sessionData.session) return;
-
-        const { data: userData, error: userError } = await withTimeout(client.auth.getUser());
-        if (userError || !userData.user) return;
-
-        const { data: membership, error: membershipError } = await withTimeout(
-          client.from('admin_users').select('user_id').eq('user_id', userData.user.id).maybeSingle(),
-        );
-        if (membershipError) throw membershipError;
+        const session = await api.session();
+        if (!session.authenticated) return;
+        await api.bootstrapCsrf();
         if (!active) return;
-
-        setAuthenticated(true);
-        setAuthorized(Boolean(membership));
-        if (membership) await Promise.all([loadProjects(), loadHomeHeroVideos(), loadSiteSettings()]);
+        setSessionState(session);
+        await Promise.all([
+          loadProjects(),
+          loadHomeHeroVideos(),
+          loadSiteSettings(),
+          session.role === 'owner' ? loadPendingProposalsCount() : Promise.resolve(),
+        ]);
       } catch (error) {
         if (!active) return;
-        setAuthenticated(false);
-        setAuthorized(false);
-        setLoginError(error instanceof Error ? error.message : 'Unable to connect to Supabase');
+        clearSession();
+        setLoginError(error instanceof Error ? error.message : 'Unable to connect to the server');
       } finally {
         if (active) setReady(true);
       }
     }
 
     initializeSession();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  async function loadProjects() {
-    if (!supabase) return;
-    const { data, error } = await withTimeout(
-      supabase.from('projects').select('*, project_images(*)').order('sort_order'),
-    );
-    if (error) setGlobalToast({ tone: 'error', message: error.message });
-    else setProjects((data ?? []).map((row) => mapProjectRow(row)));
-  }
-
-  async function loadHomeHeroVideos() {
-    if (!supabase) return;
-    const { data, error } = await withTimeout(
-      supabase.from('homepage_videos').select('*').order('sort_order'),
-    );
-    if (error) setGlobalToast({ tone: 'error', message: `Hero playlist: ${error.message}` });
-    else setHomeHeroVideos((data ?? []).map((row) => mapHomeHeroVideo(row)));
-  }
-
-  async function loadSiteSettings() {
-    if (!supabase) return;
-    const { data, error } = await withTimeout(
-      supabase.from('site_settings').select('footer_terms_visible, footer_terms_pdf_url, footer_privacy_visible, footer_privacy_pdf_url, footer_cookie_visible, footer_cookie_pdf_url').eq('id', 1).maybeSingle(),
-    );
-    if (error) setGlobalToast({ tone: 'error', message: `Site settings: ${error.message}` });
-    else setSiteSettings(mapSiteSettings(data));
-  }
+    return () => { active = false; };
+  }, [api, clearSession, loadProjects, loadHomeHeroVideos, loadSiteSettings, loadPendingProposalsCount]);
 
   async function login(email: string, password: string) {
-    if (!supabase) return;
     setLoginLoading(true);
     setLoginError('');
     try {
-      const { data, error } = await withTimeout(supabase.auth.signInWithPassword({ email, password }));
-      if (error || !data.user) {
-        setLoginError(error?.message ?? 'Unable to sign in');
-        return;
-      }
-      const { data: membership, error: membershipError } = await withTimeout(
-        supabase.from('admin_users').select('user_id').eq('user_id', data.user.id).maybeSingle(),
-      );
-      if (membershipError) throw membershipError;
-      setAuthenticated(true);
-      setAuthorized(Boolean(membership));
-      if (membership) await Promise.all([loadProjects(), loadHomeHeroVideos(), loadSiteSettings()]);
+      const session = await api.login(email, password);
+      await api.bootstrapCsrf();
+      setSessionState(session);
+      await Promise.all([
+        loadProjects(),
+        loadHomeHeroVideos(),
+        loadSiteSettings(),
+        session.role === 'owner' ? loadPendingProposalsCount() : Promise.resolve(),
+      ]);
     } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Unable to connect to Supabase');
+      setLoginError(error instanceof Error ? error.message : 'Unable to sign in');
     } finally {
       setLoginLoading(false);
     }
   }
 
   async function logout() {
-    if (demo) return;
-    await supabase?.auth.signOut();
-    setAuthenticated(false);
-    setAuthorized(false);
-    setProjects([]);
-    setHomeHeroVideos([]);
-    setSiteSettings({ ...defaultSiteSettings });
+    try {
+      await api.logout();
+    } finally {
+      clearSession();
+    }
   }
 
   async function reorder(event: DragEndEvent) {
@@ -1789,23 +2040,22 @@ export default function AdminApp() {
     const newIndex = projects.findIndex((project) => project.id === event.over?.id);
     const reordered = arrayMove(projects, oldIndex, newIndex).map((project, index) => ({ ...project, sortOrder: index }));
     setProjects(reordered);
-    if (supabase) {
-      const { error } = await supabase.rpc('reorder_projects', { p_items: reordered.map((project) => ({ id: project.id, sort_order: project.sortOrder })) });
-      if (error) setProjects(projects);
-      setGlobalToast(error ? { tone: 'error', message: error.message } : { tone: 'success', message: 'Project order updated' });
+    try {
+      await api.reorderProjects(reordered.map((project) => ({ id: project.id, sortOrder: project.sortOrder })));
+      setGlobalToast({ tone: 'success', message: 'Project order updated' });
+    } catch (error) {
+      setProjects(projects);
+      setGlobalToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to reorder projects' });
     }
   }
 
   async function importSeed() {
-    if (!supabase) return;
     for (const project of seedProjects) {
       const syncedProject = syncLegacyVideoFields(project);
-      const { error } = await supabase.rpc('save_project_with_images', {
-        p_project: projectToRow(syncedProject),
-        p_images: projectImagesToRows(syncedProject),
-      });
-      if (error) {
-        setGlobalToast({ tone: 'error', message: error.message });
+      try {
+        await api.saveProject(syncedProject);
+      } catch (error) {
+        setGlobalToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to import projects' });
         return;
       }
     }
@@ -1824,22 +2074,115 @@ export default function AdminApp() {
   }
 
   if (!ready) return <LoadingScreen />;
-  if (configurationMissing) return <main className="access-denied"><BrandLockup /><CircleAlert size={28} /><h1>Admin is not configured</h1><p>Set the public Supabase URL and key before deploying the project desk</p></main>;
-  if (!authenticated) return <LoginScreen onLogin={login} error={loginError} loading={loginLoading} />;
-  if (!authorized) return <main className="access-denied"><BrandMark /><CircleAlert size={28} /><h1>Access not granted</h1><p>This account is authenticated but is not listed in <code>admin_users</code></p><button className="secondary-button" onClick={logout}><LogOut size={16} />Sign out</button></main>;
+  if (!sessionState.authenticated) return <LoginScreen onLogin={login} error={loginError} loading={loginLoading} />;
+
+  const userRole = sessionState.role ?? 'editor';
+  const isOwner = userRole === 'owner';
 
   return (
     <div className="admin-app">
-      {!selected && <aside className="admin-rail"><BrandLockup /><nav><button className={view === 'projects' ? 'active' : ''} title="Projects" onClick={() => setView('projects')}><LayoutGrid size={19} /><span>Projects</span></button><button className={view === 'home-hero' ? 'active' : ''} title="Homepage hero" onClick={() => setView('home-hero')}><Film size={19} /><span>Home hero</span></button><button className={view === 'site-settings' ? 'active' : ''} title="Site settings" onClick={() => setView('site-settings')}><FileText size={19} /><span>Site settings</span></button><a href="/" target="_blank" rel="noreferrer"><ExternalLink size={19} /><span>View website</span></a></nav><div><span className="rail-env">{demo ? 'LOCAL MODE' : 'LIVE WORKSPACE'}</span>{!demo && <button onClick={logout} title="Sign out"><LogOut size={18} /><span>Sign out</span></button>}</div></aside>}
-      {demo && !selected && <div className="demo-banner">Local demo mode · connect Supabase to persist changes and upload media</div>}
-      {selected
-        ? <ProjectEditor initialProject={selected} onBack={() => setSelected(null)} onSaved={saveToState} onDeleted={deleteFromState} demo={demo} />
-        : view === 'home-hero'
-          ? <HomeHeroManager initialVideos={homeHeroVideos} projects={projects} demo={demo} onSaved={setHomeHeroVideos} onToast={setGlobalToast} />
-          : view === 'site-settings'
-            ? <SiteSettingsManager initialSettings={siteSettings} demo={demo} onSaved={setSiteSettings} onToast={setGlobalToast} />
-            : <ProjectList projects={projects} onOpen={setSelected} onCreate={() => setSelected(emptyProject(projects.length))} onReorder={reorder} onImport={importSeed} canImport={!demo && projects.length === 0} />}
-      {globalToast && <div className={`admin-toast ${globalToast.tone}`} role="status" aria-live="polite">{globalToast.tone === 'success' ? <Check size={17} /> : <CircleAlert size={17} />}{globalToast.message}</div>}
+      {!selected && (
+        <aside className="admin-rail">
+          <BrandLockup />
+          <nav>
+            <button className={view === 'projects' ? 'active' : ''} title="Projects" onClick={() => setView('projects')}>
+              <LayoutGrid size={19} />
+              <span>Projects</span>
+            </button>
+            <button className={view === 'home-hero' ? 'active' : ''} title="Homepage hero" onClick={() => setView('home-hero')}>
+              <Film size={19} />
+              <span>Home hero</span>
+            </button>
+            <button className={view === 'site-settings' ? 'active' : ''} title="Site settings" onClick={() => setView('site-settings')}>
+              <FileText size={19} />
+              <span>Site settings</span>
+            </button>
+            {isOwner && (
+              <>
+                <button className={view === 'proposals' ? 'active' : ''} title="Approvals" onClick={() => setView('proposals')}>
+                  <Inbox size={19} />
+                  <span>Proposals</span>
+                  {pendingProposalsCount > 0 && <span className="nav-counter-badge">{pendingProposalsCount}</span>}
+                </button>
+                <button className={view === 'users' ? 'active' : ''} title="Users" onClick={() => setView('users')}>
+                  <Users size={19} />
+                  <span>Users</span>
+                </button>
+              </>
+            )}
+            <a href="/" target="_blank" rel="noreferrer">
+              <ExternalLink size={19} />
+              <span>View website</span>
+            </a>
+          </nav>
+          <div>
+            <div className="rail-user-section">
+              <span className="rail-user-email" title={sessionState.email ?? ''}>{sessionState.email ?? 'Administrator'}</span>
+              <span className={`role-badge ${userRole}`}>{userRole}</span>
+            </div>
+            <span className="rail-env">LIVE WORKSPACE</span>
+            <button onClick={logout} title="Sign out"><LogOut size={18} /><span>Sign out</span></button>
+          </div>
+        </aside>
+      )}
+
+      {selected ? (
+        <ProjectEditor
+          initialProject={selected}
+          onBack={() => setSelected(null)}
+          onSaved={saveToState}
+          onDeleted={deleteFromState}
+          api={api}
+          role={userRole}
+        />
+      ) : view === 'home-hero' ? (
+        <HomeHeroManager
+          initialVideos={homeHeroVideos}
+          projects={projects}
+          api={api}
+          onSaved={setHomeHeroVideos}
+          onToast={setGlobalToast}
+          role={userRole}
+          currentRevisionId={homeHeroRevisionId}
+        />
+      ) : view === 'site-settings' ? (
+        <SiteSettingsManager
+          initialSettings={siteSettings}
+          api={api}
+          onSaved={setSiteSettings}
+          onToast={setGlobalToast}
+          role={userRole}
+          currentRevisionId={siteSettingsRevisionId}
+        />
+      ) : view === 'proposals' && isOwner ? (
+        <ProposalsManager
+          api={api}
+          onToast={setGlobalToast}
+          onRefreshProposalsCount={loadPendingProposalsCount}
+        />
+      ) : view === 'users' && isOwner ? (
+        <UsersManager
+          api={api}
+          currentUserEmail={sessionState.email}
+          onToast={setGlobalToast}
+        />
+      ) : (
+        <ProjectList
+          projects={projects}
+          onOpen={setSelected}
+          onCreate={() => setSelected(emptyProject(projects.length))}
+          onReorder={reorder}
+          onImport={importSeed}
+          canImport={projects.length === 0}
+        />
+      )}
+
+      {globalToast && (
+        <div className={`admin-toast ${globalToast.tone}`} role="status" aria-live="polite">
+          {globalToast.tone === 'success' ? <Check size={17} /> : <CircleAlert size={17} />}
+          {globalToast.message}
+        </div>
+      )}
     </div>
   );
 }

@@ -16,7 +16,7 @@ const contactsHref = localizePath(`${Astro.originPathname}#contacts`, locale);
 const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 ---
 
-<header class="header">
+<header class="header notranslate" translate="no">
   <div class="header-container">
     <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
       <img src="/img/logo_mark.svg" alt="" class="logo-img">

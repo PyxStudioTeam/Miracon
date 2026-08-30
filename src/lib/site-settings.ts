@@ -1,30 +1,8 @@
-import { createPublicSupabaseClient } from './supabase';
+import { defaultSiteSettings, isValidTermsPdfUrl } from './site-settings-shared';
+import type { SiteSettings } from './site-settings-shared';
 
-export type SiteSettings = {
-  footerTermsVisible: boolean;
-  footerTermsPdfUrl: string;
-  footerPrivacyVisible: boolean;
-  footerPrivacyPdfUrl: string;
-  footerCookieVisible: boolean;
-  footerCookiePdfUrl: string;
-};
-
-export const defaultSiteSettings: SiteSettings = {
-  footerTermsVisible: false,
-  footerTermsPdfUrl: '',
-  footerPrivacyVisible: false,
-  footerPrivacyPdfUrl: '',
-  footerCookieVisible: false,
-  footerCookiePdfUrl: '',
-};
-
-export function isValidTermsPdfUrl(value: string) {
-  try {
-    return new URL(value).protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
+export { defaultSiteSettings, isValidTermsPdfUrl } from './site-settings-shared';
+export type { SiteSettings } from './site-settings-shared';
 
 export function mapSiteSettings(row: Record<string, unknown> | null | undefined): SiteSettings {
   const footerTermsPdfUrl = String(row?.footer_terms_pdf_url ?? '').trim();
@@ -41,15 +19,8 @@ export function mapSiteSettings(row: Record<string, unknown> | null | undefined)
 }
 
 export async function getSiteSettings(): Promise<SiteSettings> {
-  const supabase = createPublicSupabaseClient();
-  if (!supabase) return defaultSiteSettings;
-
-  const { data, error } = await supabase
-    .from('site_settings')
-    .select('footer_terms_visible, footer_terms_pdf_url, footer_privacy_visible, footer_privacy_pdf_url, footer_cookie_visible, footer_cookie_pdf_url')
-    .eq('id', 1)
-    .maybeSingle();
-
-  if (error || !data) return defaultSiteSettings;
-  return mapSiteSettings(data);
+  if (import.meta.env.DEV && !process.env.DATABASE_URL) return defaultSiteSettings;
+  const { getDatabasePool } = await import('./server/database');
+  const { getSiteSettings: getSettings } = await import('./server/site-settings');
+  return getSettings(getDatabasePool());
 }

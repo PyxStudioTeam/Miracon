@@ -1,44 +1,20 @@
 ---
 import ProjectPage from '../../components/ProjectPage.astro';
-import { seedProjects } from '../../data/projects';
 import { getLocale } from '../../lib/i18n';
-import { localizeProject, mapProjectRow } from '../../lib/projects';
-import type { Project } from '../../lib/project-types';
-import { createAstroSupabaseClient } from '../../lib/supabase-server';
+import { localizeProject } from '../../lib/projects';
+import { cookieValue } from '../../lib/server/api';
+import { findSession } from '../../lib/server/auth/session';
+import { getDatabasePool } from '../../lib/server/database';
+import { getAdminProjectBySlug } from '../../lib/server/projects';
 
 const slug = Astro.params.slug ?? '';
 const locale = getLocale(Astro.originPathname);
-const supabase = createAstroSupabaseClient(Astro.cookies, Astro.request);
-let project: Project | null = null;
-
-if (!supabase && import.meta.env.DEV) {
-  project = seedProjects.find((item) => item.slug === slug) ?? null;
-} else if (supabase) {
-  const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user) {
-    return Astro.redirect('/admin');
-  }
-
-  const { data: membership } = await supabase
-    .from('admin_users')
-    .select('user_id')
-    .eq('user_id', authData.user.id)
-    .maybeSingle();
-
-  if (!membership) {
-    return Astro.redirect('/admin');
-  }
-
-  const { data } = await supabase
-    .from('projects')
-    .select('*, project_images(*)')
-    .eq('slug', slug)
-    .maybeSingle();
-
-  if (data) {
-    project = mapProjectRow(data);
-  }
+const sessionToken = cookieValue(Astro.request, '__Host-session');
+if (!sessionToken || !await findSession(getDatabasePool(), sessionToken, new Date())) {
+  return Astro.redirect('/admin');
 }
+
+const project = await getAdminProjectBySlug(getDatabasePool(), slug);
 
 if (!project) {
   return Astro.redirect('/admin');

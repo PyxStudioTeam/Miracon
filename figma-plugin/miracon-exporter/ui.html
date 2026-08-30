@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Miracon Design Exporter</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Inter, system-ui, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--figma-color-text, #1e1e1e);
+        background: var(--figma-color-bg, #fff);
+      }
+
+      main {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+      }
+
+      h1 { margin: 0; font-size: 18px; line-height: 24px; }
+
+      p {
+        margin: 0;
+        color: var(--figma-color-text-secondary, #6b6b6b);
+        font-size: 12px;
+        line-height: 18px;
+      }
+
+      .selection,
+      .status {
+        padding: 12px;
+        border: 1px solid var(--figma-color-border, #e5e5e5);
+        border-radius: 8px;
+        background: var(--figma-color-bg-secondary, #f5f5f5);
+      }
+
+      .selection strong {
+        display: block;
+        overflow: hidden;
+        margin-bottom: 4px;
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+
+      input { accent-color: #0d99ff; }
+
+      button {
+        width: 100%;
+        min-height: 40px;
+        border: 0;
+        border-radius: 8px;
+        color: #fff;
+        background: #0d99ff;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:hover { background: #0a86df; }
+      button:disabled { cursor: default; opacity: .45; }
+
+      progress { width: 100%; height: 6px; }
+
+      .status {
+        display: grid;
+        gap: 8px;
+        min-height: 74px;
+      }
+
+      .status[data-state="error"] { color: #f24822; }
+      .status[data-state="success"] { color: #14ae5c; }
+
+      .hint { margin-top: auto; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <h1>Miracon Design Exporter</h1>
+        <p>Exports the selected frame as REST-like JSON, computed CSS, layer properties, and an optional PNG.</p>
+      </div>
+
+      <div class="selection" id="selection">
+        <strong>No selection</strong>
+        <p>Select exactly one frame or layer in the canvas.</p>
+      </div>
+
+      <label>
+        <input id="preview" type="checkbox" checked />
+        Also download a 1× PNG preview
+      </label>
+
+      <button id="export" type="button" disabled>Export selected frame</button>
+
+      <div class="status" id="status" data-state="idle">
+        <span id="statusText">Ready.</span>
+        <progress id="progress" max="1" value="0"></progress>
+      </div>
+
+      <p class="hint">Nothing is uploaded. All files are created locally from your current Figma selection.</p>
+    </main>
+
+    <script>
+      const exportButton = document.getElementById("export");
+      const previewInput = document.getElementById("preview");
+      const selectionBox = document.getElementById("selection");
+      const statusBox = document.getElementById("status");
+      const statusText = document.getElementById("statusText");
+      const progress = document.getElementById("progress");
+
+      function setStatus(text, state = "working") {
+        statusText.textContent = text;
+        statusBox.dataset.state = state;
+      }
+
+      function download(filename, value, type) {
+        const blob = value instanceof Blob ? value : new Blob([value], { type });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        anchor.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      exportButton.addEventListener("click", () => {
+        exportButton.disabled = true;
+        progress.value = 0;
+        progress.max = 1;
+        setStatus("Reading selected layers…");
+        parent.postMessage({
+          pluginMessage: {
+            type: "EXPORT_SELECTION",
+            includePreview: previewInput.checked,
+          },
+        }, "*");
+      });
+
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+        if (!message) return;
+
+        if (message.type === "SELECTION_CHANGED") {
+          const items = message.selection || [];
+          const valid = items.length === 1;
+          exportButton.disabled = !valid;
+          selectionBox.innerHTML = valid
+            ? `<strong>${escapeHtml(items[0].name)}</strong><p>${escapeHtml(items[0].type)} · ${escapeHtml(items[0].id)}</p>`
+            : `<strong>${items.length ? `${items.length} layers selected` : "No selection"}</strong><p>Select exactly one frame or layer in the canvas.</p>`;
+          return;
+        }
+
+        if (message.type === "PROGRESS") {
+          progress.max = message.total;
+          progress.value = message.current;
+          setStatus(`Reading ${message.current}/${message.total}: ${message.nodeName}`);
+          return;
+        }
+
+        if (message.type === "EXPORT_READY") {
+          download(`${message.filename}.figma.json`, message.json, "application/json");
+          if (message.preview) {
+            download(`${message.filename}.png`, new Blob([new Uint8Array(message.preview)], { type: "image/png" }));
+          }
+          exportButton.disabled = false;
+          progress.value = progress.max;
+          setStatus("Export complete. Files were downloaded.", "success");
+          return;
+        }
+
+        if (message.type === "EXPORT_ERROR") {
+          exportButton.disabled = false;
+          setStatus(message.detail || "Export failed.", "error");
+        }
+      };
+
+      function escapeHtml(value) {
+        const element = document.createElement("span");
+        element.textContent = String(value);
+        return element.innerHTML;
+      }
+    </script>
+  </body>
+</html>

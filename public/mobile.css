@@ -7,7 +7,7 @@
   display: none;
 }
 
-@media (min-width: 601px) and (max-width: 950px) {
+@media (min-width: 601px) and (max-width: 1279px) {
   .nav-menu,
   .header-actions {
     display: none;
@@ -415,29 +415,6 @@
   }
 
   /* Hero — Figma: y0..721. */
-  .hero-pin,
-  .hero {
-    width: 100%;
-    height: 100vh;
-    height: 100svh;
-    height: 100dvh;
-    min-height: 0;
-  }
-
-  .hero-pin {
-    position: relative;
-    z-index: 1;
-  }
-
-  .hero {
-    position: relative;
-    inset: auto;
-    z-index: 0;
-    overflow: hidden;
-    opacity: 1 !important;
-    pointer-events: auto;
-  }
-
   .hero-video {
     display: block;
     object-position: 50% center;
@@ -463,138 +440,6 @@
     z-index: 0;
     background: rgba(0, 0, 0, .2);
     pointer-events: none;
-  }
-
-  .hero-content,
-  body.js-enabled .hero-content {
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .hero-subtitle {
-    position: absolute;
-    top: 280px;
-    left: 20px;
-    display: block;
-    width: 329px;
-    height: 15px;
-    margin: 0;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 15.356px;
-    letter-spacing: 2.24px;
-    white-space: nowrap;
-    text-transform: uppercase;
-    text-shadow: 0 4.7px 9.4px rgba(0, 0, 0, .25);
-  }
-
-  .hero-title {
-    position: absolute;
-    top: 327px;
-    left: 20px;
-    display: block;
-    width: 301px;
-    height: 184px;
-    margin: 0;
-    color: #fff;
-    font-size: 48px;
-    font-weight: 400;
-    line-height: 46.068px;
-    letter-spacing: 0;
-    text-shadow: 0 4.62px 9.24px rgba(0, 0, 0, .25);
-  }
-
-  .hero-title br {
-    display: block;
-  }
-
-  .hero-actions { display: contents; }
-
-  .btn-hero,
-  .badge-visa {
-    position: absolute;
-    display: block;
-    height: 46px;
-    margin: 0;
-    border-radius: 22px;
-    transform: none;
-  }
-
-  .btn-hero {
-    top: 543px;
-    left: 20px;
-    width: 217px;
-    padding: 0;
-    background: var(--mobile-blue);
-    overflow: hidden;
-  }
-
-  .btn-hero .btn-arrow {
-    position: absolute;
-    top: 15px;
-    left: 25px;
-    width: 15px;
-    height: 14px;
-  }
-
-  .btn-arrow::before {
-    width: 15px;
-    height: 1.5px;
-  }
-
-  .btn-arrow::after {
-    width: 7px;
-    height: 7px;
-    border-width: 1.5px;
-  }
-
-  .btn-hero span:not(.btn-arrow) {
-    position: absolute;
-    z-index: 2;
-    top: 11px;
-    left: 58px;
-    display: block;
-    width: 135px;
-    height: 22px;
-    color: var(--mobile-cream);
-    font-size: 18.46px;
-    font-weight: 400;
-    line-height: 22.15px;
-    text-align: center;
-  }
-
-  .btn-hero:hover .btn-arrow,
-  .btn-hero:focus-visible .btn-arrow {
-    rotate: 0deg;
-    translate: 0 0;
-  }
-
-  .btn-hero:hover span:not(.btn-arrow),
-  .btn-hero:focus-visible span:not(.btn-arrow) {
-    clip-path: none;
-  }
-
-  .badge-visa {
-    top: 610px;
-    left: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 258px;
-    border: 1px solid rgba(255, 255, 255, .14);
-    color: #fff;
-    background: linear-gradient(110deg, #8f642d 0%, #c89c4e 28%, #f1d28b 48%, #b37f35 68%, #8f642d 100%);
-    background-size: 240% 100%;
-    font-size: 18.588px;
-    line-height: 22.306px;
   }
 
   .hero-scroll-indicator {
@@ -660,7 +505,6 @@
   .filter-tab:nth-child(3) { width: 50px; }
   .filter-tab:nth-child(4) { width: 91px; }
 
-  .filter-tab::before,
   .filter-tab span::before,
   .filter-tab span::after {
     content: none;
@@ -675,7 +519,6 @@
     width: 100%;
     height: 100%;
     min-height: 0;
-    color: inherit !important;
     line-height: 14.4px;
     white-space: nowrap;
     transform: none;
@@ -684,7 +527,6 @@
   .filter-tab.active {
     border-color: var(--mobile-blue);
     color: var(--mobile-cream);
-    background: var(--mobile-blue);
   }
 
   .projects-list {
@@ -1788,26 +1630,7 @@
   }
 }
 
-@media (max-width: 600px) and (max-height: 700px) {
-  .hero-subtitle { top: calc(100% - 441px); }
-  .hero-title { top: calc(100% - 394px); }
-  .btn-hero { top: calc(100% - 178px); }
-  .badge-visa { top: calc(100% - 111px); }
-}
-
 @media (max-width: 360px) {
-  .hero-title {
-    width: calc(100% - 40px);
-    font-size: 44px;
-    line-height: 43px;
-  }
-
-  .hero-subtitle {
-    width: calc(100% - 40px);
-    font-size: 13px;
-    letter-spacing: 1.75px;
-  }
-
   .project-name { font-size: 20px; }
   .project-description { font-size: 13px; }
   .about-text { font-size: 15px; line-height: 16.4px; }
@@ -1913,51 +1736,84 @@
   .slide-text, .slide-text-short { right: 17px; bottom: 58px; width: auto; height: auto; max-height: none; overflow: visible; line-height: 1.2; }
 }
 
-/* Keep the compact hero as one content flow instead of a stack of viewport
-   coordinates. This lets both languages grow without meeting the controls. */
+/* Authoritative <=600 homepage hero flow. */
 @media (max-width: 600px) {
   .hero-pin,
   .hero {
-    min-height: 620px;
+    width: 100%;
+    height: auto;
+    min-height: max(620px, 100dvh);
+  }
+
+  .hero-pin {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero {
+    position: relative;
+    inset: auto;
+    z-index: 0;
+    overflow: hidden;
+    opacity: 1 !important;
+    pointer-events: auto;
   }
 
   .hero-content,
   body.js-enabled .hero-content {
+    position: relative;
+    z-index: 1;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    min-height: inherit;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     box-sizing: border-box;
-    padding: 96px 20px 86px;
+    margin: 0;
+    padding: clamp(96px, 15vh, 144px) 20px clamp(48px, 10vh, 86px);
+    opacity: 1 !important;
+    transform: none !important;
   }
 
   .hero-subtitle,
   .hero-title {
     position: static;
-    width: 100%;
+    width: min(100%, 420px);
     height: auto;
     min-height: 0;
   }
 
   .hero-subtitle {
     margin: 0 0 16px;
+    color: #fff;
+    font-family: 'Gilroy', sans-serif;
     font-size: clamp(13px, 3.75vw, 16px);
+    font-weight: 400;
     line-height: 1.18;
     letter-spacing: .12em;
+    text-transform: uppercase;
+    text-shadow: 0 4.7px 9.4px rgba(0, 0, 0, .25);
     white-space: normal;
   }
 
   .hero-title {
-    max-width: 390px;
+    max-width: min(100%, 390px);
     margin: 0;
+    color: #fff;
+    font-family: 'Gilroy', sans-serif;
     font-size: clamp(40px, 12vw, 48px);
-    line-height: .94;
+    font-weight: 400;
+    line-height: 1.1;
     letter-spacing: -.025em;
+    text-shadow: 0 4.62px 9.24px rgba(0, 0, 0, .25);
     text-wrap: balance;
   }
 
   html[lang='el'] .hero-title {
     font-size: clamp(37px, 10.8vw, 45px);
-    line-height: .95;
+    line-height: 1.1;
   }
 
   .hero-title br { display: block; }
@@ -1976,11 +1832,15 @@
     position: relative;
     inset: auto;
     flex: 0 0 auto;
+    display: flex;
     height: 46px;
+    border-radius: 22px;
+    font-size: 18px;
+    transform: none;
   }
 
   .hero-content .btn-hero {
-    display: flex;
+    justify-content: flex-start;
     width: 217px;
     padding: 0 22px;
     align-items: center;
@@ -1997,20 +1857,53 @@
 
   .hero-content .btn-hero .btn-arrow {
     flex: 0 0 15px;
+    width: 15px;
+    height: 14px;
     margin: 0;
   }
 
+  .hero-content .btn-arrow::before {
+    width: 15px;
+    height: 1.5px;
+  }
+
+  .hero-content .btn-arrow::after {
+    width: 7px;
+    height: 7px;
+    border-width: 1.5px;
+  }
+
   .hero-content .btn-hero span:not(.btn-arrow) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: auto;
     height: auto;
+    font-family: 'Gilroy', sans-serif;
     font-size: 17px;
+    font-weight: 400;
     line-height: 1;
+    text-align: center;
     white-space: nowrap;
   }
 
   .hero-content .badge-visa {
-    display: flex;
+    isolation: isolate;
+    justify-content: center;
     width: min(258px, 100%);
+    border: 1px solid rgba(255, 255, 255, .14);
+    overflow: hidden;
+  }
+
+  .hero-content .btn-hero:hover .btn-arrow,
+  .hero-content .btn-hero:focus-visible .btn-arrow {
+    rotate: 0deg;
+    translate: 0 0;
+  }
+
+  .hero-content .btn-hero:hover span:not(.btn-arrow),
+  .hero-content .btn-hero:focus-visible span:not(.btn-arrow) {
+    clip-path: none;
   }
 
   .hero-scroll-indicator {
@@ -2035,79 +1928,6 @@
   .about-carousel {
     width: calc(100% - 40px);
     margin-inline: auto;
-  }
-}
-
-/* Keep the compact language link available until the full desktop language
-   control returns. It sits below the desktop header row, clear of navigation
-   and contact actions. */
-@media (min-width: 951px) and (max-width: 1180px) {
-  .mobile-lang-selector {
-    position: absolute;
-    z-index: 30;
-    top: 59px;
-    right: 0;
-    display: inline-flex;
-    width: 46px;
-    height: 44px;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    color: #fff;
-    background: transparent;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: .08em;
-  }
-
-  .mobile-lang-selector span {
-    display: inline-flex;
-    width: 46px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, .34);
-    border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .mobile-lang-selector:focus-visible {
-    border-radius: 999px;
-    outline: 2px solid #fff;
-    outline-offset: 2px;
-  }
-}
-
-/* The visible controls stay compact while their hit areas meet the 44px
-   minimum and remain separated on narrow screens. */
-@media (max-width: 950px) {
-  .mobile-lang-selector {
-    top: 4px;
-    width: 46px;
-    height: 44px;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  .mobile-lang-selector span {
-    display: inline-flex;
-    width: 46px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, .34);
-    border-radius: 999px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .07));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(0, 25, 63, .16);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
   }
 }
 

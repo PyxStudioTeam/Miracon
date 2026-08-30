@@ -1,4 +1,3 @@
-import { createPublicSupabaseClient } from './supabase';
 
 const bundledIntroUrl = '/img/hero-bg-web-30.mp4';
 const bundledShowcaseUrl = '/img/home-hero-02-web-720.mp4';
@@ -60,17 +59,9 @@ export function mapHomeHeroVideo(row: Record<string, unknown>): HomeHeroVideo {
 }
 
 export async function getHomeHeroVideos(): Promise<HomeHeroVideo[]> {
-  const supabase = createPublicSupabaseClient();
-  if (!supabase) return fallbackHomeHeroVideos;
-
-  const { data, error } = await supabase
-    .from('homepage_videos')
-    .select('*')
-    .eq('is_active', true)
-    .neq('desktop_url', '')
-    .order('sort_order');
-
-  if (error) throw new Error(`Unable to load homepage videos from Supabase: ${error.message}`);
-  if (!data?.length) return fallbackHomeHeroVideos;
-  return data.map((row) => mapHomeHeroVideo(row));
+  if (import.meta.env.DEV && !process.env.DATABASE_URL) return fallbackHomeHeroVideos;
+  const { getDatabasePool } = await import('./server/database');
+  const { getActiveHomepageVideos } = await import('./server/homepage-videos');
+  const videos = await getActiveHomepageVideos(getDatabasePool());
+  return videos.length > 0 ? videos : fallbackHomeHeroVideos;
 }

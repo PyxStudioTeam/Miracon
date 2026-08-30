@@ -5,7 +5,10 @@ const developmentConnections = import.meta.env.DEV
   : '';
 
 export const onRequest = defineMiddleware(async ({ url }, next) => {
-  const response = await next();
+  const target = url.pathname === '/el' || url.pathname.startsWith('/el/')
+    ? `${url.pathname.slice(3) || '/'}${url.search}`
+    : undefined;
+  const response = await (target ? next(target) : next());
   const headers = new Headers(response.headers);
   const isPreview = url.pathname.startsWith('/preview/') || url.pathname.startsWith('/el/preview/');
   const frameAncestors = isPreview ? "'self'" : "'none'";

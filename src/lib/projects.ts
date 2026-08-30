@@ -1,7 +1,6 @@
 import { seedProjects } from '../data/projects';
 import type { SiteLocale } from './i18n';
 import type { ImageVariantSet, Project, ProjectImage, ProjectImageVariantManifest, ProjectLocaleTranslation, ProjectTranslations, ProjectVideoItem } from './project-types';
-import { createPublicSupabaseClient } from './supabase';
 
 type ProjectRow = Record<string, unknown> & {
   project_images?: Record<string, unknown>[];
@@ -187,22 +186,21 @@ export function mapProjectRow(row: ProjectRow): Project {
   const legacyWalkthroughMobileUrl = row.walkthrough_video_mobile_url ? String(row.walkthrough_video_mobile_url) : null;
   const legacyWalkthroughPosterUrl = row.walkthrough_video_poster_url ? String(row.walkthrough_video_poster_url) : null;
   const mappedHeroVideos = mapProjectVideos(row.hero_videos, `${projectId}-hero`);
-  const heroVideos = row.hero_type === 'video'
-    ? legacyHeroUrl
-      ? mergeLegacyVideo(
-          mappedHeroVideos,
-          { desktopUrl: legacyHeroUrl, mobileUrl: legacyHeroMobileUrl, posterUrl: legacyHeroPosterUrl },
-          `${projectId}-hero-1`,
-        )
-      : []
+  const heroVideos = legacyHeroUrl
+    ? mergeLegacyVideo(
+        mappedHeroVideos,
+        { desktopUrl: legacyHeroUrl, mobileUrl: legacyHeroMobileUrl, posterUrl: legacyHeroPosterUrl },
+        `${projectId}-hero-1`,
+      )
     : mappedHeroVideos;
+  const mappedWalkthroughVideos = mapProjectVideos(row.walkthrough_videos, `${projectId}-walkthrough`);
   const walkthroughVideos = legacyWalkthroughDesktopUrl
     ? mergeLegacyVideo(
-        mapProjectVideos(row.walkthrough_videos, `${projectId}-walkthrough`),
+        mappedWalkthroughVideos,
         { desktopUrl: legacyWalkthroughDesktopUrl, mobileUrl: legacyWalkthroughMobileUrl, posterUrl: legacyWalkthroughPosterUrl },
         `${projectId}-walkthrough-1`,
       )
-    : [];
+    : mappedWalkthroughVideos;
 
   return {
     id: projectId,
@@ -211,6 +209,7 @@ export function mapProjectRow(row: ProjectRow): Project {
     address: String(row.address ?? ''),
     cardAddress: String(row.card_address ?? row.address ?? ''),
     price: String(row.price ?? ''),
+    remainingUnits: row.remaining_units === null ? null : Number(row.remaining_units),
     shortDescription: String(row.short_description ?? ''),
     fullDescription: String(row.full_description ?? ''),
     introTitle: String(row.intro_title ?? ''),
@@ -223,7 +222,7 @@ export function mapProjectRow(row: ProjectRow): Project {
     heroType: row.hero_type === 'video' ? 'video' : 'image',
     heroVariant: row.hero_type === 'video' || row.hero_variant === 'immersive' || isLegacyKriopigi ? 'immersive' : 'standard',
     heroSoundEnabled: row.hero_sound_enabled === undefined ? isLegacyKriopigi : Boolean(row.hero_sound_enabled),
-    heroIdleUi: row.hero_type === 'video',
+    heroIdleUi: Boolean(row.hero_idle_ui),
     heroUrl: legacyHeroUrl,
     heroMobileUrl: legacyHeroMobileUrl,
     heroPosterUrl: legacyHeroPosterUrl,
@@ -250,59 +249,26 @@ export function mapProjectRow(row: ProjectRow): Project {
     seoTitle: String(row.seo_title ?? row.title),
     seoDescription: String(row.seo_description ?? row.short_description ?? ''),
     translations: mapTranslations(row.translations),
-    updatedAt: String(row.updated_at ?? new Date().toISOString()),
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at ?? new Date().toISOString()),
   };
 }
 
 export async function getPublishedProjects(): Promise<Project[]> {
-  const supabase = createPublicSupabaseClient();
-
-  if (!supabase) {
+  if (import.meta.env.DEV && !process.env.DATABASE_URL) {
     return fallbackProjects;
   }
-
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*, project_images(*)')
-      .eq('status', 'published')
-      .order('sort_order');
-
-    if (error) {
-      throw new Error(`Unable to load projects from Supabase: ${error.message}`);
-    }
-
-    if (!data?.length) return [];
-
-    return (data as ProjectRow[]).map(mapProjectRow);
-  } catch (error) {
-    console.error('Unable to load projects from Supabase:', error);
-    throw error;
-  }
+  const { getDatabasePool } = await import('./server/database');
+  const { getPublishedProjects: getProjects } = await import('./server/projects');
+  return getProjects(getDatabasePool());
 }
 
 export async function getPublishedProjectBySlug(slug: string): Promise<Project | null> {
   if (!slug) return null;
 
-  const fallbackProject = fallbackProjects.find((project) => project.slug === slug) ?? null;
-  const supabase = createPublicSupabaseClient();
-  if (!supabase) return fallbackProject;
-
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*, project_images(*)')
-      .eq('status', 'published')
-      .eq('slug', slug)
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(`Unable to load project "${slug}" from Supabase: ${error.message}`);
-    }
-
-    return data ? mapProjectRow(data as ProjectRow) : null;
-  } catch (error) {
-    console.error(`Unable to load project "${slug}" from Supabase:`, error);
-    throw error;
+  if (import.meta.env.DEV && !process.env.DATABASE_URL) {
+    return fallbackProjects.find((project) => project.slug === slug) ?? null;
   }
+  const { getDatabasePool } = await import('./server/database');
+  const { getPublishedProjectBySlug: getProjectBySlug } = await import('./server/projects');
+  return getProjectBySlug(getDatabasePool(), slug);
 }

@@ -1,0 +1,4 @@
+9. [GET] http://127.0.0.1:4321/api/auth/session => [401] Unauthorized
+18. [GET] http://127.0.0.1:4321/api/auth/session => [200] OK
+
+Note: 19 static requests not shown, run with "static" option to see them.

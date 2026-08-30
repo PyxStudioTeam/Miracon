@@ -2010,6 +2010,14 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   line-height: 1.08;
 }
 
+.project-availability {
+  margin: clamp(14px, 0.89vw, 17px) 0 0;
+  color: var(--white);
+  font-size: clamp(18px, 1.46vw, 28px);
+  font-weight: 500;
+  line-height: 1.08;
+}
+
 .project-brochure-link {
   position: relative;
   left: auto;

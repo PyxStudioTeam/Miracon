@@ -1,65 +1,75 @@
 # AGENTS.md
 
-## Layout
+## Active architecture
 
-- **Website + admin**: one Astro app (`src/`). SSR (`output: 'server'`) with `@astrojs/vercel`. React only for `/admin` (`src/admin/AdminApp.tsx` + `admin.css`).
-- **Public site chrome**: mostly static assets in `public/` (`style.css`, `site.js`, page CSS) — not React.
-- **Data layer**: Supabase (Postgres, Auth, Storage). Shared types/mapping in `src/lib/`; seed fallback in `src/data/projects.ts`.
-- **Worker**: separate package `worker/` (own `package-lock.json`, Node ESM). Not part of the Astro build.
-- **DB**: `supabase/migrations/*.sql` — apply in **filename order**. No Supabase CLI config in-repo; run in SQL editor.
-- **Ignore / out of scope for app work**: `studio/` (gitignored), `.figma-cache/`, `figma-plugin/` (local Figma exporter only), `dist/`, `.vercel/`.
+- **Website + admin**: one Astro SSR app in `src/`, built with `@astrojs/node` standalone mode. React is limited to `/admin`.
+- **Entrypoint**: `app.js` loads `dist/server/entry.mjs`; `npm start` runs the built standalone server.
+- **Data**: PostgreSQL through server-only repositories in `src/lib/server/`; migrations live in `postgres/migrations/` and apply in filename order.
+- **Authentication**: singleton administrator, Argon2id password hash, opaque database sessions, CSRF checks, and login throttling.
+- **Media**: local files beneath absolute `MEDIA_ROOT`, metadata in PostgreSQL, same-origin `/media/` routes.
+- **Public chrome**: source assets in `public/`; do not ignore or remove them even though release packaging ships built `dist/` output.
+- **Legacy tooling**: `supabase/`, `worker/`, Vercel files, and Supabase-named migration scripts exist only for migration/parity/rollback. They are not active runtime paths.
 
 ## Commands
 
-Root (Node `>=22.12.0`):
+Root requires Node `>=22.12.0`:
 
 ```bash
 npm install
-npm run dev          # astro dev --host 127.0.0.1
-npm run check        # astro check (typecheck)
-npm run build        # check + build + scripts/prune-vercel-output.mjs
-npm run preview
-npm run worker:test  # npm --prefix worker test
-npm run worker:start
+npm run dev
+npm test                    # deterministic, no database
+npm run check
+npm run build
+npm run release:verify      # check + build + deterministic suites
+npm run release:package -- release-output
+npm start
 ```
 
-Worker only:
+`npm test` keeps runner discovery separate: Vitest scripts list Vitest files explicitly, while Node `.mjs` contract/migration/release tests run through `node --test`.
+
+Database acceptance is explicit and destructive. Every database suite ends in `:db` and first runs `scripts/require-database-test-config.mjs`. Missing or unsafe configuration is a hard failure, never a skip:
 
 ```bash
-cd worker && npm ci && npm test && npm start
-# single test file:
-node --test test/jobs.test.js
+DATABASE_TEST_ALLOW_RESET=1 \
+DATABASE_TEST_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/miracon_test \
+npm run test:db
 ```
 
-No project ESLint/Prettier/Jest. Verification = `npm run check`, `npm run build`, `npm run worker:test`.
+The URL database name must contain a distinct `test`, `testing`, `ci`, `disposable`, or `tmp` segment. Never use development, staging, or production data. Individual guarded commands are listed in the root README.
 
-Worker Docker: `docker compose -f docker-compose.worker.yml up --build` (env from `worker/.env`).
+No project ESLint/Prettier/Jest is configured. Verification is `npm run release:verify`; database-backed acceptance is separately `npm run test:db` with safe disposable configuration.
 
-## Environment
+## Runtime environment
 
-Copy `.env.example` → `.env` / `.env.local`. Website needs only:
+Active standalone variables:
 
-- `PUBLIC_SUPABASE_URL`
-- `PUBLIC_SUPABASE_ANON_KEY`
-- optional: `PUBLIC_SITE_URL`, `PUBLIC_MEDIA_WORKER_ENABLED` (default off)
+- `DATABASE_URL`: server-only PostgreSQL connection
+- `MEDIA_ROOT`: absolute writable local media directory
+- `PUBLIC_SITE_URL`: canonical public origin
+- optional `HOST` and `PORT` for the Node server
 
-**Without Supabase env**: public site + `/admin` use seed data; admin edits are not persisted; uploads disabled.
-
-**Never** put the service-role key on `PUBLIC_*` or in the website bundle. Only the worker uses `SUPABASE_SERVICE_ROLE_KEY` (`worker/.env.example`).
-
-Worker mode: set `PUBLIC_MEDIA_WORKER_ENABLED=true` only after media migrations + a deployed always-on worker (no HTTP port; not a Vercel function).
+Never expose database or administrator credentials through `PUBLIC_*`. Supabase variables in `.env.example` are legacy migration inputs only. `SUPABASE_SERVICE_ROLE_KEY` belongs only to offline legacy tooling and must never enter the website bundle or standalone release.
 
 ## Architecture gotchas
 
-- Admin auth: Supabase user must exist in `public.admin_users`. Browser client uses anon key + RPCs (`save_project_with_images`, `reorder_projects`, `delete_project`, media queue RPCs, etc.).
-- Default uploads: browser resizes images → WebP ≤2400px → public buckets. Worker mode: private `media-sources` + async derivatives via `src/lib/admin-media.ts`.
-- Preview: `/preview/[slug]` requires admin session; `Cache-Control: private, no-store`; CSP allows framing only there (`src/middleware.ts`).
-- Locales: English uses unprefixed URLs; Greek uses `/el/*` through Astro fallback rewrites. Static UI lives in `src/lib/i18n.ts`; project translations are the `projects.translations.el` JSON overlay edited by the EN/ΕΛ admin tabs. Preserve `/el/preview/*` in the middleware framing exception.
-- Published projects: `/projects/[slug]`. Legacy static routes still exist (`kriopigi-villas`, `olympus-sea-view`, `golden-visa`).
-- `npm run build` prunes large unused `public/img` assets from `.vercel/output/static` — keep `scripts/prune-vercel-output.mjs` and `.vercelignore` in sync when adding deploy exclusions.
-- `tsconfig` includes `src/**/*` only (excludes `public`, `studio`, `worker`).
+- Run `npm run postgres:migrate` before provisioning or starting a new environment.
+- Provision with `npm run admin:provision -- --email=... --password-stdin`; rotation requires `--rotate`.
+- Preview routes require an admin session, use `Cache-Control: private, no-store`, and allow same-origin framing only for preview paths, including `/el/preview/*`.
+- English uses unprefixed routes; Greek uses `/el/*`. Preserve locale-aware links, middleware rewrites, and preview exceptions.
+- Public and API data must use PostgreSQL repositories. Do not add browser database access or Supabase RPC calls.
+- Media paths are database-relative and filesystem-rooted. Do not trust client filenames or permit paths outside `MEDIA_ROOT`.
+- Media cleanup apply mode requires a real exclusive-writer maintenance window; do not weaken its guard or apply cleanup during verification.
+- `npm run release:verify` is safe without `DATABASE_TEST_URL` and does not prove database acceptance.
+- Release packaging must retain `app.js`, `dist/server/entry.mjs`, package manifests, PostgreSQL migrations, the migration runner, provisioner, and required import/parity tools. It must exclude secrets, tests, local agents/browsers, QA/deploy output, temp files, and workstation-only exporters.
+
+## Legacy migration and rollback
+
+- Do not reintroduce `@astrojs/vercel`, dual runtime adapters, Supabase Auth/Storage, service-role browser access, or the deferred media worker.
+- Do not remove current migration/import/parity tooling merely because its filenames mention Supabase.
+- Treat `.vercelignore`, `supabase/migrations/`, `worker/`, and old hosting handoff documents as migration or rollback references, not active architecture instructions.
 
 ## Docs
 
-- Root `README.md` — setup, content workflow, Vercel.
-- `worker/README.md` — RPC contract, profiles, safety limits, cleanup.
+- `README.md`: active standalone setup, testing, release, and staging acceptance
+- `postgres/README.md`: schema, migration ledger, and disposable database safety
+- `docs/`: operational or historical handoff references; verify them against the root README before use

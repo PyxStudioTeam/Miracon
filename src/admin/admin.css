@@ -1075,3 +1075,297 @@ button:disabled { cursor: wait; opacity: .55; }
   .preview-sizes button { padding-inline: 9px; }
   .preview-stage { padding: 8px; }
 }
+
+/* Governance, Users, Proposals, and History */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font: 700 10px 'DM Mono', monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.role-badge.owner {
+  border: 1px solid rgba(182, 134, 61, 0.4);
+  background: rgba(182, 134, 61, 0.12);
+  color: var(--admin-gold);
+}
+.role-badge.editor {
+  border: 1px solid rgba(8, 47, 93, 0.25);
+  background: rgba(8, 47, 93, 0.08);
+  color: var(--admin-navy);
+}
+
+.rail-user-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 10px;
+}
+.rail-user-email {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--admin-gold);
+  color: var(--admin-navy-deep);
+  font: 700 10px 'DM Mono', monospace;
+  margin-left: auto;
+}
+
+/* Users Manager */
+.users-manager {
+  padding: 48px 5vw;
+}
+.users-table-card {
+  margin-top: 32px;
+  border: 1px solid var(--admin-line);
+  border-radius: 4px;
+  background: white;
+  overflow: hidden;
+}
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+.users-table th {
+  padding: 14px 20px;
+  background: var(--admin-paper);
+  border-bottom: 1px solid var(--admin-line);
+  font: 11px 'DM Mono', monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--admin-muted);
+}
+.users-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--admin-line);
+  vertical-align: middle;
+}
+.users-table tr:last-child td {
+  border-bottom: 0;
+}
+.user-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.user-status.active { color: var(--admin-green); }
+.user-status.deactivated { color: var(--admin-muted); opacity: 0.6; }
+.user-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid var(--admin-line);
+  border-radius: 3px;
+  background: white;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--admin-navy);
+  transition: .15s;
+}
+.action-btn:hover {
+  border-color: #9aa4ad;
+}
+.action-btn.danger {
+  color: var(--admin-red);
+}
+.action-btn.danger:hover {
+  border-color: var(--admin-red);
+  background: rgba(168, 61, 53, 0.05);
+}
+
+/* Proposals View */
+.proposals-manager {
+  padding: 48px 5vw;
+}
+.proposals-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 32px;
+}
+.proposal-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid var(--admin-line);
+  border-radius: 4px;
+  background: white;
+  align-items: center;
+}
+.proposal-info h3 {
+  margin: 0 0 6px;
+  font-family: Georgia, serif;
+  font-size: 20px;
+  font-weight: 400;
+}
+.proposal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--admin-muted);
+}
+.proposal-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* History Modal / Drawer */
+.history-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(8, 47, 93, 0.4);
+  backdrop-filter: blur(4px);
+}
+.history-panel {
+  width: min(100%, 540px);
+  height: 100%;
+  background: white;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn .25s ease-out;
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--admin-line);
+}
+.history-header h2 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+}
+.history-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+.history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+}
+.history-timeline::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 17px;
+  width: 2px;
+  background: var(--admin-line);
+}
+.history-entry {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 14px;
+  position: relative;
+}
+.history-node {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--admin-paper);
+  border: 2px solid var(--admin-navy);
+  display: grid;
+  place-items: center;
+  color: var(--admin-navy);
+  font: 700 11px 'DM Mono', monospace;
+  z-index: 2;
+}
+.history-entry.current-head .history-node {
+  background: var(--admin-navy);
+  color: white;
+  border-color: var(--admin-gold);
+}
+.history-entry-card {
+  padding: 16px;
+  border: 1px solid var(--admin-line);
+  border-radius: 4px;
+  background: var(--admin-paper);
+}
+.history-entry-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.history-entry-meta {
+  font-size: 12px;
+  color: var(--admin-muted);
+  line-height: 1.5;
+}
+.history-action-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font: 700 10px 'DM Mono', monospace;
+  text-transform: uppercase;
+}
+.history-action-badge.publish { background: rgba(43, 118, 93, 0.12); color: var(--admin-green); }
+.history-action-badge.proposal { background: rgba(182, 134, 61, 0.12); color: var(--admin-gold); }
+.history-action-badge.rollback { background: rgba(8, 47, 93, 0.12); color: var(--admin-navy); }
+.history-action-badge.delete { background: rgba(168, 61, 53, 0.12); color: var(--admin-red); }
+.history-action-badge.baseline { background: #e0ded8; color: #555; }
+.rollback-btn {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--admin-line);
+  border-radius: 3px;
+  background: white;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-navy);
+  cursor: pointer;
+  transition: .15s;
+}
+.rollback-btn:hover {
+  border-color: var(--admin-navy);
+  background: var(--admin-navy);
+  color: white;
+}
+
