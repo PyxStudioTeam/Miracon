@@ -988,9 +988,10 @@
 
   .golden-visa-page .stages-section {
     position: relative;
-    height: 606px;
-    padding: 0;
-    overflow: hidden;
+    height: auto;
+    min-height: 640px;
+    padding: 0 0 40px;
+    overflow: visible;
   }
 
   .golden-visa-page .stages-section + .contacts-section {
@@ -1031,7 +1032,7 @@
     right: auto;
     left: 20px;
     width: calc(100% - 40px);
-    height: 452px;
+    height: 460px;
     padding: 0;
     overflow: visible;
   }
@@ -1371,12 +1372,20 @@
     right: 48px;
     width: 44px;
     height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .project-page .mobile-lang-selector span,
   .golden-visa-page .mobile-lang-selector span {
     width: 42px;
     height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1;
   }
 
   .project-page .mobile-menu-btn,
