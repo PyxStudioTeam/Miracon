@@ -2098,13 +2098,13 @@ body.js-enabled .about-reveal.visible {
 
 /* Contacts */
 .contacts-section {
-  height: 920px;
+  height: 820px;
   background: linear-gradient(180deg, #fefbf5 0%, #ffffff 100%);
 }
 
 .form-container {
   position: relative;
-  height: 920px;
+  height: 820px;
 }
 
 .form-container .section-title {
@@ -2282,17 +2282,12 @@ body.js-enabled .about-reveal.visible {
 }
 
 .form-captcha {
-  position: absolute;
-  top: 414px;
-  left: 50%;
-  width: 303px;
-  min-height: 78px;
-  transform: translateX(-50%);
+  display: none;
 }
 
 .btn-submit {
   position: absolute;
-  top: 512px;
+  top: 420px;
   left: 50%;
   display: inline-flex;
   align-items: center;
@@ -3458,14 +3453,14 @@ body.js-enabled .about-reveal.visible {
   }
 
   .contacts-section {
-    height: calc(44.2708vw + 70px);
+    height: 42.7083vw;
     margin-top: 0;
     padding: 0;
   }
 
   .form-container {
     display: block;
-    height: calc(44.2708vw + 70px);
+    height: 42.7083vw;
   }
 
   .form-container .section-title {
@@ -3502,7 +3497,7 @@ body.js-enabled .about-reveal.visible {
     left: 0.026vw;
     display: block;
     width: 89.5833vw;
-    height: calc(25.4167vw + 132px);
+    height: 28.125vw;
   }
 
   .form-row {
@@ -3563,17 +3558,12 @@ body.js-enabled .about-reveal.visible {
   }
 
   .form-captcha {
-    position: absolute;
-    top: 21.5625vw;
-    left: 50%;
-    width: 303px;
-    min-height: 78px;
-    transform: translateX(-50%);
+    display: none;
   }
 
   .btn-submit {
     position: absolute;
-    top: calc(21.5625vw + 98px);
+    top: 21.875vw;
     left: 50%;
     justify-self: auto;
     gap: 1.6667vw;
@@ -3589,7 +3579,7 @@ body.js-enabled .about-reveal.visible {
 
   .form-status {
     position: absolute;
-    top: calc(25.625vw + 114px);
+    top: 26.5625vw;
     left: 50%;
     transform: translateX(-50%);
   }

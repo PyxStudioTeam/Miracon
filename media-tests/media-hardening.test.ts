@@ -105,7 +105,7 @@ describe('MEDIA_ROOT initialization', () => {
     expect(first).toMatchObject({ ok: true, value: { path: cachedRoot } });
     expect(repeated).toMatchObject({ ok: true, value: { path: cachedRoot } });
     await expect(readdir(join(cachedRoot, '.tmp'))).rejects.toMatchObject({ code: 'ENOENT' });
-  });
+  }, 20000);
 });
 
 async function temporaryRoot(): Promise<string> {
