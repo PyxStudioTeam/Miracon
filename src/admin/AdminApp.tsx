@@ -254,7 +254,7 @@ function pruneTranslations(project: Project): Project {
 }
 
 function BrandMark() {
-  return <div className="admin-brand-mark"><span>M</span></div>;
+  return <div className="admin-brand-mark"><img src="/img/logo_mark.svg" alt="MIRACON" /></div>;
 }
 
 function BrandLockup() {
@@ -498,40 +498,55 @@ function SortableHomeHeroVideo({
 
   return (
     <article ref={setNodeRef} style={style} className="home-hero-card">
-      <header>
-        <button className="drag-handle" {...attributes} {...listeners}><GripVertical size={16} /></button>
-        <span className="home-hero-index">{String(index + 1).padStart(2, '0')}</span>
-        <input value={video.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="Video title" />
-        <label className="home-hero-toggle">
-          <input type="checkbox" checked={video.isActive} onChange={(e) => onChange({ isActive: e.target.checked })} />
-          <span></span>{video.isActive ? 'Active' : 'Inactive'}
-        </label>
-        <button className="danger-button icon-text-button" onClick={onRemove} title="Remove video"><Trash2 size={16} /></button>
+      <header className="home-hero-card-header">
+        <div className="home-hero-ordering">
+          <button className="drag-handle" type="button" {...attributes} {...listeners} aria-label={`Reorder hero video ${index + 1}`} title="Drag to reorder"><GripVertical size={16} /></button>
+          <span className="home-hero-index" aria-label={`Playlist position ${index + 1}`}>{String(index + 1).padStart(2, '0')}</span>
+        </div>
+        <div className="home-hero-identity">
+          <label className="home-hero-title-field">
+            <span>Video title</span>
+            <input value={video.title} onChange={(e) => onChange({ title: e.target.value })} placeholder="Video title" />
+          </label>
+          <label className="home-hero-toggle">
+            <input type="checkbox" checked={video.isActive} onChange={(e) => onChange({ isActive: e.target.checked })} />
+            <span></span>{video.isActive ? 'Active' : 'Inactive'}
+          </label>
+        </div>
+        <button className="danger-button home-hero-remove" type="button" onClick={onRemove} aria-label={`Remove hero video ${index + 1}`}><Trash2 size={16} /><span>Remove</span></button>
       </header>
       <div className="home-hero-card-body">
-        <div className="home-hero-preview">
+        <section className="home-hero-preview" aria-label="Visual preview">
           {video.desktopUrl ? <video src={video.desktopUrl} muted playsInline onPlay={pauseOtherAdminVideos} controls /> : <div className="home-hero-video-placeholder"><Film size={24} /><span>Upload desktop video</span></div>}
-        </div>
+        </section>
         <div className="home-hero-fields">
-          <label>
+          <label className="home-hero-project-field">
             <span>Linked project</span>
             <select value={video.projectId ?? ''} onChange={(e) => onChange({ projectId: e.target.value || null })}>
               <option value="">None (Homepage only)</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
           </label>
-          <div className="home-hero-upload-slots">
-            <label className="media-slot-button">
-              <input type="file" accept="video/mp4" onChange={(e) => onUpload('desktop', e)} />
-              {uploading === `${video.id}:desktop` ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}
-              {video.desktopUrl ? 'Replace desktop MP4' : 'Upload desktop MP4'}
-            </label>
-            <label className="media-slot-button">
-              <input type="file" accept="video/mp4" onChange={(e) => onUpload('mobile', e)} />
-              {uploading === `${video.id}:mobile` ? <LoaderCircle className="spin" size={15} /> : <Smartphone size={15} />}
-              {video.mobileUrl ? 'Replace mobile MP4' : 'Upload mobile MP4 (optional)'}
-            </label>
-          </div>
+          <section className="home-hero-assets" aria-label="Video uploads">
+            <div>
+              <Upload size={18} />
+              <span><strong>Desktop video</strong><small>Required for active slides</small></span>
+              <label>
+                <input type="file" accept="video/mp4" aria-label="Upload desktop MP4" onChange={(e) => onUpload('desktop', e)} />
+                {uploading === `${video.id}:desktop` ? <LoaderCircle className="spin" size={15} /> : <Upload size={15} />}
+                {video.desktopUrl ? 'Replace MP4' : 'Upload MP4'}
+              </label>
+            </div>
+            <div>
+              <Smartphone size={18} />
+              <span><strong>Mobile video (optional)</strong><small>Used on narrow screens when supplied</small></span>
+              <label>
+                <input type="file" accept="video/mp4" aria-label="Upload mobile MP4" onChange={(e) => onUpload('mobile', e)} />
+                {uploading === `${video.id}:mobile` ? <LoaderCircle className="spin" size={15} /> : <Smartphone size={15} />}
+                {video.mobileUrl ? 'Replace MP4' : 'Upload MP4'}
+              </label>
+            </div>
+          </section>
         </div>
       </div>
     </article>
@@ -1360,6 +1375,203 @@ function UsersManager({
   );
 }
 
+function ProjectProposalVisual({ project }: { project: Record<string, unknown> }) {
+  const coverUrl = String(project['cover_image_url'] || project['coverImageUrl'] || project['hero_poster_url'] || '');
+  const title = String(project['title'] || 'Untitled Project');
+  const category = String(project['category'] || '');
+  const status = String(project['status'] || '');
+  const city = String(project['city'] || project['location'] || '');
+  const remainingUnits = project['remaining_units'] ?? project['remainingUnits'];
+  const shortDesc = String(project['short_description'] || project['shortDescription'] || '');
+  const images = (project['images'] as Array<{ id?: string; url: string; alt?: string }>) || [];
+  const characteristics = (project['characteristics'] as Array<{ id?: string; label: string; value: string }>) || [];
+  const floorPlans = (project['floor_plan_groups'] as Array<{ title: string; plans?: Array<{ title: string }> }>) || [];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: '#fff', padding: '14px', borderRadius: '8px', border: '1px solid var(--admin-line)' }}>
+        {coverUrl ? (
+          <img src={coverUrl} alt={title} style={{ width: '130px', height: '88px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--admin-line)', flexShrink: 0 }} />
+        ) : null}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h4 style={{ margin: 0, fontSize: '18px', color: 'var(--admin-navy)', fontFamily: 'Georgia, serif' }}>{title}</h4>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '8px 0 6px' }}>
+            {category && <span className="role-badge owner">{category}</span>}
+            {status && <span className="role-badge editor">{status}</span>}
+            {remainingUnits !== undefined && remainingUnits !== null && (
+              <span className="role-badge" style={{ background: '#eef2f6', color: 'var(--admin-navy)' }}>
+                {String(remainingUnits)} {Number(remainingUnits) === 1 ? 'unit left' : 'units left'}
+              </span>
+            )}
+          </div>
+          {city && <div style={{ fontSize: '13px', color: 'var(--admin-muted)' }}>📍 {city}</div>}
+        </div>
+      </div>
+
+      {shortDesc && (
+        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--admin-line)', fontSize: '13px', lineHeight: '1.5', color: '#2d3748' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--admin-gold)', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>
+            Description
+          </div>
+          {shortDesc}
+        </div>
+      )}
+
+      {characteristics.length > 0 && (
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-navy)', marginBottom: '8px' }}>
+            Characteristics ({characteristics.length})
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+            {characteristics.map((c, i) => (
+              <div key={c.id || i} style={{ background: '#fff', border: '1px solid var(--admin-line)', borderRadius: '6px', padding: '8px 10px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>{c.label}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--admin-navy)', marginTop: '2px' }}>{c.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {images.length > 0 && (
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-navy)', marginBottom: '8px' }}>
+            Gallery Images ({images.length})
+          </div>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
+            {images.map((img, i) => (
+              <div key={img.id || i} style={{ flexShrink: 0, width: '84px', textAlign: 'center' }}>
+                <img src={img.url} alt={img.alt || ''} style={{ width: '84px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--admin-line)' }} />
+                {img.alt && <div style={{ fontSize: '10px', color: 'var(--admin-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{img.alt}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {floorPlans.length > 0 && (
+        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--admin-line)', fontSize: '13px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--admin-gold)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
+            Floor Plan Groups ({floorPlans.length})
+          </div>
+          <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--admin-navy)' }}>
+            {floorPlans.map((g, i) => (
+              <li key={i} style={{ marginBottom: '4px' }}>
+                <strong>{g.title}</strong> {g.plans?.length ? `(${g.plans.length} plan sheets)` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HeroProposalVisual({ videos }: { videos: Array<Record<string, unknown>> }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-navy)', marginBottom: '4px' }}>
+        Hero Videos Playlist ({videos.length} videos)
+      </div>
+      {videos.map((vid, i) => {
+        const isActive = Boolean(vid['is_active'] ?? vid['isActive']);
+        const title = String(vid['title'] || `Video #${i + 1}`);
+        const desktopUrl = String(vid['desktop_url'] || vid['desktopUrl'] || '');
+        const mobileUrl = String(vid['mobile_url'] || vid['mobileUrl'] || '');
+
+        return (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--admin-line)' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--admin-navy)', fontSize: '14px' }}>{title}</span>
+                <span className={`role-badge ${isActive ? 'owner' : ''}`} style={{ fontSize: '11px', background: isActive ? undefined : '#e2e8f0', color: isActive ? undefined : '#64748b' }}>
+                  {isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--admin-muted)', marginTop: '4px', wordBreak: 'break-all' }}>
+                🖥️ {desktopUrl || 'No desktop video'} {mobileUrl ? `| 📱 ${mobileUrl}` : ''}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SettingsProposalVisual({ settings }: { settings: Record<string, unknown> }) {
+  const items = [
+    { label: 'Company Name', value: settings['company_name'] ?? settings['companyName'] },
+    { label: 'Email', value: settings['contact_email'] ?? settings['contactEmail'] },
+    { label: 'Phone', value: settings['contact_phone'] ?? settings['contactPhone'] },
+    { label: 'Address', value: settings['office_address'] ?? settings['officeAddress'] },
+    { label: 'Privacy Policy PDF', value: settings['privacy_policy_pdf_url'] ?? settings['privacyPolicyPdfUrl'] },
+    { label: 'Terms PDF', value: settings['terms_pdf_url'] ?? settings['termsPdfUrl'] },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-navy)', marginBottom: '4px' }}>
+        Updated Site Settings
+      </div>
+      {items.map((item, i) => (
+        item.value ? (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: '#fff', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--admin-line)', fontSize: '13px' }}>
+            <span style={{ color: 'var(--admin-muted)', fontWeight: 500 }}>{item.label}:</span>
+            <span style={{ color: 'var(--admin-navy)', fontWeight: 600, maxWidth: '60%', textAlign: 'right', wordBreak: 'break-all' }}>{String(item.value)}</span>
+          </div>
+        ) : null
+      ))}
+    </div>
+  );
+}
+
+function ProposalReviewContent({ proposal }: { proposal: PendingProposal }) {
+  const [viewMode, setViewMode] = useState<'visual' | 'json'>('visual');
+  const snap = proposal.snapshot as Record<string, unknown>;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+        <button
+          type="button"
+          className={viewMode === 'visual' ? 'primary-button' : 'secondary-button'}
+          style={{ minHeight: '32px', height: '32px', padding: '0 14px', fontSize: '12px' }}
+          onClick={() => setViewMode('visual')}
+        >
+          Visual summary
+        </button>
+        <button
+          type="button"
+          className={viewMode === 'json' ? 'primary-button' : 'secondary-button'}
+          style={{ minHeight: '32px', height: '32px', padding: '0 14px', fontSize: '12px' }}
+          onClick={() => setViewMode('json')}
+        >
+          Raw JSON
+        </button>
+      </div>
+
+      <div style={{ maxHeight: '400px', overflowY: 'auto', background: 'var(--admin-paper)', padding: '16px', borderRadius: '8px', border: '1px solid var(--admin-line)', marginBottom: '24px' }}>
+        {viewMode === 'json' ? (
+          <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+            {JSON.stringify(proposal.snapshot, null, 2)}
+          </pre>
+        ) : proposal.aggregateType === 'project' ? (
+          <ProjectProposalVisual project={(snap['project'] as Record<string, unknown>) ?? snap} />
+        ) : proposal.aggregateType === 'homepage_hero' ? (
+          <HeroProposalVisual videos={(snap['videos'] as Array<Record<string, unknown>>) ?? []} />
+        ) : proposal.aggregateType === 'site_settings' ? (
+          <SettingsProposalVisual settings={(snap['settings'] as Record<string, unknown>) ?? snap} />
+        ) : (
+          <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+            {JSON.stringify(proposal.snapshot, null, 2)}
+          </pre>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProposalsManager({
   api,
   onToast,
@@ -1499,7 +1711,7 @@ function ProposalsManager({
       {/* Review & Diff Modal */}
       {reviewingProposal && (
         <div className="modal-backdrop">
-          <div className="confirm-modal" style={{ maxWidth: '640px', textAlign: 'left' }} role="dialog" aria-modal="true">
+          <div className="confirm-modal" style={{ maxWidth: '720px', textAlign: 'left', width: '92vw' }} role="dialog" aria-modal="true">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
                 <span className="eyebrow">{reviewingProposal.aggregateType.replace('_', ' ')} proposal #{reviewingProposal.revisionNumber}</span>
@@ -1510,11 +1722,7 @@ function ProposalsManager({
             <div style={{ fontSize: '13px', color: 'var(--admin-muted)', marginBottom: '16px' }}>
               Proposed by <strong>{reviewingProposal.creatorEmail}</strong> on {formatDateTime(reviewingProposal.createdAt)}
             </div>
-            <div style={{ maxHeight: '360px', overflowY: 'auto', background: 'var(--admin-paper)', padding: '16px', borderRadius: '4px', border: '1px solid var(--admin-line)', marginBottom: '24px' }}>
-              <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                {JSON.stringify(reviewingProposal.snapshot, null, 2)}
-              </pre>
-            </div>
+            <ProposalReviewContent proposal={reviewingProposal} />
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button className="danger-button" onClick={() => handleReject(reviewingProposal)} disabled={Boolean(processingId)}>
                 <X size={16} />Reject proposal
