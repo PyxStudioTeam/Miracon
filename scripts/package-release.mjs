@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Transform } from 'node:stream';
@@ -11,9 +11,11 @@ const requiredInputs = [
   'dist',
   'package.json',
   'package-lock.json',
+  'docs/production-release-runbook.md',
   'postgres/migrations',
   'scripts/postgres-migrate.mjs',
   'scripts/provision-admin.mjs',
+  'scripts/contact-retention-purge.mjs',
   'scripts/supabase-import.mjs',
   'scripts/verify-media-state.mjs',
   'scripts/migration/import-artifacts.mjs',
@@ -28,7 +30,8 @@ const requiredInputs = [
   'scripts/migration/validate-transfer.mjs',
 ];
 const forbiddenSegments = new Set([
-  '.git', '.omo', '.playwright-mcp', '.slim', '.vercel', 'coverage', 'deploy-artifacts', 'exports',
+  '.agents', '.codegraph', '.git', '.idea', '.omo', '.opencode', '.playwright-mcp', '.slim', '.vercel', '.vscode',
+  'artifacts', 'browser-tests', 'contact-tests', 'coverage', 'deploy-artifacts', 'exports',
   'fixtures', 'logs', 'node_modules', 'playwright-report', 'public', 'qa-artifacts', 'qa-output',
   'release-tests', 'temp', 'test-fixtures', 'test-results', 'tests', 'tmp', 'worker',
 ]);
@@ -95,12 +98,25 @@ export async function packageRelease(options) {
     };
     await writeFile(join(temporary, 'release-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'wx' });
 
+    const safeMove = async (from, to) => {
+      try {
+        await rename(from, to);
+      } catch (err) {
+        if (err?.code === 'EPERM' || err?.code === 'EXDEV') {
+          await cp(from, to, { recursive: true });
+          await rm(from, { recursive: true, force: true });
+          return;
+        }
+        throw err;
+      }
+    };
+
     if (outputExists) {
-      await rename(output, backup);
+      await safeMove(output, backup);
       previousMoved = true;
     }
-    await rename(temporary, output);
-    if (previousMoved) await rm(backup, { recursive: true });
+    await safeMove(temporary, output);
+    if (previousMoved) await rm(backup, { recursive: true, force: true });
     return manifest;
   } catch (error) {
     await rm(temporary, { recursive: true, force: true });
