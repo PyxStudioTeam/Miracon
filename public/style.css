@@ -4755,7 +4755,7 @@ body.js-enabled .about-reveal.visible {
   .btn-submit {
     width: 220px;
     min-height: 44px;
-    margin-top: 4px;
+    margin-top: 10px;
     padding: 8px 16px;
     font-size: 14px;
   }

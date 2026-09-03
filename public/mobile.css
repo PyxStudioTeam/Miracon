@@ -2136,7 +2136,7 @@
   .contacts-section {
     height: auto;
     min-height: 0;
-    padding: 42px 0 32px;
+    padding: 42px 0 24px;
   }
 
   .contacts-section > .container,
@@ -2246,7 +2246,7 @@
 
   .btn-submit {
     justify-self: center;
-    margin-top: 0;
+    margin-top: 10px;
     transform: none;
   }
 
