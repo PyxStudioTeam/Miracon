@@ -450,8 +450,23 @@ function ProjectList({
         </div>
       </header>
       <div className="list-search">
-        <Search size={17} />
-        <input placeholder="Search projects by name, address or slug..." value={query} onChange={(e) => setQuery(e.target.value)} />
+        <Search size={18} className="list-search-icon" />
+        <input
+          type="text"
+          placeholder="Search projects by name, address or slug..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        {query && (
+          <button
+            type="button"
+            className="list-search-clear"
+            onClick={() => setQuery('')}
+            aria-label="Clear search"
+          >
+            <X size={15} />
+          </button>
+        )}
       </div>
       {filtered.length > 0 ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onReorder}>
