@@ -15,7 +15,10 @@ postgres/backups/
 postgres/exports/
 postgres/tmp/
 release-output/
+.agents/
+.codegraph/
 .omo/
+.opencode/
 .playwright-mcp/
 playwright-report/
 test-results/
@@ -23,3 +26,9 @@ qa-artifacts/
 qa-output/
 deploy-artifacts/
 tmp/
+/opencode.json
+/cookies.txt
+/admin-login-brand.png
+/miracon-qa-*.png
+/ORIGINAL_REQUEST.md
+/PROJECT.md
