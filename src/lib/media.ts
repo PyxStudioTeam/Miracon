@@ -77,7 +77,7 @@ export function getOptimizedImageSources(source?: string | null, variants?: Imag
   if (remoteSources) return remoteSources;
 
   const avif = localAvifPatterns.some((pattern) => pattern.test(path))
-    ? `${path.replace(/\.(?:png|jpe?g)$/i, '.avif')}${suffix}`
+    ? `${path.replace(/\.(?:png|jpe?g)$/i, '.avif')}${suffix || '?v=20260910'}`
     : null;
   return { avif, webp: null, avifSrcset: null, webpSrcset: null };
 }
