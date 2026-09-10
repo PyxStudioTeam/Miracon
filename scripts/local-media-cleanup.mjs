@@ -113,7 +113,7 @@ async function finalizePending(client, candidate, context) {
   const scope = JSON.stringify([candidateScope(candidate)]);
   return inTransaction(client, async () => {
     await client.query(CONTENT_TABLE_LOCK);
-    const locked = await client.query(LOCK_PENDING_LOCAL_MEDIA_SQL, [context.cutoff, context.siteOrigin, scope]);
+    const locked = await client.query(LOCK_PENDING_LOCAL_MEDIA_SQL, [context.siteOrigin, scope]);
     const row = locked.rows[0];
     if (!row) return null;
     if (!row.is_orphan) {

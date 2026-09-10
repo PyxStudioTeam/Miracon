@@ -55,7 +55,7 @@ const seedProjectDefinitions: Project[] = [
     heroFocalX: 50,
     heroFocalY: 50,
     introImageUrl: '/img/kriopigi-detail/intro.png',
-    brochureUrl: '/brochures/Kriopigi Villas_compressed.pdf',
+    brochureUrl: '/brochures/kriopigi-villas-compressed.pdf',
     mapQuery: '40.043045,23.478448',
     mapUrl: 'https://maps.app.goo.gl/oNShmLUfoEc3PRE66',
     cardImages: [
@@ -231,7 +231,7 @@ const seedProjectDefinitions: Project[] = [
     heroFocalX: 50,
     heroFocalY: 50,
     introImageUrl: '/img/figma_artemis_side_2.png',
-    brochureUrl: '/brochures/A4 Artemis_compressed.pdf',
+    brochureUrl: '/brochures/a4-artemis-compressed.pdf',
     mapQuery: '40.3147209,23.0626348',
     mapUrl: 'https://maps.app.goo.gl/dtuvB2uHHP5x8e1q6',
     cardImages: [

@@ -1,24 +1,11 @@
-const normalizeOrigin = (value: string) => value.replace(/\/+$/, '');
-
-export function getSiteOrigin(requestUrl: URL): string {
-  const configuredUrl = import.meta.env.PUBLIC_SITE_URL?.trim();
-
-  if (configuredUrl) {
-    try {
-      return normalizeOrigin(new URL(configuredUrl).origin);
-    } catch {
-      console.warn('PUBLIC_SITE_URL must be an absolute URL. Falling back to the current request origin.');
-    }
-  }
-
-  return normalizeOrigin(requestUrl.origin);
-}
+import { getSiteOrigin } from './site-origin';
+import { localizePath, type SiteLocale } from './i18n';
 
 export function absoluteSiteUrl(pathOrUrl: string, requestUrl: URL): string {
   try {
-    return new URL(pathOrUrl, `${getSiteOrigin(requestUrl)}/`).href;
+    return new URL(pathOrUrl, getSiteOrigin(requestUrl)).href;
   } catch {
-    return `${getSiteOrigin(requestUrl)}/`;
+    return getSiteOrigin(requestUrl).href;
   }
 }
 
@@ -34,4 +21,3 @@ export function escapeXml(value: string): string {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&apos;');
 }
-import { localizePath, type SiteLocale } from './i18n';

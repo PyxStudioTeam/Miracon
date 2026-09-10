@@ -21,6 +21,7 @@ export default defineConfig({
     allowedDomains: [
       { hostname: 'miracon.gr' },
       { hostname: 'www.miracon.gr' },
+      { hostname: '*.onrender.com' },
     ],
   },
   i18n: {

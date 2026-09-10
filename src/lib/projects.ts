@@ -1,4 +1,5 @@
 import { seedProjects } from '../data/projects.ts';
+import { normalizeBrochurePath } from './brochure-paths';
 import type { SiteLocale } from './i18n';
 import type { ImageVariantSet, Project, ProjectImage, ProjectImageVariantManifest, ProjectLocaleTranslation, ProjectTranslations, ProjectVideoItem } from './project-types';
 
@@ -236,7 +237,7 @@ export function mapProjectRow(row: ProjectRow): Project {
     heroFocalX: Number(row.hero_focal_x ?? 50),
     heroFocalY: Number(row.hero_focal_y ?? 50),
     introImageUrl: String(row.intro_image_url ?? ''),
-    brochureUrl: row.brochure_url ? String(row.brochure_url) : null,
+    brochureUrl: row.brochure_url ? normalizeBrochurePath(String(row.brochure_url)) : null,
     mapQuery: String(row.map_query ?? ''),
     mapUrl: String(row.map_url ?? ''),
     cardImages: images.filter((image) => image.role === 'card'),

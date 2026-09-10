@@ -69,14 +69,18 @@ const CANDIDATE_COLUMNS = `
   media.deletion_pending_at
 `;
 
-const IS_REFERENCED = `
+// Each statement binds a different number of values, so the shared predicates take
+// their placeholder positions from the caller instead of hard-coding them. A
+// placeholder that never appears in the final SQL cannot be type-inferred by
+// PostgreSQL and fails the whole statement with 42P18.
+const isReferenced = (originPlaceholder) => `
   (
     exists (
       select 1
       from media_references
       where reference = media.relative_url
         or reference = media.relative_path
-        or reference = $2::text || media.relative_url
+        or reference = ${originPlaceholder}::text || media.relative_url
     )
     or exists (
       select 1
@@ -86,19 +90,21 @@ const IS_REFERENCED = `
   )
 `;
 
-const IS_ORPHAN = `
-  media.created_at <= $1
-  and not ${IS_REFERENCED}
+const isOrphan = (cutoffPlaceholder, originPlaceholder) => `
+  media.created_at <= ${cutoffPlaceholder}
+  and not ${isReferenced(originPlaceholder)}
 `;
 
+// Values: $1 cutoff, $2 site origin, $3 limit.
 export const DISCOVER_LOCAL_MEDIA_ORPHANS_SQL = `${REFERENCE_CTES}
   select ${CANDIDATE_COLUMNS}
   from miracon.media_files as media
-  where media.deletion_pending_at is not null or (${IS_ORPHAN})
+  where media.deletion_pending_at is not null or (${isOrphan('$1', '$2')})
   order by media.deletion_pending_at nulls last, media.created_at, media.id
   limit $3
 `;
 
+// Values: $1 cutoff, $2 site origin, $3 requested candidate scope.
 export const MARK_LOCAL_MEDIA_PENDING_SQL = `${REFERENCE_CTES},
   requested_media as (
     select id, relative_path
@@ -109,16 +115,18 @@ export const MARK_LOCAL_MEDIA_PENDING_SQL = `${REFERENCE_CTES},
   from requested_media as requested
   where requested.id = media.id
     and requested.relative_path = media.relative_path
-    and (media.deletion_pending_at is not null or (${IS_ORPHAN}))
+    and (media.deletion_pending_at is not null or (${isOrphan('$1', '$2')}))
   returning ${CANDIDATE_COLUMNS}
 `;
 
+// Values: $1 site origin, $2 requested candidate scope. Pending rows are already
+// past the cutoff decision, so this statement deliberately takes no cutoff value.
 export const LOCK_PENDING_LOCAL_MEDIA_SQL = `${REFERENCE_CTES},
   requested_media as (
     select id, relative_path
-    from jsonb_to_recordset($3::jsonb) as requested(id text, relative_path text)
+    from jsonb_to_recordset($2::jsonb) as requested(id text, relative_path text)
   )
-  select ${CANDIDATE_COLUMNS}, not ${IS_REFERENCED} as is_orphan
+  select ${CANDIDATE_COLUMNS}, not ${isReferenced('$1')} as is_orphan
   from miracon.media_files as media
   join requested_media as requested
     on requested.id = media.id and requested.relative_path = media.relative_path

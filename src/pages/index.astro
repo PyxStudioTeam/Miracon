@@ -458,7 +458,7 @@ const homeStructuredData = {
             {contactDescriptionLines.map((line) => <span>{line}</span>)}
           </p>
 
-          <form class="consultation-form" data-consultation-form data-web3forms-key="bcf7cde0-e5e8-4908-8b89-02ebe78bcd0d" novalidate>
+          <form class="consultation-form" data-consultation-form novalidate>
             <div class="form-row">
               <label class="form-group">
                 <span>{m['form.name']}</span>
@@ -476,7 +476,7 @@ const homeStructuredData = {
 
             <label class="form-group form-message">
               <span>{m['form.message']}</span>
-              <textarea name="message" class="form-input form-textarea" placeholder={m['form.message']} maxlength="3000"></textarea>
+              <textarea name="message" class="form-input form-textarea" placeholder={m['form.message']} maxlength="3000" required></textarea>
             </label>
 
             <label class="form-consent">
@@ -486,13 +486,11 @@ const homeStructuredData = {
                   href="#">{m['common.privacy']}</a> {m['form.consentAfter']}</span>
             </label>
 
-            <div class="form-captcha"><div class="h-captcha" data-captcha="true" data-theme="light"></div></div>
-
             <button type="submit" class="btn-submit" disabled>
               <span>{m['form.submit']}</span>
               <span class="btn-submit-arrow"></span>
             </button>
-            <input class="form-honeypot" type="checkbox" name="botcheck" tabindex="-1" aria-hidden="true">
+            <input class="form-honeypot" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
             <p class="form-status" aria-live="polite" hidden></p>
           </form>
         </div>
@@ -544,7 +542,6 @@ const homeStructuredData = {
     </div>
   </footer>
 
-  <script is:inline src="https://web3forms.com/client/script.js" async defer></script>
   <script is:inline src="/site.js"></script>
 </body>
 </html>

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { access, mkdtemp, rm } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -15,8 +16,8 @@ const standaloneEntry = fileURLToPath(new URL('../dist/server/entry.mjs', import
 const chromeByRoute = {
   homeEn: { links: [['/#projects', 'Projects'], ['/golden-visa', 'Golden Visa'], ['/#about', 'About us'], ['/#contacts', 'Contacts']], languageHref: '/el/', language: 'Ελληνικά', languageCode: 'EN' },
   homeEl: { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/#contacts', 'Επικοινωνία']], languageHref: '/', language: 'English', languageCode: 'EL' },
-  goldenVisaEl: { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa#top', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/golden-visa#contacts', 'Επικοινωνία']], languageHref: '/golden-visa', language: 'English', languageCode: 'EL' },
-  projectEl: { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/projects/standalone-build-project?campaign=greek#contacts', 'Επικοινωνία']], languageHref: '/projects/standalone-build-project?campaign=greek', language: 'English', languageCode: 'EL' },
+  goldenVisaEl: { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa#top', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/golden-visa#contacts', 'Επικοινωνία']], languageHref: '/golden-visa/', language: 'English', languageCode: 'EL' },
+  projectEl: { links: [['/el/?filter=coastal#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/projects/standalone-build-project/#contacts', 'Επικοινωνία']], languageHref: '/projects/standalone-build-project/?campaign=greek', language: 'English', languageCode: 'EL' },
 };
 
 test('rejects Google document-wide translation suppression', () => {
@@ -84,18 +85,54 @@ test('serves the built standalone application on the supplied port', { timeout: 
     const homeHtml = await home.text();
     assert.match(homeHtml, /Standalone build project/u);
     assert.match(homeHtml, /\/img\/hero-bg-web-30\.mp4/u);
+    assert.match(homeHtml, /<link rel="canonical" href="https:\/\/miracon\.gr\/">/u);
+    assert.match(homeHtml, /<meta property="og:url" content="https:\/\/miracon\.gr\/">/u);
+    assert.match(homeHtml, /"url":"https:\/\/miracon\.gr\/"/u);
     assertLocalizedChrome(homeHtml, chromeByRoute.homeEn);
     assertTranslationBoundaries(homeHtml, true, 'about-section');
 
     const runtimeOriginLogin = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: 'https://runtime-origin.miracon.test' },
+      headers: { 'content-type': 'application/json', origin: 'https://miracon.gr' },
       body: JSON.stringify({ email: 'missing@miracon.test', password: 'not-a-real-password' }),
     });
     assert.equal(runtimeOriginLogin.status, 401);
     assert.deepEqual(await runtimeOriginLogin.json(), {
       error: { code: 'invalid_credentials', message: 'Invalid email or password' },
     });
+
+    const wwwRedirect = await new Promise((resolve, reject) => {
+      const request = httpRequest(`${baseUrl}/el/api/health?probe=host`, {
+        headers: { host: 'www.miracon.gr', 'x-forwarded-host': 'www.miracon.gr', 'x-forwarded-proto': 'https' },
+      }, resolve);
+      request.on('error', reject);
+      request.end();
+    });
+    wwwRedirect.resume();
+    assert.equal(wwwRedirect.statusCode, 308);
+    assert.equal(wwwRedirect.headers.location, 'https://miracon.gr/el/api/health?probe=host');
+
+    const robots = await fetch(`${baseUrl}/robots.txt`);
+    assert.equal(robots.status, 200);
+    assert.match(await robots.text(), /Sitemap: https:\/\/miracon\.gr\/sitemap\.xml/u);
+
+    const sitemap = await fetch(`${baseUrl}/sitemap.xml`);
+    assert.equal(sitemap.status, 200);
+    const sitemapXml = await sitemap.text();
+    assert.match(sitemapXml, /<loc>https:\/\/miracon\.gr\/<\/loc>/u);
+    assert.doesNotMatch(sitemapXml, /(?:<loc>|href=")(?:http:\/\/|https:\/\/(?:127\.0\.0\.1|www\.miracon\.gr))/u);
+
+    for (const [legacyPath, targetPath] of [
+      ['/brochures/A4%20Artemis_compressed.pdf', '/brochures/a4-artemis-compressed.pdf'],
+      ['/brochures/Kriopigi%20Villas_compressed.pdf', '/brochures/kriopigi-villas-compressed.pdf'],
+    ]) {
+      const legacy = await fetch(`${baseUrl}${legacyPath}?download=1`, { redirect: 'manual' });
+      assert.equal(legacy.status, 308);
+      assert.equal(legacy.headers.get('location'), `${targetPath}?download=1`);
+      const brochure = await fetch(`${baseUrl}${targetPath}`);
+      assert.equal(brochure.status, 200);
+      assert.match(brochure.headers.get('content-type') ?? '', /^application\/pdf\b/u);
+    }
 
     const greekHome = await fetch(`${baseUrl}/el/`);
     assert.equal(greekHome.status, 200);
@@ -168,7 +205,7 @@ function assertTranslationBoundaries(html, isHome, editorialClass) {
 }
 
 function assertUnmarkedEditorialRoot(html, className) {
-  const roots = [...html.matchAll(new RegExp(`<[^>]+\\bclass="[^"]*\\b${escapeRegExp(className)}\\b[^"]*"[^>]*>`, 'gu'))];
+  const roots = [...html.matchAll(new RegExp(`<[^>]+\\bclass="(?:${escapeRegExp(className)}(?=\\s|")|[^"]*\\s${escapeRegExp(className)}(?=\\s|"))[^"]*"[^>]*>`, 'gu'))];
   assert.equal(roots.length, 1, `expected exactly one .${className} editorial root`);
   assert.doesNotMatch(roots[0][0], /(?:class="[^"]*\bnotranslate\b[^"]*"|translate="no")/u, `.${className} must remain eligible for translation`);
 }
@@ -204,7 +241,7 @@ function startStandalone({ baseUrl, databaseUrl, mediaRoot, port }) {
       PORT: String(port),
       DATABASE_URL: databaseUrl,
       MEDIA_ROOT: mediaRoot,
-      PUBLIC_SITE_URL: 'https://runtime-origin.miracon.test',
+      PUBLIC_SITE_URL: 'https://miracon.gr',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

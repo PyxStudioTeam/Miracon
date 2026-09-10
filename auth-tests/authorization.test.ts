@@ -65,6 +65,7 @@ describe('centralized administrator authorization', () => {
       'rejectRevision',
       'rollbackRevision',
       'manageEditors',
+      'manageContacts',
       'deleteProject',
       'reorderProjects',
     ];
@@ -89,6 +90,7 @@ describe('centralized administrator authorization', () => {
       rejectRevision: false,
       rollbackRevision: false,
       manageEditors: false,
+      manageContacts: true,
       deleteProject: false,
       reorderProjects: false,
     };

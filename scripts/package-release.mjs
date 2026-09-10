@@ -36,6 +36,7 @@ const forbiddenSegments = new Set([
   'release-tests', 'temp', 'test-fixtures', 'test-results', 'tests', 'tmp', 'worker',
 ]);
 const migrationFilePattern = /^postgres\/migrations\/\d{4}_[a-z0-9_]+\.sql$/u;
+const generatedServerChunkPattern = /^dist\/server\/chunks\/[^/]+\.mjs$/u;
 const forbiddenNamePatterns = [
   /^\.env(?:\..*)?$/u,
   /^\.(?:netrc|npmrc|pypirc|yarnrc)$/u,
@@ -50,6 +51,13 @@ const forbiddenNamePatterns = [
   /\.(?:bak|har|tmp|trace)$/u,
   /\.log$/u,
 ];
+const releaseFormat = 'miracon-release/v1';
+const protectedProjectPaths = ['.git', 'src', 'public'];
+const requiredReleaseFiles = [
+  ...requiredInputs.filter((path) => path !== 'dist' && path !== 'postgres/migrations'),
+  'dist/server/entry.mjs',
+  'tmp/.gitkeep',
+];
 
 export class ReleasePackagingError extends Error {
   constructor(message) {
@@ -63,19 +71,42 @@ export async function packageRelease(options) {
   const output = resolve(projectRoot, options.output);
   const createdAt = options.createdAt ?? new Date();
   const force = options.force ?? false;
+  const warn = options.warn ?? console.warn;
+  const fileSystem = {
+    rename,
+    copy: cp,
+    remove: rm,
+    ...options.fileSystem,
+  };
   const inputPaths = requiredInputs.map((path) => resolve(projectRoot, path));
-  assertSafeOutput(output, inputPaths);
-  await assertInputs(projectRoot);
-  const outputExists = await pathExists(output);
+  assertSafeOutput(projectRoot, output, inputPaths);
+  const outputStats = await lstatIfExists(output);
+  const outputExists = outputStats !== null;
   if (outputExists && !force) {
     throw new ReleasePackagingError(`Release output already exists: ${output}`);
   }
+  if (outputExists) await assertReplaceableOutput(output, outputStats);
+  await assertInputs(projectRoot);
 
   const packageJson = JSON.parse(await readFile(join(projectRoot, 'package.json'), 'utf8'));
   const candidates = await collectCandidates(projectRoot);
   const temporary = join(dirname(output), `.${basename(output)}.tmp-${process.pid}-${randomUUID()}`);
   const backup = join(dirname(output), `.${basename(output)}.backup-${process.pid}-${randomUUID()}`);
+  const displaced = join(dirname(output), `.${basename(output)}.displaced-${process.pid}-${randomUUID()}`);
   let previousMoved = false;
+
+  const safeMove = async (from, to) => {
+    try {
+      await fileSystem.rename(from, to);
+    } catch (err) {
+      if (err?.code === 'EPERM' || err?.code === 'EXDEV') {
+        await fileSystem.copy(from, to, { recursive: true });
+        await fileSystem.remove(from, { recursive: true, force: true });
+        return;
+      }
+      throw err;
+    }
+  };
 
   try {
     await mkdir(temporary, { recursive: true });
@@ -90,6 +121,7 @@ export async function packageRelease(options) {
     files.sort((left, right) => left.path.localeCompare(right.path, 'en'));
 
     const manifest = {
+      format: releaseFormat,
       version: 1,
       applicationVersion: packageJson.version ?? null,
       createdAt: createdAt.toISOString(),
@@ -98,40 +130,78 @@ export async function packageRelease(options) {
     };
     await writeFile(join(temporary, 'release-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'wx' });
 
-    const safeMove = async (from, to) => {
-      try {
-        await rename(from, to);
-      } catch (err) {
-        if (err?.code === 'EPERM' || err?.code === 'EXDEV') {
-          await cp(from, to, { recursive: true });
-          await rm(from, { recursive: true, force: true });
-          return;
-        }
-        throw err;
-      }
-    };
-
     if (outputExists) {
       await safeMove(output, backup);
       previousMoved = true;
     }
     await safeMove(temporary, output);
-    if (previousMoved) await rm(backup, { recursive: true, force: true });
+    if (previousMoved) {
+      try {
+        await fileSystem.remove(backup, { recursive: true, force: true });
+      } catch (error) {
+        warn(`Release created, but its previous-package backup could not be removed: ${backup}`);
+      }
+    }
     return manifest;
   } catch (error) {
-    await rm(temporary, { recursive: true, force: true });
+    try {
+      await fileSystem.remove(temporary, { recursive: true, force: true });
+    } catch (cleanupError) {
+      warn(`Failed temporary package could not be removed before rollback; restoration will continue: ${temporary}`);
+    }
     if (previousMoved) {
-      if (await pathExists(output)) await rm(output, { recursive: true, force: true });
-      await rename(backup, output);
+      if (!(await isRecognizedReleaseOutput(backup))) throw error;
+      let displacedOutputPath;
+      if (await pathExists(output)) {
+        displacedOutputPath = await pathExists(temporary) ? displaced : temporary;
+        await safeMove(output, displacedOutputPath);
+      }
+      try {
+        await safeMove(backup, output);
+      } catch (restoreError) {
+        if (displacedOutputPath) {
+          if (await pathExists(output)) await fileSystem.remove(output, { recursive: true, force: true });
+          await safeMove(displacedOutputPath, output);
+        }
+        throw restoreError;
+      }
+      if (displacedOutputPath) {
+        try {
+          await fileSystem.remove(displacedOutputPath, { recursive: true, force: true });
+        } catch (cleanupError) {
+          warn(`Release rollback completed, but its displaced-output backup could not be removed: ${displacedOutputPath}`);
+        }
+      }
+    } else if (await pathExists(backup)) {
+      if (!(await isRecognizedReleaseOutput(backup))) {
+        await fileSystem.remove(backup, { recursive: true, force: true });
+      } else if (await isRecognizedReleaseOutput(output)) {
+        await fileSystem.remove(backup, { recursive: true, force: true });
+      } else {
+        if (await pathExists(output)) await fileSystem.remove(output, { recursive: true, force: true });
+        await safeMove(backup, output);
+      }
+    }
+    if (await pathExists(temporary)) {
+      try {
+        await fileSystem.remove(temporary, { recursive: true, force: true });
+      } catch (cleanupError) {
+        warn(`Release rollback completed, but its failed temporary package could not be removed: ${temporary}`);
+      }
     }
     throw error;
   }
 }
 
-function assertSafeOutput(output, inputPaths) {
+function assertSafeOutput(projectRoot, output, inputPaths) {
   for (const input of inputPaths) {
     if (containsPath(input, output) || containsPath(output, input)) {
       throw new ReleasePackagingError(`Release output overlaps package input: ${output}`);
+    }
+  }
+  for (const protectedPath of protectedProjectPaths.map((path) => resolve(projectRoot, path))) {
+    if (containsPath(protectedPath, output) || containsPath(output, protectedPath)) {
+      throw new ReleasePackagingError(`Release output overlaps a protected project path: ${output}`);
     }
   }
 }
@@ -160,6 +230,61 @@ async function assertInputs(projectRoot) {
   const builtEntry = join(projectRoot, 'dist/server/entry.mjs');
   if (!(await pathExists(builtEntry))) {
     throw new ReleasePackagingError('Required built entry dist/server/entry.mjs is missing; run npm run build first');
+  }
+}
+
+async function assertReplaceableOutput(output, outputStats) {
+  const invalidOutput = () => new ReleasePackagingError(`Forced replacement requires a recognized Miracon release package: ${output}`);
+  if (outputStats.isSymbolicLink()) throw new ReleasePackagingError(`Release output must not be a symlink: ${output}`);
+  if (!outputStats.isDirectory()) throw invalidOutput();
+
+  let manifest;
+  try {
+    const manifestPath = join(output, 'release-manifest.json');
+    const manifestStats = await lstat(manifestPath);
+    if (!manifestStats.isFile() || manifestStats.isSymbolicLink()) throw invalidOutput();
+    manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  } catch (error) {
+    if (error instanceof ReleasePackagingError) throw error;
+    throw invalidOutput();
+  }
+
+  if (
+    manifest?.format !== releaseFormat || manifest.version !== 1 ||
+    !(manifest.applicationVersion === null || typeof manifest.applicationVersion === 'string') ||
+    typeof manifest.createdAt !== 'string' || Number.isNaN(Date.parse(manifest.createdAt)) ||
+    !(manifest.nodeEngine === null || typeof manifest.nodeEngine === 'string') ||
+    !Array.isArray(manifest.files)
+  ) throw invalidOutput();
+  const paths = new Set();
+  for (const file of manifest.files) {
+    const pathSegments = typeof file?.path === 'string' ? file.path.split('/') : [];
+    if (
+      !file || typeof file.path !== 'string' || file.path === '' || file.path.startsWith('/') ||
+      file.path.includes('\\') || pathSegments.some((segment) => segment === '' || segment === '.' || segment === '..') ||
+      paths.has(file.path) ||
+      !Number.isSafeInteger(file.bytes) || file.bytes < 0 ||
+      typeof file.sha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(file.sha256)
+    ) throw invalidOutput();
+    paths.add(file.path);
+    const packageFile = join(output, ...file.path.split('/'));
+    const stats = await lstatIfExists(packageFile);
+    if (!stats?.isFile() || stats.isSymbolicLink() || stats.size !== file.bytes) throw invalidOutput();
+    if (await hashFile(packageFile) !== file.sha256) throw invalidOutput();
+  }
+  if (requiredReleaseFiles.some((path) => !paths.has(path))) throw invalidOutput();
+  if (![...paths].some((path) => migrationFilePattern.test(path))) throw invalidOutput();
+}
+
+async function isRecognizedReleaseOutput(output) {
+  const outputStats = await lstatIfExists(output);
+  if (!outputStats) return false;
+  try {
+    await assertReplaceableOutput(output, outputStats);
+    return true;
+  } catch (error) {
+    if (error instanceof ReleasePackagingError) return false;
+    throw error;
   }
 }
 
@@ -200,6 +325,7 @@ function isForbidden(relativePath) {
   // 0006_tighten_admin_password_hash.sql), and dropping one silently breaks the
   // runner's exact-prefix ledger preflight on a fresh environment.
   if (migrationFilePattern.test(normalized)) return false;
+  if (generatedServerChunkPattern.test(normalized)) return false;
   return forbiddenNamePatterns.some((pattern) => pattern.test(segments.at(-1)));
 }
 
@@ -218,6 +344,21 @@ async function copyAndHash(projectRoot, temporary, relativePath) {
   });
   await pipeline(createReadStream(source), hasher, createWriteStream(destination, { flags: 'wx' }));
   return { path: relativePath, bytes, sha256: hash.digest('hex') };
+}
+
+async function hashFile(path) {
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  return hash.digest('hex');
+}
+
+async function lstatIfExists(path) {
+  try {
+    return await lstat(path);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
 }
 
 async function pathExists(path) {

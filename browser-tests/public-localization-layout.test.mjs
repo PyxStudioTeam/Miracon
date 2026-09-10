@@ -120,17 +120,17 @@ const heroTextGeometryTolerance = .75;
 const chromeByRoute = {
   'home-en': { links: [['/#projects', 'Projects'], ['/golden-visa', 'Golden Visa'], ['/#about', 'About us'], ['/#contacts', 'Contacts']], languageHref: '/el/', language: 'Ελληνικά', languageCode: 'EN' },
   'home-el': { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/#contacts', 'Επικοινωνία']], languageHref: '/', language: 'English', languageCode: 'EL' },
-  'golden-visa-en': { links: [['/#projects', 'Projects'], ['/golden-visa#top', 'Golden Visa'], ['/#about', 'About us'], ['/golden-visa#contacts', 'Contacts']], languageHref: '/el/golden-visa', language: 'Ελληνικά', languageCode: 'EN' },
-  'golden-visa-el': { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa#top', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/golden-visa#contacts', 'Επικοινωνία']], languageHref: '/golden-visa', language: 'English', languageCode: 'EL' },
-  'project-en': { links: [['/?filter=coastal#projects', 'Projects'], ['/golden-visa', 'Golden Visa'], ['/#about', 'About us'], ['/projects/browser-coastal-golden#contacts', 'Contacts']], languageHref: '/el/projects/browser-coastal-golden', language: 'Ελληνικά', languageCode: 'EN' },
-  'project-el': { links: [['/el/?filter=coastal#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/projects/browser-coastal-golden#contacts', 'Επικοινωνία']], languageHref: '/projects/browser-coastal-golden', language: 'English', languageCode: 'EL' },
+  'golden-visa-en': { links: [['/#projects', 'Projects'], ['/golden-visa#top', 'Golden Visa'], ['/#about', 'About us'], ['/golden-visa#contacts', 'Contacts']], languageHref: '/el/golden-visa/', language: 'Ελληνικά', languageCode: 'EN' },
+  'golden-visa-el': { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa#top', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/golden-visa#contacts', 'Επικοινωνία']], languageHref: '/golden-visa/', language: 'English', languageCode: 'EL' },
+  'project-en': { links: [['/?filter=coastal#projects', 'Projects'], ['/golden-visa', 'Golden Visa'], ['/#about', 'About us'], ['/projects/browser-coastal-golden/#contacts', 'Contacts']], languageHref: '/el/projects/browser-coastal-golden/', language: 'Ελληνικά', languageCode: 'EN' },
+  'project-el': { links: [['/el/?filter=coastal#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/projects/browser-coastal-golden/#contacts', 'Επικοινωνία']], languageHref: '/projects/browser-coastal-golden/', language: 'English', languageCode: 'EL' },
 };
 const availabilityDetailCasePlan = availabilityProjects.flatMap((project) => ['en', 'el'].flatMap((locale) => availabilityDetailViewports.map((viewport) => ({
   route: {
     key: `availability-${project.slug}-${locale}`,
     path: `${locale === 'el' ? '/el' : ''}/projects/${project.slug}`,
     locale,
-    chrome: projectChrome(locale, project.slug, project.categories[0], 'preview'),
+    chrome: projectChrome(locale, project.slug, project.categories[0]),
     editorialRoot: '.project-intro-copy',
     title: locale === 'el' ? project.greekTitle : project.title,
     availability: project.availability[locale],
@@ -142,7 +142,7 @@ const previewCasePlan = availabilityProjects.flatMap((project) => ['en', 'el'].m
     key: `preview-${project.slug}-${locale}`,
     path: `${locale === 'el' ? '/el' : ''}/preview/${project.slug}`,
     locale,
-    chrome: projectChrome(locale, project.slug, project.categories[0]),
+    chrome: projectChrome(locale, project.slug, project.categories[0], 'preview'),
     editorialRoot: '.project-intro-copy',
     title: locale === 'el' ? project.greekTitle : project.title,
     availability: project.availability[locale],
@@ -416,9 +416,8 @@ test('characterizes the public header source contract before responsive ownershi
   ]);
 
   for (const headerMarkup of [homePage, goldenVisaPage, siteHeader]) {
-    assert.match(headerMarkup, /class="header(?: notranslate)?"/u);
-    for (const control of ['logo', 'nav-menu', 'header-actions', 'lang-selector', 'contact-menu', 'mobile-lang-selector', 'mobile-menu-btn', 'mobile-nav']) {
-      assert.match(headerMarkup, new RegExp(`class="[^"\n]*${control}`, 'u'));
+    for (const control of ['header', 'logo', 'nav-menu', 'header-actions', 'lang-selector', 'contact-menu', 'mobile-lang-selector', 'mobile-menu-btn', 'mobile-nav']) {
+      assertMarkupClassToken(headerMarkup, control);
     }
   }
   assert.match(homePage, /href="\/style\.css"[\s\S]*href="\/mobile\.css"/u);
@@ -427,7 +426,7 @@ test('characterizes the public header source contract before responsive ownershi
 
   assert.match(stylesheet, /\.header-container\s*\{[\s\S]*?height:\s*51px;/u);
   assert.match(stylesheet, /\.glass-gradient\s*\{[\s\S]*?backdrop-filter:\s*blur\(18px\);/u);
-  assert.match(stylesheet, /\.lang-selector\s*\{[\s\S]*?width:\s*62px;[\s\S]*?height:\s*51px;/u);
+  assert.match(stylesheet, /\.lang-selector\s*\{[\s\S]*?width:\s*146px;[\s\S]*?height:\s*51px;/u);
   assert.match(stylesheet, /\.contact-menu\s*\{[\s\S]*?width:\s*194px;[\s\S]*?height:\s*51px;/u);
   assert.match(stylesheet, /\.contact-dropdown\s*\{[\s\S]*?right:\s*0;/u);
   assert.match(mobileStylesheet, /@media \(max-width: 600px\)/u);
@@ -446,7 +445,7 @@ test('requires Task 4 exclusive compact owners and a 1280px desktop grid', async
 
   const homeCompactOwner = /@media \(min-width: 601px\) and \(max-width: 1279px\) \{[\s\S]*?\.nav-menu,[\s\S]*?\.header-actions \{[\s\S]*?display:\s*none;[\s\S]*?\.mobile-menu-btn \{[\s\S]*?display:\s*block;[\s\S]*?\.mobile-lang-selector \{[\s\S]*?display:\s*inline-flex;/u;
   const innerCompactOwner = /@media \(min-width: 761px\) and \(max-width: 1279px\) \{[\s\S]*?\.project-page \.nav-menu,[\s\S]*?\.golden-visa-page \.header-actions \{[\s\S]*?display:\s*none;[\s\S]*?\.project-page \.mobile-menu-btn,[\s\S]*?\.golden-visa-page \.mobile-menu-btn \{[\s\S]*?display:\s*block;/u;
-  const desktopGridOwner = /@media \(min-width: 1280px\) \{[\s\S]*?\.header-container \{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*max-content minmax\(0, 1fr\) max-content;[\s\S]*?\.header \.logo,[\s\S]*?\.contact-btn \{[\s\S]*?position:\s*static;[\s\S]*?\.contact-menu \{[\s\S]*?position:\s*relative;[\s\S]*?flex:\s*0 0 194px;/u;
+  const desktopGridOwner = /@media \(min-width: 1280px\) \{[\s\S]*?\.header-container \{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*max-content minmax\(0, 1fr\) max-content;[\s\S]*?\.header \.logo,[\s\S]*?\.nav-menu \{[\s\S]*?position:\s*static;[\s\S]*?\.header-actions \{[\s\S]*?position:\s*relative;[\s\S]*?width:\s*256px;[\s\S]*?\.lang-selector \{[\s\S]*?position:\s*absolute;[\s\S]*?width:\s*146px;[\s\S]*?\.contact-menu \{[\s\S]*?position:\s*absolute;[\s\S]*?right:\s*0;[\s\S]*?width:\s*194px;[\s\S]*?\.contact-btn \{[\s\S]*?position:\s*absolute;[\s\S]*?right:\s*0;[\s\S]*?width:\s*194px;/u;
 
   assert.equal((mobileStylesheet.match(/@media \(min-width: 601px\) and \(max-width: 1279px\)/gu) ?? []).length, 1);
   assert.match(mobileStylesheet, homeCompactOwner);
@@ -712,6 +711,8 @@ test('runs the built standalone public localization fixture', { timeout: 180_000
     for (const { route, viewport } of availabilityDetailCasePlan) {
       await runCase({ context, baseUrl, route, viewport, externalRequests, unknownExternalRequests, artifacts: null });
     }
+    await assertPublicContactFlow({ context, baseUrl, database, path: '/', locale: 'en', name: 'Browser English Contact', successText: 'Thank you. Your request has been sent' });
+    await assertPublicContactFlow({ context, baseUrl, database, path: '/el/golden-visa', locale: 'el', name: 'Browser Greek Contact', successText: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε' });
     await transitionFixtureToDraft(database, 'browser-city-seven');
     const previewBaseUrl = baseUrl;
     previewContext = await createAuthenticatedPreviewContext(browser, {
@@ -791,6 +792,43 @@ async function createAuthenticatedPreviewContext(browser, routing) {
   const session = await context.request.get(`${routing.baseUrl}/api/auth/session`);
   assert.equal(session.status(), 200, 'Authenticated preview context must retain the issued session cookie');
   return context;
+}
+
+async function assertPublicContactFlow({ context, baseUrl, database, path, locale, name, successText }) {
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}${path}`, { waitUntil: 'domcontentloaded' });
+    await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+    const form = page.locator('[data-consultation-form]');
+    await form.locator('[name="consent"]').evaluate((input) => input.click());
+    await form.locator('[name="message"]').fill('Browser acceptance contact message');
+    await form.locator('.btn-submit').click();
+    await form.locator('.form-status').waitFor({ state: 'visible' });
+    assert.match(await form.locator('.form-status').textContent(), locale === 'el' ? /Συμπληρώστε/u : /Please enter/u);
+
+    await form.locator('[name="name"]').fill(name);
+    await form.locator('[name="email"]').fill(`${locale}-browser-contact@example.test`);
+    await page.waitForTimeout(3_100);
+    await form.locator('.btn-submit').click();
+    await form.locator('.form-status').filter({ hasText: successText }).waitFor({ timeout: 10_000 });
+
+    const result = await database.query(
+      'select name, email, locale, source_path, message, consented_at from miracon.contact_submissions where name = $1',
+      [name],
+    );
+    assert.equal(result.rowCount, 1);
+    assert.deepEqual(result.rows[0], {
+      name,
+      email: `${locale}-browser-contact@example.test`,
+      locale,
+      source_path: path,
+      message: 'Browser acceptance contact message',
+      consented_at: result.rows[0].consented_at,
+    });
+    assert.ok(result.rows[0].consented_at instanceof Date);
+  } finally {
+    await page.close();
+  }
 }
 
 async function runCase({ context, baseUrl, route, viewport, externalRequests, unknownExternalRequests, artifacts }) {
@@ -909,18 +947,24 @@ function projectChrome(locale, slug, category, routeKind = 'projects') {
   const routePath = `/${routeKind}/${slug}`;
   if (locale === 'el') {
     return {
-      links: [[`/el/?filter=${category}#projects`, 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], [`/el${routePath}#contacts`, 'Επικοινωνία']],
-      languageHref: routePath,
+      links: [[`/el/?filter=${category}#projects`, 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], [`/el${routePath}/#contacts`, 'Επικοινωνία']],
+      languageHref: `${routePath}/`,
       language: 'English',
       languageCode: 'EL',
     };
   }
   return {
-    links: [[`/?filter=${category}#projects`, 'Projects'], ['/golden-visa', 'Golden Visa'], ['/#about', 'About us'], [`${routePath}#contacts`, 'Contacts']],
-    languageHref: `/el${routePath}`,
+    links: [[`/?filter=${category}#projects`, 'Projects'], ['/golden-visa', 'Golden Visa'], ['/#about', 'About us'], [`${routePath}/#contacts`, 'Contacts']],
+    languageHref: `/el${routePath}/`,
     language: 'Ελληνικά',
     languageCode: 'EN',
   };
+}
+
+function assertMarkupClassToken(markup, token) {
+  const classTokenSets = [...markup.matchAll(/\bclass\s*=\s*"(?<tokens>[^"]*)"/gu)]
+    .map((match) => new Set(match.groups?.tokens?.trim().split(/\s+/u).filter(Boolean)));
+  assert.equal(classTokenSets.some((tokens) => tokens.has(token)), true, `Expected an exact ${token} class token`);
 }
 
 async function assertProjectAvailability(page, expected) {
@@ -1712,7 +1756,16 @@ async function freeLoopbackPort() {
 function startStandalone({ baseUrl, databaseUrl, mediaRoot, port }) {
   const child = spawn(process.execPath, ['app.js'], {
     cwd: projectRoot,
-    env: { ...process.env, HOST: '::', PORT: String(port), DATABASE_URL: databaseUrl, MEDIA_ROOT: mediaRoot, PUBLIC_SITE_URL: baseUrl },
+    env: {
+      ...process.env,
+      HOST: '::',
+      PORT: String(port),
+      DATABASE_URL: databaseUrl,
+      MEDIA_ROOT: mediaRoot,
+      PUBLIC_SITE_URL: 'https://miracon.gr',
+      NODE_ENV: 'test',
+      CONTACT_DIGEST_SECRET: 'browser-contact-digest-secret-at-least-32-characters',
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.output = '';

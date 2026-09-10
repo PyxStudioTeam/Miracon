@@ -33,6 +33,7 @@ test('defines the standalone schema when migrations are read in filename order',
     '0007_media_cleanup_pending.sql',
     '0008_admin_governance_and_availability.sql',
     '0009_exact_revision_materialization.sql',
+    '0010_contact_intake.sql',
   ]);
   for (const table of [
     'projects',
@@ -47,9 +48,30 @@ test('defines the standalone schema when migrations are read in filename order',
     'content_revision_heads',
     'audit_events',
     'revision_media',
+    'contact_submissions',
+    'contact_challenges',
   ]) {
     assert.match(sql, new RegExp(`create table miracon\\.${table}\\b`, 'i'));
   }
+});
+
+test('defines digest-only contact intake with bounded retention and challenge state', async () => {
+  // Given
+  const sql = await readFile(new URL('../migrations/0010_contact_intake.sql', import.meta.url), 'utf8');
+
+  // When / Then
+  for (const contract of [
+    /create table miracon\.contact_submissions/iu,
+    /client_digest bytea[^,]*octet_length\(client_digest\) = 32/iu,
+    /duplicate_digest bytea[^,]*octet_length\(duplicate_digest\) = 32/iu,
+    /create table miracon\.contact_challenges/iu,
+    /token_digest bytea[^,]*octet_length\(token_digest\) = 32/iu,
+    /not_before timestamptz not null/iu,
+    /consumed_at timestamptz/iu,
+  ]) {
+    assert.match(sql, contract);
+  }
+  assert.doesNotMatch(sql, /\b(?:ip|client)_address\b|\binet\b/iu);
 });
 
 test('keeps the standalone migrations independent of Supabase and worker infrastructure', async () => {

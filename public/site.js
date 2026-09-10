@@ -14,14 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
     missingContact: 'Συμπληρώστε το όνομά σας και τουλάχιστον ένα στοιχείο επικοινωνίας',
     invalidEmail: 'Συμπληρώστε μια έγκυρη διεύθυνση email',
     sendError: 'Δεν ήταν δυνατή η αποστολή του αιτήματος. Δοκιμάστε ξανά',
-    securityCheck: 'Ολοκληρώστε τον έλεγχο ασφαλείας',
     waitMoment: 'Περιμένετε λίγο και δοκιμάστε ξανά',
     waitBeforeRetry: 'Περιμένετε πριν στείλετε νέο αίτημα',
     sending: 'Το αίτημά σας αποστέλλεται',
     formUnavailable: 'Η φόρμα δεν είναι προσωρινά διαθέσιμη. Δοκιμάστε ξανά αργότερα',
     success: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε',
     sendLater: 'Δεν ήταν δυνατή η αποστολή του αιτήματος. Δοκιμάστε ξανά αργότερα',
-    subject: (name) => `Αίτημα συμβουλευτικής από ${name}`,
   } : {
     playVideo: 'Play video',
     pauseVideo: 'Pause video',
@@ -34,14 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
     missingContact: 'Please enter your name and at least one contact detail',
     invalidEmail: 'Please enter a valid email address',
     sendError: 'Unable to send your request. Please try again',
-    securityCheck: 'Please complete the security check',
     waitMoment: 'Please wait a moment and try again',
     waitBeforeRetry: 'Please wait before sending another request',
     sending: 'Sending your request',
     formUnavailable: 'The form is temporarily unavailable. Please try again later',
     success: 'Thank you. Your request has been sent',
     sendLater: 'Unable to send your request. Please try again later',
-    subject: (name) => `Consultation request from ${name}`,
   };
 
   /* ==========================================================================
@@ -981,8 +977,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const consent = consultationForm.querySelector('[name="consent"]');
     const submitBtn = consultationForm.querySelector('.btn-submit');
     const status = consultationForm.querySelector('.form-status');
-    const web3FormsKey = consultationForm.dataset.web3formsKey;
-    const formStartedAt = Date.now();
+    let challenge = null;
+    let challengeRequest = null;
     const attemptStorageKey = 'miracon-contact-last-attempt';
     const successStorageKey = 'miracon-contact-last-success';
 
@@ -1002,6 +998,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
+    const clearTimestamp = (storage, key) => {
+      try {
+        storage.removeItem(key);
+      } catch {
+        // Storage can be unavailable in strict privacy modes.
+      }
+    };
+
     const setStatus = (message, type) => {
       if (!status) return;
       status.textContent = message;
@@ -1013,8 +1017,38 @@ document.addEventListener('DOMContentLoaded', () => {
       if (submitBtn && consent) submitBtn.disabled = !consent.checked;
     };
 
+    const issueChallenge = async () => {
+      const response = await fetch('/api/contact/challenge', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error(ui.formUnavailable);
+      const result = await response.json();
+      const notBefore = Date.parse(result.notBefore);
+      const expiresAt = Date.parse(result.expiresAt);
+      if (typeof result.challenge !== 'string' || result.challenge.length !== 43 || !Number.isFinite(notBefore) || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        throw new Error(ui.formUnavailable);
+      }
+      challenge = { token: result.challenge, notBefore, expiresAt };
+      return challenge;
+    };
+
     updateSubmitState();
     if (consent) consent.addEventListener('change', updateSubmitState);
+    const obtainChallenge = () => {
+      if (challenge && Date.now() < challenge.expiresAt) return Promise.resolve(challenge);
+      challenge = null;
+      if (!challengeRequest) {
+        challengeRequest = issueChallenge().finally(() => {
+          challengeRequest = null;
+        });
+      }
+      return challengeRequest;
+    };
+    const prepareChallenge = () => {
+      if (consent?.checked) obtainChallenge().catch(() => {});
+    };
+    if (consent) consent.addEventListener('change', prepareChallenge);
 
     consultationForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -1022,11 +1056,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = String(formData.get('name') || '').trim();
       const phone = String(formData.get('phone') || '').trim();
       const email = String(formData.get('email') || '').trim();
-      const captchaResponse = String(formData.get('h-captcha-response') || '').trim();
+      const message = String(formData.get('message') || '').trim();
+      const website = String(formData.get('website') || '');
       const emailInput = consultationForm.querySelector('[name="email"]');
       const now = Date.now();
 
-      if (!name || (!phone && !email)) {
+      if (!name || !message || (!phone && !email) || !consent?.checked) {
         setStatus(ui.missingContact, 'error');
         return;
       }
@@ -1036,17 +1071,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      if (formData.get('botcheck')) {
+      if (website) {
         setStatus(ui.sendError, 'error');
         return;
       }
 
-      if (!captchaResponse) {
-        setStatus(ui.securityCheck, 'error');
+      let activeChallenge;
+      try {
+        activeChallenge = await obtainChallenge();
+      } catch {
+        setStatus(ui.formUnavailable, 'error');
         return;
       }
-
-      if (now - formStartedAt < 1500) {
+      if (now < activeChallenge.notBefore) {
         setStatus(ui.waitMoment, 'error');
         return;
       }
@@ -1062,33 +1099,57 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus(ui.sending, 'pending');
       storeTimestamp(sessionStorage, attemptStorageKey, now);
 
+      let succeeded = false;
       try {
-        if (!web3FormsKey) throw new Error(ui.formUnavailable);
-
-        const web3FormsPayload = new FormData(consultationForm);
-        web3FormsPayload.append('access_key', web3FormsKey);
-        web3FormsPayload.append('from_name', 'MIRACON Website');
-        web3FormsPayload.append('subject', ui.subject(name));
-        web3FormsPayload.append('page', window.location.pathname);
-        if (!email) web3FormsPayload.set('email', 'not-provided@miracon.gr');
-        if (email) web3FormsPayload.set('replyto', email);
-
-        const response = await fetch('https://api.web3forms.com/submit', {
-          method: 'POST',
-          headers: { Accept: 'application/json' },
-          body: web3FormsPayload,
-        });
-        const result = await response.json();
-
-        if (!response.ok || !result.success) throw new Error(ui.sendError);
+        let mayRetryInvalidChallenge = true;
+        while (activeChallenge) {
+          const response = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name,
+              ...(email ? { email } : {}),
+              ...(phone ? { phone } : {}),
+              message,
+              consent: true,
+              locale: isGreek ? 'el' : 'en',
+              sourcePath: window.location.pathname,
+              website,
+              challenge: activeChallenge.token,
+            }),
+          });
+          let result;
+          try {
+            result = await response.json();
+          } catch {
+            throw new Error(response.status === 429 ? ui.waitBeforeRetry : ui.sendError);
+          }
+          if (response.ok && typeof result.id === 'string') {
+            succeeded = true;
+            break;
+          }
+          if (response.status === 400 && result?.error?.code === 'invalid_challenge' && mayRetryInvalidChallenge) {
+            mayRetryInvalidChallenge = false;
+            challenge = null;
+            activeChallenge = await obtainChallenge();
+            const dwellMs = activeChallenge.notBefore - Date.now();
+            if (dwellMs > 0) await new Promise((resolve) => window.setTimeout(resolve, dwellMs));
+            continue;
+          }
+          throw new Error(response.status === 429 ? ui.waitBeforeRetry : ui.sendError);
+        }
 
         consultationForm.reset();
         storeTimestamp(localStorage, successStorageKey, Date.now());
         setStatus(ui.success, 'success');
       } catch (error) {
-        setStatus(error instanceof Error && [ui.formUnavailable, ui.sendError].includes(error.message) ? error.message.replace(/[.]+$/, '') : ui.sendLater, 'error');
+        setStatus(error instanceof Error && [ui.formUnavailable, ui.sendError, ui.waitBeforeRetry].includes(error.message) ? error.message.replace(/[.]+$/, '') : ui.sendLater, 'error');
       } finally {
-        window.hcaptcha?.reset();
+        challenge = null;
+        if (!succeeded) {
+          clearTimestamp(sessionStorage, attemptStorageKey);
+          prepareChallenge();
+        }
         updateSubmitState();
       }
     });

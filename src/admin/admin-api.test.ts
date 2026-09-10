@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminApi, AdminApiError } from './admin-api';
 import { parseRemainingUnitsInput } from './remaining-units';
@@ -254,6 +255,33 @@ describe('parseRemainingUnitsInput', () => {
 
     // Then
     expect(remainingUnits).toBeUndefined();
+  });
+});
+
+describe('admin interface contracts', () => {
+  it('uses the public SVG mark and explicit homepage-video row groups', async () => {
+    // Given
+    const adminApp = await readFile(new URL('./AdminApp.tsx', import.meta.url), 'utf8');
+    const adminCss = await readFile(new URL('./admin.css', import.meta.url), 'utf8');
+
+    // When
+    const brandMark = adminApp.match(/function BrandMark\(\) \{[\s\S]*?\n\}/)?.[0] ?? '';
+    const heroVideoRow = adminApp.match(/function SortableHomeHeroVideo\([\s\S]*?\n\}\n\nfunction HomeHeroManager/)?.[0] ?? '';
+
+    // Then
+    expect(brandMark).toContain('<img src="/img/logo_mark.svg" alt="MIRACON" />');
+    expect(heroVideoRow).toContain('className="home-hero-ordering"');
+    expect(heroVideoRow).toContain('className="home-hero-identity"');
+    expect(heroVideoRow).toContain('aria-label="Visual preview"');
+    expect(heroVideoRow).toContain('className="home-hero-project-field"');
+    expect(heroVideoRow).toContain('aria-label="Video uploads"');
+    expect(heroVideoRow).toContain('Desktop video');
+    expect(heroVideoRow).toContain('Mobile video (optional)');
+    expect(heroVideoRow).toContain('aria-label="Upload desktop MP4"');
+    expect(heroVideoRow).toContain('aria-label="Upload mobile MP4"');
+    expect(heroVideoRow).toContain('aria-label={`Remove hero video ${index + 1}`}');
+    expect(adminCss).toContain('.home-hero-assets label:focus-within');
+    expect(adminCss).toContain('.home-hero-toggle input:focus-visible + span');
   });
 });
 

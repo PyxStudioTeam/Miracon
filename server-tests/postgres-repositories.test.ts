@@ -160,6 +160,30 @@ describe('PostgreSQL projects repository', () => {
     expect(stored?.heroUrl).toBe('');
     expect(stored?.walkthroughVideoDesktopUrl).toBe('');
   });
+
+  it('normalizes legacy brochure URLs from existing project rows without mutating storage', async () => {
+    // Given
+    const legacyBrochures = [
+      ['legacy-artemis-space', '/brochures/A4 Artemis_compressed.pdf', '/brochures/a4-artemis-compressed.pdf'],
+      ['legacy-artemis-encoded', '/brochures/A4%20Artemis_compressed.pdf', '/brochures/a4-artemis-compressed.pdf'],
+      ['legacy-kriopigi-space', '/brochures/Kriopigi Villas_compressed.pdf', '/brochures/kriopigi-villas-compressed.pdf'],
+      ['legacy-kriopigi-encoded', '/brochures/Kriopigi%20Villas_compressed.pdf', '/brochures/kriopigi-villas-compressed.pdf'],
+    ] as const;
+    for (const [id, storedUrl] of legacyBrochures) {
+      await saveProject(pool, projectFixture(id, id, 'draft', 20));
+      await pool.query('update miracon.projects set brochure_url = $1 where id = $2', [storedUrl, id]);
+    }
+
+    // When
+    const projects = await getAdminProjects(pool);
+
+    // Then
+    for (const [id, storedUrl, expectedUrl] of legacyBrochures) {
+      expect(projects.find((project) => project.id === id)?.brochureUrl).toBe(expectedUrl);
+      const stored = await pool.query<{ brochure_url: string }>('select brochure_url from miracon.projects where id = $1', [id]);
+      expect(stored.rows[0]?.brochure_url).toBe(storedUrl);
+    }
+  });
 });
 
 describe('PostgreSQL homepage videos repository', () => {

@@ -26,13 +26,13 @@ FTP, настройку cPanel, доступ к PostgreSQL, DNS, TLS и прие
   приложения.
 - Поддерживаемые учетной записью процедуры для startup-файла Passenger,
   переменных среды менеджера приложений, перезапуска, резервного копирования,
-  TLS и Node 22.23.
+  TLS и доступную версию Node не ниже `>=22.12.0`.
 
 Остановитесь: не создавайте пакет с привязанными к хосту командами и ничего не
-загружайте, пока команда не подтвердит эти значения и наличие Node 22.23.
-Подтвержденные ресурсы: Node 22.23, Passenger, PostgreSQL, диск 30 ГБ и 3 ГБ
-ОЗУ. Фактический корень приложения, учетные данные базы, порт и настройки cPanel
-неизвестны.
+загружайте, пока команда не подтвердит эти значения, Node `>=22.12.0`, Passenger,
+PostgreSQL, доступный диск и ОЗУ. Node 22.23 подходит, если именно эту версию
+предлагает cPanel. Фактические версии, ресурсы, корень приложения, учетные данные
+базы, порт и настройки cPanel должны быть подтверждены командой хостинга.
 
 ## 2. Локальные проверки и передаваемые артефакты
 
@@ -42,18 +42,19 @@ SHA-256.
 
 ```bash
 npm ci
-npm run check
-npm run build
-npm run postgres:test:contract
-npm run migration:test
-npm run release:test
-npm run standalone:test
+npm run release:verify
+DATABASE_TEST_ALLOW_RESET=1 \
+DATABASE_TEST_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/miracon_test \
+npm run standalone:test:db
 ```
 
 Остановитесь, если какая-либо команда завершилась ошибкой, `npm run build` не
 создала `dist/server/entry.mjs` или локальные подтверждающие материалы не
 сохранены. Это только локальные результаты. Они не подтверждают состояние среды
-хостинга клиента.
+хостинга клиента. `standalone:test:db` разрешено запускать только с отдельной
+одноразовой базой, имя которой содержит маркер `test`, `testing`, `ci`,
+`disposable` или `tmp`; никогда не указывайте базу разработки, staging или
+production.
 
 Создайте архив релиза. Реализованный упаковщик включает `app.js`, `dist`,
 `package.json`, `package-lock.json`, миграции PostgreSQL,
@@ -121,7 +122,8 @@ npm run migration:media -- --input=<EXPORT_DIR> --media-root=<ABSOLUTE_LOCAL_MED
 состояния с помощью утвержденного процесса передачи. Эта инструкция не задает
 пути на хосте.
 
-Внутри `<HOST_APP_ROOT>`, в среде Node 22.23 платформы хостинга:
+Внутри `<HOST_APP_ROOT>`, в подтвержденной среде Node `>=22.12.0` платформы
+хостинга (Node 22.23 также подходит, если доступен):
 
 ```bash
 cd <HOST_APP_ROOT>
@@ -129,7 +131,7 @@ npm ci --omit=dev
 ```
 
 Не загружайте `node_modules`. `argon2` является нативной зависимостью: установите
-его на сервере с Node 22.23, чтобы npm выбрал или собрал бинарный файл,
+его на сервере с подтвержденной версией Node, чтобы npm выбрал или собрал бинарный файл,
 совместимый с ABI сервера. Остановитесь, если установка не может собрать или
 загрузить `argon2`. Не копируйте `node_modules` с рабочей станции в качестве
 обходного решения. Установка производственных зависимостей является этапом
@@ -142,7 +144,17 @@ npm ci --omit=dev
 DATABASE_URL=<TARGET_POSTGRES_CONNECTION_STRING>
 MEDIA_ROOT=<ABSOLUTE_HOST_MEDIA_ROOT>
 PUBLIC_SITE_URL=<CANONICAL_HTTPS_ORIGIN>
+CONTACT_DIGEST_SECRET=<INDEPENDENT_SECRET_AT_LEAST_32_CHARACTERS>
+CONTACT_SMTP_ENABLED=false
 ```
+
+`CONTACT_DIGEST_SECRET` обязателен в production и должен храниться только на
+сервере вне релиза и `public_html`. Уведомления SMTP по умолчанию отключены. Если
+они отдельно одобрены, задайте полный серверный набор
+`CONTACT_SMTP_ENABLED=true`, `CONTACT_SMTP_HOST`, `CONTACT_SMTP_PORT`,
+`CONTACT_SMTP_USER`, `CONTACT_SMTP_PASSWORD`, `CONTACT_SMTP_FROM` и
+`CONTACT_SMTP_TO`; используйте только порт 465 с implicit TLS или 587 с
+обязательным STARTTLS. Не добавляйте к этим именам префикс `PUBLIC_`.
 
 Не настраивайте `SUPABASE_SOURCE_SERVICE_ROLE_KEY` в среде выполнения сайта. Эта
 переменная предназначена только для автономной передачи. Среда выполнения сайта
@@ -203,7 +215,8 @@ npm run migration:validate -- --input=<EXPORT_DIR> --media-state=<HOST_MEDIA_STA
 Релиз содержит `app.js`, который импортирует `dist/server/entry.mjs`. Настройте
 Passenger на использование `app.js` или получите явное подтверждение, что
 настройка startup-file на платформе предоставляет эквивалентную возможность,
-укажите Node 22.23 и переданный платформой хостинга Passenger `PORT`. Не
+укажите подтвержденный хостингом Node `>=22.12.0` (Node 22.23 подходит, если
+доступен) и переданный платформой хостинга Passenger `PORT`. Не
 задавайте порт жестко.
 
 Если перед включением Passenger команде хостинга нужна проверка запуска в

@@ -106,6 +106,7 @@ test('repeat application leaves one complete migration ledger', async () => {
     '0007_media_cleanup_pending.sql',
     '0008_admin_governance_and_availability.sql',
     '0009_exact_revision_materialization.sql',
+    '0010_contact_intake.sql',
   ]);
 });
 

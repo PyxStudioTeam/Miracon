@@ -10,6 +10,7 @@ export const ADMIN_CAPABILITIES = [
   'rejectRevision',
   'rollbackRevision',
   'manageEditors',
+  'manageContacts',
   'deleteProject',
   'reorderProjects',
 ] as const;
@@ -23,6 +24,7 @@ const capabilitiesByRole: Readonly<Record<AdminRole, readonly AdminCapability[]>
     'proposeProject',
     'proposeHomepageHero',
     'proposeSiteSettings',
+    'manageContacts',
   ],
 };
 

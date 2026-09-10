@@ -45,6 +45,26 @@ describe('uploaded media response caching', () => {
     expect(await head.text()).toBe('');
   });
 
+  it('serves JPEG and PNG uploads with their source MIME type and bytes', async () => {
+    // Given
+    const images = [
+      { extension: 'jpg', mimeType: 'image/jpeg', source: Buffer.from([0xff, 0xd8, 0xff, 0xe0]) },
+      { extension: 'png', mimeType: 'image/png', source: Buffer.from([0x89, 0x50, 0x4e, 0x47]) },
+    ] as const;
+    const paths = images.map((image) => `uploads/${uuid}/${uuid}.${image.extension}`);
+    await Promise.all(paths.map((path, index) => writeFile(join(mediaRoot, path), images[index].source)));
+
+    // When
+    const responses = await Promise.all(paths.map((path) => GET(context(path))));
+
+    // Then
+    for (const [index, response] of responses.entries()) {
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe(images[index].mimeType);
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(images[index].source);
+    }
+  });
+
   it('does not attach immutable caching to legacy paths or UUID error responses', async () => {
     // Given
     const legacyPath = 'legacy/clip.mp4';

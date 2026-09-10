@@ -55,10 +55,11 @@ type AuthHeaders = {
 };
 
 async function loginAsAdmin(): Promise<AuthHeaders> {
+  const credentials = JSON.stringify({ email: 'admin@miracon.test', password: 'correct horse battery staple' });
   const response = await login(context('/api/auth/login', {
     method: 'POST',
-    headers: { origin: siteUrl },
-    body: JSON.stringify({ email: 'admin@miracon.test', password: 'correct horse battery staple' }),
+    headers: { origin: siteUrl, 'content-length': String(Buffer.byteLength(credentials)) },
+    body: credentials,
   }));
   const cookie = response.headers.get('set-cookie');
   if (!cookie) throw new Error('Expected session cookie');

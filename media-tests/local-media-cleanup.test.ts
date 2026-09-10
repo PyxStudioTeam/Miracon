@@ -24,7 +24,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await pool.query(`
     truncate miracon.projects cascade;
-    truncate miracon.media_files;
+    delete from miracon.media_files;
     delete from miracon.homepage_videos;
     update miracon.site_settings set
       footer_terms_visible = false, footer_terms_pdf_url = '',

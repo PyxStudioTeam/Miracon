@@ -18,7 +18,7 @@ beforeAll(async () => {
 }, 30_000);
 
 beforeEach(async () => {
-  await pool.query('truncate miracon.projects cascade; truncate miracon.media_files');
+  await pool.query('truncate miracon.projects cascade; delete from miracon.media_files');
 });
 
 afterEach(async () => {

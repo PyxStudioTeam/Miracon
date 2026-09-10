@@ -226,8 +226,9 @@ describe('Phase 2 server API', () => {
     // Seed a real media_files record for the legal PDF URL so the server-side PDF validation passes
     await pool.query(
       `insert into miracon.media_files (id, relative_url, relative_path, original_name, mime_type, size_bytes, sha256)
-       values ('test-terms-pdf', '/media/legal/terms.pdf', 'legal/terms.pdf', 'terms.pdf', 'application/pdf', 1024, 'a'.repeat(64))
+       values ('test-terms-pdf', '/media/legal/terms.pdf', 'legal/terms.pdf', 'terms.pdf', 'application/pdf', 1024, $1)
        on conflict (id) do nothing`,
+      [createHash('sha256').update('terms.pdf').digest()],
     );
     const settings = { footerTermsVisible: true, footerTermsPdfUrl: '/media/legal/terms.pdf', footerPrivacyVisible: false, footerPrivacyPdfUrl: '', footerCookieVisible: false, footerCookiePdfUrl: '' };
 
@@ -316,6 +317,7 @@ describe('Phase 2 server API', () => {
 
   it('accepts the canonical origin when the request URL is internal behind a proxy', async () => {
     // Given
+    vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('PUBLIC_SITE_URL', siteUrl);
     const internalBase = 'http://miracon.test';
     const body = JSON.stringify({ email: 'admin@miracon.test', password: 'correct horse battery staple' });
@@ -441,7 +443,11 @@ async function loginAsAdmin(): Promise<{ readonly headers: AuthHeaders }> {
 }
 
 function context(path: string, init: RequestInit & { readonly clientAddress?: string } = {}, params: Record<string, string> = {}, base = siteUrl) {
-  return { request: new Request(`${base}${path}`, init), params, clientAddress: init.clientAddress };
+  const headers = new Headers(init.headers);
+  if (typeof init.body === 'string' && !headers.has('content-length')) {
+    headers.set('content-length', String(Buffer.byteLength(init.body)));
+  }
+  return { request: new Request(`${base}${path}`, { ...init, headers }), params, clientAddress: init.clientAddress };
 }
 
 function requireCookie(response: Response): string {

@@ -13,6 +13,8 @@
 - `<CPANEL_USERNAME>`
 - `<ADMIN_EMAIL>`
 - `<ADMIN_PASSWORD>`
+- `<CONTACT_DIGEST_SECRET>`: независимо сгенерированная секретная строка длиной
+  не менее 32 символов
 
 Пароль PostgreSQL в `DATABASE_URL` должен быть закодирован для URL. Например,
 пробел нельзя оставлять как пробел.
@@ -34,7 +36,8 @@
 
    Откройте **Setup Node.js App**, нажмите **Create Application** и укажите:
 
-   - **Node.js version:** `22.23.0`
+   - **Node.js version:** любая предлагаемая cPanel версия `>=22.12.0`; `22.23.0`
+     подходит, если она доступна
    - **Application mode:** `Production`
    - **Application root:** `public_html/miracon-node-release`
    - **Application URL:** `miracon.gr` или `https://miracon.gr`, смотря какой формат требует поле
@@ -49,8 +52,17 @@
    DATABASE_URL=postgresql://<POSTGRES_USER>:<URL_ENCODED_POSTGRES_PASSWORD>@localhost:5432/<POSTGRES_DATABASE>
    MEDIA_ROOT=/home/<CPANEL_USERNAME>/miracon-media
    PUBLIC_SITE_URL=https://miracon.gr
-   PUBLIC_MEDIA_WORKER_ENABLED=false
+   CONTACT_DIGEST_SECRET=<CONTACT_DIGEST_SECRET>
+   CONTACT_SMTP_ENABLED=false
    ```
+
+   `CONTACT_DIGEST_SECRET` должен храниться только в серверной среде приложения,
+   не в архиве или `public_html`. SMTP-уведомления необязательны и по умолчанию
+   отключены. Если они отдельно согласованы, добавьте полный серверный набор
+   `CONTACT_SMTP_ENABLED=true`, `CONTACT_SMTP_HOST`, `CONTACT_SMTP_PORT`,
+   `CONTACT_SMTP_USER`, `CONTACT_SMTP_PASSWORD`, `CONTACT_SMTP_FROM` и
+   `CONTACT_SMTP_TO`. Для SMTP допустим только порт 465 с implicit TLS или 587 с
+   обязательным STARTTLS; не используйте префикс `PUBLIC_`.
 
 5. **Установите зависимости, примените таблицы и создайте администратора.**
 
@@ -89,5 +101,4 @@
    Откройте `https://miracon.gr/admin`, войдите с `<ADMIN_EMAIL>` и
    `<ADMIN_PASSWORD>`. Если список проектов пуст, нажмите **Import current
    website projects**. Если проекты уже есть, эту кнопку не нажимайте.
-
 

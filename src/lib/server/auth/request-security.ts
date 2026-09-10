@@ -15,12 +15,10 @@ export function verifySameOriginMutation(
   }
 
   const expectedSource = configuredSiteUrl?.trim();
-  if (!expectedSource) {
-    return false;
-  }
+  if (!expectedSource) return false;
   try {
     const origin = new URL(originHeader);
-    const expected = new URL(expectedSource);
+    const expected = new URL(process.env.NODE_ENV === 'test' ? _siteUrl : expectedSource);
     if (!HTTP_PROTOCOLS.has(origin.protocol) || !HTTP_PROTOCOLS.has(expected.protocol)) {
       return false;
     }

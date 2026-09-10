@@ -8,8 +8,6 @@ const IMAGE_MAX_BYTES = 20 * 1024 * 1024;
 const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 const IMAGE_MAX_PIXELS = 40_000_000;
 const IMAGE_MAX_EDGE = 10_000;
-const DIRECT_IMAGE_MAX_EDGE = 2400;
-const DIRECT_IMAGE_QUALITY = 0.86;
 
 export interface ProcessedMediaVariant {
   variantKey: string;
@@ -114,29 +112,7 @@ export async function readImageDimensions(file: File) {
 
 export async function optimizePhotoForDirectUpload(file: File): Promise<File> {
   await validateProcessableFile(file, 'image');
-  if (file.type !== 'image/jpeg' && file.type !== 'image/png') return file;
-
-  let bitmap: ImageBitmap | null = null;
-  try {
-    bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, DIRECT_IMAGE_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-    const width = Math.max(1, Math.round(bitmap.width * scale));
-    const height = Math.max(1, Math.round(bitmap.height * scale));
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d');
-    if (!context) return file;
-    context.drawImage(bitmap, 0, 0, width, height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', DIRECT_IMAGE_QUALITY));
-    if (!blob || (scale === 1 && blob.size >= file.size)) return file;
-    const baseName = file.name.replace(/\.[^.]+$/, '') || 'image';
-    return new File([blob], `${baseName}.webp`, { type: 'image/webp', lastModified: file.lastModified });
-  } catch {
-    return file;
-  } finally {
-    bitmap?.close();
-  }
+  return file;
 }
 
 export async function validateProcessableFile(file: File, kind: 'image' | 'video') {

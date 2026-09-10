@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: miracon-website
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: node scripts/render-start.mjs
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: miracon-db
+          property: connectionString
+      - key: MEDIA_ROOT
+        value: /tmp/miracon-media
+      - key: ALLOW_PREVIEW_HOSTS
+        value: "true"
+      - key: HOST
+        value: 0.0.0.0
+      - key: CONTACT_DIGEST_SECRET
+        generateValue: true
+
+databases:
+  - name: miracon-db
+    plan: free
+    region: frankfurt
+    databaseName: miracon
+    user: miracon_user

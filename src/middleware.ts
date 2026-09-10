@@ -1,10 +1,14 @@
 import { defineMiddleware } from 'astro:middleware';
+import { getPublicIdentityRedirect, getSiteOrigin } from './lib/site-origin';
 
 const developmentConnections = import.meta.env.DEV
   ? ' ws://127.0.0.1:* ws://localhost:*'
   : '';
 
 export const onRequest = defineMiddleware(async ({ url }, next) => {
+  const redirect = getPublicIdentityRedirect(url, getSiteOrigin(url));
+  if (redirect) return new Response(null, { status: 308, headers: { Location: redirect } });
+
   const target = url.pathname === '/el' || url.pathname.startsWith('/el/')
     ? `${url.pathname.slice(3) || '/'}${url.search}`
     : undefined;
@@ -17,14 +21,14 @@ export const onRequest = defineMiddleware(async ({ url }, next) => {
     "base-uri 'self'",
     "object-src 'none'",
     `frame-ancestors ${frameAncestors}`,
-    "form-action 'self' https://api.web3forms.com",
-    "script-src 'self' 'unsafe-inline' https://web3forms.com https://hcaptcha.com https://*.hcaptcha.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://hcaptcha.com https://*.hcaptcha.com",
+    "form-action 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
-    "img-src 'self' data: blob: https://*.supabase.co https://hcaptcha.com https://*.hcaptcha.com",
-    "media-src 'self' blob: https://*.supabase.co",
-    `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://web3forms.com https://api.web3forms.com https://hcaptcha.com https://*.hcaptcha.com${developmentConnections}`,
-    "frame-src 'self' https://www.google.com https://hcaptcha.com https://*.hcaptcha.com",
+    "img-src 'self' data: blob:",
+    "media-src 'self' blob:",
+    `connect-src 'self'${developmentConnections}`,
+    "frame-src 'self' https://www.google.com",
     "worker-src 'self' blob:",
     ...(import.meta.env.PROD ? ['upgrade-insecure-requests'] : []),
   ].join('; ');

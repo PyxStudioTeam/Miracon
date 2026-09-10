@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { lstat, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
@@ -11,11 +11,15 @@ const fixtureFiles = {
   'dist/client/assets/site.css': 'body { color: black; }\n',
   'dist/client/index.html': '<!doctype html>\n',
   'dist/server/entry.mjs': "console.log('server');\n",
+  'dist/server/chunks/login_A1b2C3.mjs': "import './password_D4e5F6.mjs';\n",
+  'dist/server/chunks/password_D4e5F6.mjs': 'export const verifyPassword = true;\n',
   'package-lock.json': '{"lockfileVersion":3}\n',
-  'package.json': '{"name":"fixture","version":"2.4.0","type":"module","engines":{"node":">=22.12.0"}}\n',
+  'package.json': '{"name":"fixture","version":"2.4.0","type":"module","engines":{"node":">=22.12.0"},"dependencies":{"nodemailer":"^9.1.1"}}\n',
+  'docs/production-release-runbook.md': '# Production Release Runbook\n',
   'postgres/migrations/0001_initial.sql': 'select 1;\n',
   'scripts/postgres-migrate.mjs': 'export const migrate = true;\n',
   'scripts/provision-admin.mjs': 'export const provision = true;\n',
+  'scripts/contact-retention-purge.mjs': 'export const purge = true;\n',
   'scripts/supabase-import.mjs': 'export const importSnapshot = true;\n',
   'scripts/verify-media-state.mjs': 'export const verifyMedia = true;\n',
   'scripts/migration/import-artifacts.mjs': 'export const load = true;\n',
@@ -63,15 +67,20 @@ test('writes a sorted deterministic manifest when package inputs are valid', asy
     const paths = manifest.files.map((file) => file.path);
     assert.deepEqual(paths, [...paths].sort());
     assert.equal(manifest.version, 1);
+    assert.equal(manifest.format, 'miracon-release/v1');
     assert.equal(manifest.applicationVersion, '2.4.0');
     assert.equal(manifest.createdAt, createdAt.toISOString());
     assert.equal(manifest.nodeEngine, '>=22.12.0');
     assert.equal(paths.includes('release-manifest.json'), false);
     assert.equal(paths.includes('tmp/.gitkeep'), true);
+    const packagedPackage = JSON.parse(await readFile(join(output, 'package.json'), 'utf8'));
+    assert.equal(packagedPackage.dependencies.nodemailer, '^9.1.1');
     for (const requiredPath of [
-      'app.js', 'dist/server/entry.mjs', 'package.json', 'package-lock.json',
+      'app.js', 'dist/server/entry.mjs', 'dist/server/chunks/login_A1b2C3.mjs',
+      'dist/server/chunks/password_D4e5F6.mjs', 'package.json', 'package-lock.json', 'docs/production-release-runbook.md',
       'postgres/migrations/0001_initial.sql',
-      'scripts/postgres-migrate.mjs', 'scripts/provision-admin.mjs', 'scripts/supabase-import.mjs',
+      'scripts/postgres-migrate.mjs', 'scripts/provision-admin.mjs', 'scripts/contact-retention-purge.mjs',
+      'scripts/supabase-import.mjs',
       'scripts/verify-media-state.mjs',
       'scripts/migration/import-artifacts.mjs', 'scripts/migration/import-database.mjs',
       'scripts/migration/import-preparation.mjs', 'scripts/migration/media-paths.mjs',
@@ -174,6 +183,9 @@ test('excludes forbidden files inside selected package directories', async () =>
     // Given
     const forbiddenPaths = [
       'dist/client/.env.production',
+      'dist/server/.env.smtp',
+      'dist/server/smtp-credentials.json',
+      'dist/server/chunks/passwords.json',
       'dist/client/admin-credentials.json',
       'dist/client/debug.log',
       'dist/client/exports/data.json',
@@ -185,6 +197,13 @@ test('excludes forbidden files inside selected package directories', async () =>
       'dist/server/test-results/result.json',
       'dist/server/tmp/scratch.json',
       'dist/server/request.trace',
+      'dist/server/.agents/session.json',
+      'dist/server/.codegraph/index.db',
+      'dist/server/.idea/workspace.xml',
+      'dist/server/.vscode/settings.json',
+      'dist/server/artifacts/local-state.json',
+      'dist/server/browser-tests/contact.test.mjs',
+      'dist/server/contact-tests/contact.test.ts',
     ];
     for (const relativePath of forbiddenPaths) {
       const destination = join(projectRoot, relativePath);
@@ -222,15 +241,369 @@ test('atomically replaces an existing release when force is explicit', async () 
   await withFixture(async (projectRoot) => {
     // Given
     const output = join(projectRoot, 'release');
-    await mkdir(output);
-    await writeFile(join(output, 'obsolete.txt'), 'remove\n');
+    await packageRelease({ projectRoot, output, createdAt: new Date('2026-08-12T10:00:00.000Z') });
+    await writeFile(join(projectRoot, 'app.js'), "import './dist/server/entry.mjs'; // updated\n");
 
     // When
-    await packageRelease({ projectRoot, output, force: true });
+    await packageRelease({ projectRoot, output, force: true, createdAt: new Date('2026-08-13T10:00:00.000Z') });
 
     // Then
-    await assert.rejects(lstat(join(output, 'obsolete.txt')), /ENOENT/u);
+    const manifest = JSON.parse(await readFile(join(output, 'release-manifest.json'), 'utf8'));
+    assert.equal(manifest.createdAt, '2026-08-13T10:00:00.000Z');
+    assert.equal(await readFile(join(output, 'app.js'), 'utf8'), "import './dist/server/entry.mjs'; // updated\n");
+  });
+});
+
+test('refuses forced replacement of protected workspace paths without changing their bytes', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    for (const relativePath of ['.git/HEAD', 'src/index.ts', 'public/index.html']) {
+      const destination = join(projectRoot, relativePath);
+      await mkdir(dirname(destination), { recursive: true });
+      await writeFile(destination, `${relativePath}\n`);
+    }
+    const targets = [
+      [projectRoot, join(projectRoot, 'app.js')],
+      [join(projectRoot, '.git'), join(projectRoot, '.git/HEAD')],
+      [join(projectRoot, 'src'), join(projectRoot, 'src/index.ts')],
+      [join(projectRoot, 'public'), join(projectRoot, 'public/index.html')],
+      [join(projectRoot, 'dist'), join(projectRoot, 'dist/server/entry.mjs')],
+      [join(projectRoot, 'docs'), join(projectRoot, 'docs/production-release-runbook.md')],
+      [join(projectRoot, 'postgres'), join(projectRoot, 'postgres/migrations/0001_initial.sql')],
+      [join(projectRoot, 'postgres/migrations'), join(projectRoot, 'postgres/migrations/0001_initial.sql')],
+      [join(projectRoot, 'scripts'), join(projectRoot, 'scripts/postgres-migrate.mjs')],
+      [join(projectRoot, 'scripts/migration'), join(projectRoot, 'scripts/migration/import-artifacts.mjs')],
+    ];
+
+    for (const [output, sentinel] of targets) {
+      const before = createHash('sha256').update(await readFile(sentinel)).digest('hex');
+
+      // When
+      const packaging = packageRelease({ projectRoot, output, force: true });
+
+      // Then
+      await assert.rejects(packaging, /protected project path|overlaps package input/u);
+      const after = createHash('sha256').update(await readFile(sentinel)).digest('hex');
+      assert.equal(after, before, `${output} must remain byte-identical`);
+    }
+  });
+});
+
+test('refuses forced replacement of an arbitrary non-release directory', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'customer-files');
+    await mkdir(output);
+    await writeFile(join(output, 'keep.txt'), 'keep\n');
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true });
+
+    // Then
+    await assert.rejects(packaging, /recognized Miracon release package/u);
+    assert.equal(await readFile(join(output, 'keep.txt'), 'utf8'), 'keep\n');
+  });
+});
+
+test('refuses forced replacement when the release ownership marker is malformed', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await mkdir(output);
+    await writeFile(join(output, 'release-manifest.json'), JSON.stringify({ format: 'not-miracon', version: 1, files: [] }));
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true });
+
+    // Then
+    await assert.rejects(packaging, /recognized Miracon release package/u);
+    const manifest = JSON.parse(await readFile(join(output, 'release-manifest.json'), 'utf8'));
+    assert.equal(manifest.format, 'not-miracon');
+  });
+});
+
+test('refuses forced replacement when an owned manifest omits required release entries', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await packageRelease({ projectRoot, output });
+    const manifestPath = join(output, 'release-manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    manifest.files = manifest.files.filter((file) => file.path !== 'app.js');
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true });
+
+    // Then
+    await assert.rejects(packaging, /recognized Miracon release package/u);
     assert.equal(await readFile(join(output, 'app.js'), 'utf8'), fixtureFiles['app.js']);
+  });
+});
+
+test('refuses forced replacement when an owned manifest contains noncanonical paths', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await packageRelease({ projectRoot, output });
+    const manifestPath = join(output, 'release-manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    const appEntry = manifest.files.find((file) => file.path === 'app.js');
+    manifest.files.push({ ...appEntry, path: './app.js' });
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true });
+
+    // Then
+    await assert.rejects(packaging, /recognized Miracon release package/u);
+    assert.equal(await readFile(join(output, 'app.js'), 'utf8'), fixtureFiles['app.js']);
+  });
+});
+
+test('refuses a symlink output before forced replacement when the platform supports it', async (context) => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const ownedDirectory = join(projectRoot, 'owned-directory');
+    const output = join(projectRoot, 'release-link');
+    await mkdir(ownedDirectory);
+    await writeFile(join(ownedDirectory, 'keep.txt'), 'keep\n');
+    try {
+      await symlink(ownedDirectory, output, 'junction');
+    } catch (error) {
+      if (error?.code === 'EPERM' || error?.code === 'EACCES') {
+        context.skip('Creating symlinks is not permitted on this platform');
+        return;
+      }
+      throw error;
+    }
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true });
+
+    // Then
+    await assert.rejects(packaging, /symlink/u);
+    assert.equal(await readFile(join(ownedDirectory, 'keep.txt'), 'utf8'), 'keep\n');
+  });
+});
+
+test('uses the copy fallback when Windows-style rename errors occur', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await packageRelease({ projectRoot, output });
+    await writeFile(join(projectRoot, 'app.js'), "import './dist/server/entry.mjs'; // fallback\n");
+    let fallbackCopies = 0;
+    const fileSystem = {
+      rename: async (from, to) => {
+        if (from.includes('.release.tmp-')) {
+          const error = new Error('simulated Windows rename failure');
+          error.code = 'EPERM';
+          throw error;
+        }
+        await rename(from, to);
+      },
+      copy: async (from, to, options) => {
+        fallbackCopies += 1;
+        await cp(from, to, options);
+      },
+      remove: rm,
+    };
+
+    // When
+    await packageRelease({ projectRoot, output, force: true, fileSystem });
+
+    // Then
+    assert.equal(fallbackCopies, 1);
+    assert.equal(await readFile(join(output, 'app.js'), 'utf8'), "import './dist/server/entry.mjs'; // fallback\n");
+  });
+});
+
+test('restores the recognized prior release when fallback copy fails', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await packageRelease({ projectRoot, output, createdAt: new Date('2026-08-12T10:00:00.000Z') });
+    const previousManifest = await readFile(join(output, 'release-manifest.json'), 'utf8');
+    await writeFile(join(projectRoot, 'app.js'), "import './dist/server/entry.mjs'; // must roll back\n");
+    const fileSystem = {
+      rename: async (from, to) => {
+        if (from.includes('.release.tmp-')) {
+          const error = new Error('simulated cross-device rename');
+          error.code = 'EXDEV';
+          throw error;
+        }
+        await rename(from, to);
+      },
+      copy: async () => {
+        throw new Error('simulated fallback copy failure');
+      },
+      remove: rm,
+    };
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true, fileSystem });
+
+    // Then
+    await assert.rejects(packaging, /simulated fallback copy failure/u);
+    assert.equal(await readFile(join(output, 'release-manifest.json'), 'utf8'), previousManifest);
+    assert.equal(await readFile(join(output, 'app.js'), 'utf8'), fixtureFiles['app.js']);
+    const siblings = await readdir(dirname(output));
+    assert.equal(siblings.some((name) => name.includes('.release.tmp-') || name.includes('.release.backup-')), false);
+  });
+});
+
+test('restores the prior release when initial temporary cleanup fails after promotion failure', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await packageRelease({ projectRoot, output, createdAt: new Date('2026-08-12T10:00:00.000Z') });
+    const previousManifest = await readFile(join(output, 'release-manifest.json'), 'utf8');
+    await writeFile(join(projectRoot, 'app.js'), "import './dist/server/entry.mjs'; // cleanup must not block rollback\n");
+    const warnings = [];
+    let temporaryCleanupAttempts = 0;
+    const fileSystem = {
+      rename: async (from, to) => {
+        if (from.includes('.release.tmp-')) {
+          const error = new Error('simulated cross-device promotion');
+          error.code = 'EXDEV';
+          throw error;
+        }
+        await rename(from, to);
+      },
+      copy: async () => {
+        throw new Error('simulated promotion copy failure');
+      },
+      remove: async (path, options) => {
+        if (path.includes('.release.tmp-')) {
+          temporaryCleanupAttempts += 1;
+          if (temporaryCleanupAttempts === 1) throw new Error('simulated initial temporary cleanup failure');
+        }
+        await rm(path, options);
+      },
+    };
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true, fileSystem, warn: (message) => warnings.push(message) });
+
+    // Then
+    await assert.rejects(packaging, /simulated promotion copy failure/u);
+    assert.equal(await readFile(join(output, 'release-manifest.json'), 'utf8'), previousManifest);
+    assert.equal(await readFile(join(output, 'app.js'), 'utf8'), fixtureFiles['app.js']);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /temporary package could not be removed before rollback/u);
+    const siblings = await readdir(dirname(output));
+    assert.equal(siblings.some((name) => name.includes('.release.tmp-') || name.includes('.release.backup-')), false);
+  });
+});
+
+test('restores the recognized prior release when fallback source cleanup partially fails', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await packageRelease({ projectRoot, output, createdAt: new Date('2026-08-12T10:00:00.000Z') });
+    const previousManifest = await readFile(join(output, 'release-manifest.json'), 'utf8');
+    let sourceCleanupFailed = false;
+    const fileSystem = {
+      rename: async (from, to) => {
+        if (from === output) {
+          const error = new Error('simulated locked release directory');
+          error.code = 'EPERM';
+          throw error;
+        }
+        await rename(from, to);
+      },
+      copy: cp,
+      remove: async (path, options) => {
+        await rm(path, options);
+        if (path === output && !sourceCleanupFailed) {
+          sourceCleanupFailed = true;
+          throw new Error('simulated partial source cleanup failure');
+        }
+      },
+    };
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true, fileSystem });
+
+    // Then
+    await assert.rejects(packaging, /simulated partial source cleanup failure/u);
+    assert.equal(await readFile(join(output, 'release-manifest.json'), 'utf8'), previousManifest);
+    assert.equal(await readFile(join(output, 'app.js'), 'utf8'), fixtureFiles['app.js']);
+    const siblings = await readdir(dirname(output));
+    assert.equal(siblings.some((name) => name.includes('.release.tmp-') || name.includes('.release.backup-')), false);
+  });
+});
+
+test('keeps the new release usable when obsolete backup cleanup fails', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await packageRelease({ projectRoot, output });
+    await writeFile(join(projectRoot, 'app.js'), "import './dist/server/entry.mjs'; // cleanup warning\n");
+    const warnings = [];
+    const fileSystem = {
+      rename,
+      copy: cp,
+      remove: async (path, options) => {
+        if (path.includes('.release.backup-')) throw new Error('simulated backup cleanup failure');
+        await rm(path, options);
+      },
+    };
+
+    // When
+    await packageRelease({ projectRoot, output, force: true, fileSystem, warn: (message) => warnings.push(message) });
+
+    // Then
+    assert.equal(await readFile(join(output, 'app.js'), 'utf8'), "import './dist/server/entry.mjs'; // cleanup warning\n");
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /previous-package backup could not be removed/u);
+  });
+});
+
+test('preserves a usable output and prior backup when rollback restoration fails', async () => {
+  await withFixture(async (projectRoot) => {
+    // Given
+    const output = join(projectRoot, 'release');
+    await packageRelease({ projectRoot, output });
+    await writeFile(join(projectRoot, 'app.js'), "import './dist/server/entry.mjs'; // preserved output\n");
+    let promotionRenameFailed = false;
+    let promotionCopyFailed = false;
+    const fileSystem = {
+      rename: async (from, to) => {
+        if (from.includes('.release.tmp-') && to === output && !promotionRenameFailed) {
+          promotionRenameFailed = true;
+          const error = new Error('simulated promotion rename failure');
+          error.code = 'EXDEV';
+          throw error;
+        }
+        if (from.includes('.release.backup-') && to === output) {
+          const error = new Error('simulated restoration rename failure');
+          error.code = 'EXDEV';
+          throw error;
+        }
+        await rename(from, to);
+      },
+      copy: async (from, to, options) => {
+        await cp(from, to, options);
+        if (!promotionCopyFailed) {
+          promotionCopyFailed = true;
+          throw new Error('simulated promotion copy completion ambiguity');
+        }
+        if (from.includes('.release.backup-')) throw new Error('simulated restoration copy failure');
+      },
+      remove: rm,
+    };
+
+    // When
+    const packaging = packageRelease({ projectRoot, output, force: true, fileSystem });
+
+    // Then
+    await assert.rejects(packaging, /simulated restoration copy failure/u);
+    assert.equal(await readFile(join(output, 'app.js'), 'utf8'), "import './dist/server/entry.mjs'; // preserved output\n");
+    const backup = (await readdir(dirname(output))).find((name) => name.includes('.release.backup-'));
+    assert.ok(backup);
+    assert.equal(await readFile(join(dirname(output), backup, 'app.js'), 'utf8'), fixtureFiles['app.js']);
   });
 });
 

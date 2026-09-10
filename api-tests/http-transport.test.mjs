@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { cp, copyFile, mkdtemp, rm, symlink } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,6 +16,7 @@ const admin = { email: 'admin@miracon.test', password: 'correct horse battery st
 test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async () => {
   const databaseUrl = testDatabaseUrl();
   const mediaRoot = await mkdtemp(join(tmpdir(), 'miracon-http-media-'));
+  const astroRoot = await mkdtemp(join(tmpdir(), 'miracon-http-astro-'));
   const database = await openClient(databaseUrl, 'miracon-http-transport-test');
   let server;
   try {
@@ -25,7 +26,8 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
 
     const port = await freeLoopbackPort();
     const baseUrl = `http://127.0.0.1:${port}`;
-    server = startAstro({ baseUrl, databaseUrl, mediaRoot, port });
+    await linkAstroProject({ astroRoot });
+    server = startAstro({ astroRoot, baseUrl, databaseUrl, mediaRoot, port });
     await waitForHealth(baseUrl, server);
 
     const health = await fetch(`${baseUrl}/api/health`);
@@ -85,10 +87,10 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     const saved = await fetch(`${baseUrl}/api/admin/projects`, {
       method: 'POST',
       headers: authHeaders,
-      body: JSON.stringify(projectFixture({
+      body: JSON.stringify(projectSaveBody(projectFixture({
         title: 'PostgreSQL draft project',
         translations: { el: { title: 'Πρόχειρο έργο PostgreSQL' } },
-      })),
+      }))),
     });
     assert.equal(saved.status, 201);
     assert.equal((await saved.json()).project.id, 'http-transport-project');
@@ -96,13 +98,13 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     const published = await fetch(`${baseUrl}/api/admin/projects`, {
       method: 'POST',
       headers: authHeaders,
-      body: JSON.stringify(projectFixture({
+      body: JSON.stringify(projectSaveBody(projectFixture({
         id: 'postgres-public-project',
         slug: 'postgres-public-project',
         title: 'PostgreSQL public project',
         status: 'published',
         translations: { el: { title: 'Δημόσιο έργο PostgreSQL' } },
-      })),
+      }))),
     });
     assert.equal(published.status, 201);
 
@@ -115,13 +117,35 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
         mobileUrl: null, mobileStoragePath: null, sortOrder: 0, isActive: true,
       }] }),
     });
-    assert.equal(homepageVideos.status, 204);
+    // Hero saves now return the materialized playlist with its revision head.
+    assert.equal(homepageVideos.status, 200);
+    const homepageVideosBody = await homepageVideos.json();
+    assert.equal(homepageVideosBody.videos[0].id, 'postgres-home-video');
+    assert.ok('currentRevisionId' in homepageVideosBody);
+
+    // Legal documents must resolve to an uploaded catalog PDF, so external URLs are rejected.
+    await assertApiError(fetch(`${baseUrl}/api/admin/site-settings`, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({
+        footerTermsVisible: true, footerTermsPdfUrl: 'https://miracon.test/terms.pdf',
+        footerPrivacyVisible: false, footerPrivacyPdfUrl: '',
+        footerCookieVisible: false, footerCookiePdfUrl: '',
+      }),
+    }), 400, 'invalid_media');
+
+    const uploadedTerms = await upload(baseUrl, authHeaders, pdfSignature(), {
+      filename: 'terms.pdf',
+      mimeType: 'application/pdf',
+    });
+    assert.equal(uploadedTerms.status, 201);
+    const termsPdfUrl = (await uploadedTerms.json()).media.relativeUrl;
 
     const siteSettings = await fetch(`${baseUrl}/api/admin/site-settings`, {
       method: 'PUT',
       headers: authHeaders,
       body: JSON.stringify({
-        footerTermsVisible: true, footerTermsPdfUrl: 'https://miracon.test/terms.pdf',
+        footerTermsVisible: true, footerTermsPdfUrl: termsPdfUrl,
         footerPrivacyVisible: false, footerPrivacyPdfUrl: '',
         footerCookieVisible: false, footerCookiePdfUrl: '',
       }),
@@ -135,7 +159,7 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     assert.match(homeHtml, /PostgreSQL public project/u);
     assert.doesNotMatch(homeHtml, /PostgreSQL draft project/u);
     assert.match(homeHtml, /postgres-home\.mp4/u);
-    assert.match(homeHtml, /https:\/\/miracon\.test\/terms\.pdf/u);
+    assert.ok(homeHtml.includes(termsPdfUrl));
 
     const greekHome = await fetch(`${baseUrl}/el/`);
     assert.equal(greekHome.status, 200);
@@ -216,11 +240,23 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     await stopAstro(server);
     await database.end();
     await rm(mediaRoot, { recursive: true, force: true });
+    await rm(astroRoot, { recursive: true, force: true });
   }
 });
 
 function testDatabaseUrl() {
   return requireSafeDatabaseTestUrl();
+}
+
+async function linkAstroProject({ astroRoot }) {
+  const projectRoot = fileURLToPath(new URL('../', import.meta.url));
+  await Promise.all([
+    copyFile(join(projectRoot, 'astro.config.mjs'), join(astroRoot, 'astro.config.mjs')),
+    copyFile(join(projectRoot, 'package.json'), join(astroRoot, 'package.json')),
+    cp(join(projectRoot, 'public'), join(astroRoot, 'public'), { recursive: true }),
+    cp(join(projectRoot, 'src'), join(astroRoot, 'src'), { recursive: true }),
+    symlink(join(projectRoot, 'node_modules'), join(astroRoot, 'node_modules'), 'junction'),
+  ]);
 }
 
 async function freeLoopbackPort() {
@@ -233,11 +269,11 @@ async function freeLoopbackPort() {
   return address.port;
 }
 
-function startAstro({ baseUrl, databaseUrl, mediaRoot, port }) {
+function startAstro({ astroRoot, baseUrl, databaseUrl, mediaRoot, port }) {
   const entry = fileURLToPath(new URL('../node_modules/astro/bin/astro.mjs', import.meta.url));
-  const child = spawn(process.execPath, [entry, 'dev', '--host', '127.0.0.1', '--port', String(port), '--mode', 'test', '--ignore-lock'], {
-    cwd: fileURLToPath(new URL('../', import.meta.url)),
-    env: { ...process.env, DATABASE_URL: databaseUrl, MEDIA_ROOT: mediaRoot, PUBLIC_SITE_URL: baseUrl },
+  const child = spawn(process.execPath, [entry, 'dev', '--root', astroRoot, '--config', 'astro.config.mjs', '--host', '127.0.0.1', '--port', String(port), '--mode', 'test'], {
+    cwd: astroRoot,
+    env: { ...process.env, ASTRO_DEV_BACKGROUND: '0', DATABASE_URL: databaseUrl, MEDIA_ROOT: mediaRoot, PUBLIC_SITE_URL: baseUrl },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.output = '';
@@ -267,10 +303,10 @@ async function stopAstro(server) {
   if (server.exitCode === null && server.signalCode === null) server.kill('SIGKILL');
 }
 
-function upload(baseUrl, headers, bytes) {
+function upload(baseUrl, headers, bytes, { filename = 'clip.mp4', mimeType = 'video/mp4' } = {}) {
   const boundary = 'miracon-http-boundary';
   const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="clip.mp4"\r\nContent-Type: video/mp4\r\n\r\n`),
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${mimeType}\r\n\r\n`),
     bytes,
     Buffer.from(`\r\n--${boundary}--\r\n`),
   ]);
@@ -293,6 +329,10 @@ function requiredHeader(response, name) {
   return value;
 }
 
+function projectSaveBody(project, { expectedRevisionId = null, mediaFileIds = [] } = {}) {
+  return { project, expectedRevisionId, mediaFileIds };
+}
+
 function projectFixture({
   id = 'http-transport-project',
   slug = 'http-transport-project',
@@ -305,8 +345,13 @@ function projectFixture({
     coverUrl: '', coverFocalX: 50, coverFocalY: 50, heroType: 'image', heroVariant: 'standard', heroSoundEnabled: false, heroIdleUi: false, heroUrl: '', heroMobileUrl: null, heroPosterUrl: null, heroVideos: [],
     walkthroughVideoEnabled: false, walkthroughVideoTitle: '', walkthroughVideoDesktopUrl: '', walkthroughVideoMobileUrl: null, walkthroughVideoPosterUrl: null, walkthroughVideos: [], heroFocalX: 50, heroFocalY: 50,
     introImageUrl: '', brochureUrl: null, mapQuery: '', mapUrl: '', cardImages: [], gallery: [], characteristics: [], benefits: [], floorPlanGroups: [], nearbyPlaces: [], seoTitle: '', seoDescription: '',
+    remainingUnits: null,
     ...(translations ? { translations } : {}),
   };
+}
+
+function pdfSignature() {
+  return Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n', 'binary');
 }
 
 function mp4Signature() {
