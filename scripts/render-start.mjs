@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import pg from 'pg';
 import { migrate } from './postgres-migrate.mjs';
 import { provisionSingletonAdmin } from './provision-admin.mjs';
@@ -80,7 +81,7 @@ async function main() {
       const countResult = await client.query('select count(*)::int as count from miracon.projects');
       if (countResult.rows[0].count === 0) {
         console.log('[Render Start] Projects table is empty; seeding default catalog...');
-        const { seedProjects } = await import('../src/data/projects.ts');
+        const seedProjects = JSON.parse(await readFile(new URL('./seed-projects.json', import.meta.url), 'utf8'));
         for (const project of seedProjects) {
           const row = {
             id: project.id,
