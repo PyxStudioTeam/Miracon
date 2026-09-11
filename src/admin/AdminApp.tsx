@@ -2192,17 +2192,88 @@ function ProjectEditor({
 
             <section className="repeat-section" style={{ marginTop: '36px' }}>
               <header className="repeat-heading">
-                <h3>Gallery photos ({project.gallery.length})</h3>
-                <label className="primary-button" style={{ cursor: 'pointer' }}><input type="file" multiple accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files && uploadFiles(e.target.files, 'gallery')} /><Upload size={16} />Upload photos</label>
+                <div>
+                  <h3 style={{ margin: 0 }}>Catalog card photos ({project.cardImages.length})</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--admin-muted)' }}>
+                    Preview photos displayed on the project card in catalog listings (3 recommended)
+                  </p>
+                </div>
+                <label className="primary-button" style={{ cursor: 'pointer' }}>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => e.target.files && uploadFiles(e.target.files, 'card')}
+                  />
+                  {uploading === 'card' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
+                  Upload photos
+                </label>
               </header>
-              <div className="media-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px', marginTop: '16px' }}>
-                {project.gallery.map((img) => (
-                  <div key={img.id} style={{ position: 'relative', border: '1px solid var(--admin-line)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <img src={img.url} alt={img.alt} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
-                    <button type="button" onClick={() => update('gallery', project.gallery.filter((item) => item.id !== img.id))} style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.65)', color: 'white', border: 0, borderRadius: '50%', width: '28px', height: '28px', display: 'grid', placeItems: 'center', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                  </div>
-                ))}
-              </div>
+              {project.cardImages.length === 0 ? (
+                <div style={{ marginTop: '16px', padding: '16px', border: '1px dashed var(--admin-line)', borderRadius: '4px', color: 'var(--admin-muted)', fontSize: '13px' }}>
+                  No card photos uploaded yet. Upload 3 photos to appear in catalog previews.
+                </div>
+              ) : (
+                <div className="media-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px', marginTop: '16px' }}>
+                  {project.cardImages.map((img) => (
+                    <div key={img.id} style={{ position: 'relative', border: '1px solid var(--admin-line)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <img src={img.url} alt={img.alt} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                      <button
+                        type="button"
+                        onClick={() => update('cardImages', project.cardImages.filter((item) => item.id !== img.id))}
+                        style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.65)', color: 'white', border: 0, borderRadius: '50%', width: '28px', height: '28px', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
+                        title="Remove photo"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="repeat-section" style={{ marginTop: '36px' }}>
+              <header className="repeat-heading">
+                <div>
+                  <h3 style={{ margin: 0 }}>Gallery photos ({project.gallery.length})</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--admin-muted)' }}>
+                    Interior and exterior gallery photos displayed in the project page slider
+                  </p>
+                </div>
+                <label className="primary-button" style={{ cursor: 'pointer' }}>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => e.target.files && uploadFiles(e.target.files, 'gallery')}
+                  />
+                  {uploading === 'gallery' ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
+                  Upload photos
+                </label>
+              </header>
+              {project.gallery.length === 0 ? (
+                <div style={{ marginTop: '16px', padding: '16px', border: '1px dashed var(--admin-line)', borderRadius: '4px', color: 'var(--admin-muted)', fontSize: '13px' }}>
+                  Gallery is empty. The public website will automatically fall back to showing catalog card photos.
+                </div>
+              ) : (
+                <div className="media-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px', marginTop: '16px' }}>
+                  {project.gallery.map((img) => (
+                    <div key={img.id} style={{ position: 'relative', border: '1px solid var(--admin-line)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <img src={img.url} alt={img.alt} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                      <button
+                        type="button"
+                        onClick={() => update('gallery', project.gallery.filter((item) => item.id !== img.id))}
+                        style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.65)', color: 'white', border: 0, borderRadius: '50%', width: '28px', height: '28px', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
+                        title="Remove photo"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </>}
 

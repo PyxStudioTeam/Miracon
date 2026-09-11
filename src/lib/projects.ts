@@ -203,6 +203,17 @@ export function mapProjectRow(row: ProjectRow): Project {
       )
     : mappedWalkthroughVideos;
 
+  const cardImages = images.filter((image) => image.role === 'card');
+  const explicitGallery = images.filter((image) => image.role === 'gallery');
+  const gallery = explicitGallery.length > 0
+    ? explicitGallery
+    : cardImages.map((image, index) => ({
+        ...image,
+        id: `${projectId}-gallery-${index + 1}`,
+        role: 'gallery' as const,
+        sortOrder: index,
+      }));
+
   return {
     id: projectId,
     slug: String(row.slug),
@@ -240,8 +251,8 @@ export function mapProjectRow(row: ProjectRow): Project {
     brochureUrl: row.brochure_url ? normalizeBrochurePath(String(row.brochure_url)) : null,
     mapQuery: String(row.map_query ?? ''),
     mapUrl: String(row.map_url ?? ''),
-    cardImages: images.filter((image) => image.role === 'card'),
-    gallery: images.filter((image) => image.role === 'gallery'),
+    cardImages,
+    gallery,
     imageVariants: mapImageVariants(row.image_variants),
     characteristics: hasIncorrectArtemisData ? [] : (row.characteristics ?? []) as Project['characteristics'],
     benefits: hasIncorrectArtemisData ? artemisBenefits : rowBenefits as Project['benefits'],

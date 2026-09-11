@@ -239,7 +239,11 @@ const seedProjectDefinitions: Project[] = [
       { id: 'artemis-card-2', url: '/img/figma_artemis_side_1.png', alt: 'Artemis Residences living room', role: 'card', sortOrder: 1 },
       { id: 'artemis-card-3', url: '/img/figma_artemis_side_2.png', alt: 'Artemis Residences terrace', role: 'card', sortOrder: 2 },
     ],
-    gallery: [],
+    gallery: [
+      { id: 'artemis-gallery-1', url: '/img/figma_artemis_main.png', alt: 'Artemis Residences exterior', role: 'gallery', sortOrder: 0 },
+      { id: 'artemis-gallery-2', url: '/img/figma_artemis_side_1.png', alt: 'Artemis Residences living room', role: 'gallery', sortOrder: 1 },
+      { id: 'artemis-gallery-3', url: '/img/figma_artemis_side_2.png', alt: 'Artemis Residences terrace', role: 'gallery', sortOrder: 2 },
+    ],
     characteristics: [],
     benefits: [
       { id: 'shore', title: '400 metres from the sea', icon: '/img/olympus-detail/icons/amenity-shore.svg' },
@@ -296,7 +300,11 @@ const seedProjectDefinitions: Project[] = [
       { id: 'monastiriou-card-2', url: '/img/figma_monastiriou_side_1.png', alt: 'Monastiriou 4 front view', role: 'card', sortOrder: 1 },
       { id: 'monastiriou-card-3', url: '/img/figma_monastiriou_side_2.png', alt: 'Monastiriou 4 side view', role: 'card', sortOrder: 2 },
     ],
-    gallery: [],
+    gallery: [
+      { id: 'monastiriou-gallery-1', url: '/img/figma_monastiriou_main.png', alt: 'Monastiriou 4 exterior', role: 'gallery', sortOrder: 0 },
+      { id: 'monastiriou-gallery-2', url: '/img/figma_monastiriou_side_1.png', alt: 'Monastiriou 4 front view', role: 'gallery', sortOrder: 1 },
+      { id: 'monastiriou-gallery-3', url: '/img/figma_monastiriou_side_2.png', alt: 'Monastiriou 4 side view', role: 'gallery', sortOrder: 2 },
+    ],
     characteristics: defaultCharacteristics,
     benefits: defaultBenefits,
     floorPlanGroups: [],
@@ -346,7 +354,11 @@ const seedProjectDefinitions: Project[] = [
       { id: 'giannitson-card-2', url: '/img/figma_giannitson_side_1.png', alt: 'Giannitson Thessaloniki exterior', role: 'card', sortOrder: 1 },
       { id: 'giannitson-card-3', url: '/img/figma_giannitson_side_2.png', alt: 'Giannitson Thessaloniki side view', role: 'card', sortOrder: 2 },
     ],
-    gallery: [],
+    gallery: [
+      { id: 'giannitson-gallery-1', url: '/img/figma_giannitson_main.png', alt: 'Giannitson Thessaloniki tower', role: 'gallery', sortOrder: 0 },
+      { id: 'giannitson-gallery-2', url: '/img/figma_giannitson_side_1.png', alt: 'Giannitson Thessaloniki exterior', role: 'gallery', sortOrder: 1 },
+      { id: 'giannitson-gallery-3', url: '/img/figma_giannitson_side_2.png', alt: 'Giannitson Thessaloniki side view', role: 'gallery', sortOrder: 2 },
+    ],
     characteristics: defaultCharacteristics,
     benefits: defaultBenefits,
     floorPlanGroups: [],
