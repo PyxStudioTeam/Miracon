@@ -420,6 +420,7 @@
   }
 
   .golden-visa-page .stages-carousel {
+    position: relative;
     left: auto;
     width: calc(100% - 40px);
     margin: 20px auto 0;

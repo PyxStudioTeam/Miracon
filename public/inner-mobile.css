@@ -921,6 +921,11 @@
     text-shadow: 0 3px 12px rgba(0, 0, 0, .4);
   }
 
+  html[lang='el'] .golden-visa-page .gv-hero h1 {
+    font-size: clamp(28px, 8.5vw, 38px);
+    line-height: 1.12;
+  }
+
   .golden-visa-page .gv-hero-lead {
     width: 100%;
     margin-top: 16px;
@@ -1003,50 +1008,55 @@
   .golden-visa-page .stages-section {
     position: relative;
     height: auto;
-    min-height: 640px;
-    padding: 0 0 40px;
+    min-height: 0;
+    padding: 56px 0;
     overflow: visible;
+    background: var(--mobile-cream);
   }
 
   .golden-visa-page .stages-section + .contacts-section {
     margin-top: 0;
   }
 
-  .golden-visa-page .stages-container,
+  .golden-visa-page .stages-container {
+    position: static;
+    width: calc(100% - 40px);
+    height: auto;
+    margin-inline: auto;
+  }
+
   .golden-visa-page .stages-intro {
     position: static;
+    display: grid;
+    gap: 14px;
     width: 100%;
-    height: 100%;
+    height: auto;
     margin: 0;
   }
 
-  .golden-visa-page .stages-intro .section-title {
-    position: absolute;
-    top: 56px;
-    left: 20px;
-    width: calc(100% - 40px);
+  .golden-visa-page .stages-intro .section-title,
+  .golden-visa-page .stages-intro .section-subtitle {
+    position: static;
+    display: block;
+    width: 100%;
     height: auto;
     margin: 0;
   }
 
   .golden-visa-page .stages-intro .section-subtitle {
-    position: absolute;
-    top: 101px;
-    left: 20px;
-    width: calc(100% - 40px);
-    height: auto;
-    margin: 0;
     font-size: 16px;
-    line-height: 1.1;
+    line-height: 1.3;
   }
 
   .golden-visa-page .stages-carousel {
-    position: absolute;
-    top: 154px;
+    position: relative;
+    z-index: 1;
+    top: auto;
     right: auto;
-    left: 20px;
+    left: auto;
     width: calc(100% - 40px);
-    height: 460px;
+    height: auto;
+    margin: 20px auto 0;
     padding: 0;
     overflow: visible;
   }
@@ -1055,7 +1065,7 @@
   .golden-visa-page .stages-carousel-set {
     display: block;
     width: 100%;
-    height: 452px;
+    height: auto;
     animation: none;
     transform: none;
   }
@@ -1065,46 +1075,70 @@
   }
 
   .golden-visa-page .stage-card {
-    position: absolute;
-    left: 0;
+    position: relative;
+    top: auto;
+    left: auto;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 11px;
     width: 100%;
-    height: 84px;
     min-height: 84px;
+    height: auto;
+    padding: 15px 14px;
     border-radius: 22px;
+    background: var(--mobile-card);
+    box-shadow: 0 1.6px 1.6px rgba(0, 0, 0, .05);
   }
 
-  .golden-visa-page .stage-card:nth-child(1) { top: 0; }
-  .golden-visa-page .stage-card:nth-child(2) { top: 92px; }
-  .golden-visa-page .stage-card:nth-child(3) { top: 184px; }
-  .golden-visa-page .stage-card:nth-child(4) { top: 276px; }
-  .golden-visa-page .stage-card:nth-child(5) { top: 368px; }
+  .golden-visa-page .stage-card + .stage-card {
+    margin-top: 8px;
+  }
 
   .golden-visa-page .stage-number {
-    top: 27px;
-    left: 14px;
+    position: static;
+    grid-row: 1 / span 2;
+    display: block;
     width: 34px;
-    height: 28px;
-    font-size: 29px;
-    line-height: 28px;
+    height: auto;
+    align-self: center;
+    color: var(--mobile-blue);
+    font-size: 29.11px;
+    font-weight: 500;
+    line-height: 27.939px;
+    text-align: center;
+    opacity: .4;
   }
 
   .golden-visa-page .stage-card h3 {
-    top: 16px;
-    left: 59px;
-    width: calc(100% - 76px);
+    position: static;
+    grid-column: 2;
+    display: block;
+    width: auto;
     height: auto;
+    margin: 0;
+    color: var(--mobile-blue);
     font-size: 16px;
-    line-height: 1.1;
+    font-weight: 500;
+    line-height: 1.12;
     white-space: normal;
   }
 
   .golden-visa-page .stage-card p {
-    top: 46px;
-    left: 59px;
-    width: calc(100% - 76px);
+    position: static;
+    grid-column: 2;
+    width: auto;
     height: auto;
+    margin: 5px 0 0;
+    color: var(--mobile-blue);
     font-size: 11px;
+    font-weight: 400;
     line-height: 1.2;
+    opacity: .8;
+  }
+
+  .golden-visa-page .stage-card p br {
+    display: none;
   }
 
   .golden-visa-page .stage-card.mobile-rise-card {
@@ -1308,76 +1342,6 @@
   .golden-visa-page .mobile-nav-contacts.active { display: grid; }
 }
 
-/* Mobile Golden Visa hero: content shares one vertical flow, so translated
-   copy can wrap naturally without colliding with the stacked actions. */
-@media (max-width: 760px) {
-  .golden-visa-page .gv-hero {
-    height: max(620px, 100svh);
-    min-height: 620px;
-  }
-
-  .golden-visa-page .gv-hero-content {
-    display: flex;
-    height: 100%;
-    flex-direction: column;
-    justify-content: center;
-    box-sizing: border-box;
-    padding-top: 104px;
-    padding-bottom: 34px;
-  }
-
-  html[lang='el'] .golden-visa-page .gv-hero-content {
-    padding-top: 104px;
-    padding-bottom: 34px;
-  }
-
-  .golden-visa-page .gv-hero h1 {
-    width: 100%;
-    height: auto;
-    min-height: 0;
-    margin: 0;
-    font-size: clamp(36px, 11vw, 52px);
-    line-height: .95;
-    overflow-wrap: normal;
-    text-wrap: balance;
-  }
-
-  html[lang='el'] .golden-visa-page .gv-hero h1 {
-    min-height: 0;
-    font-size: clamp(28px, 8.5vw, 38px);
-    line-height: .95;
-  }
-
-  .golden-visa-page .gv-hero-lead,
-  html[lang='el'] .golden-visa-page .gv-hero-lead {
-    width: 100%;
-    height: auto;
-    margin: 18px 0 0;
-    font-size: clamp(12.5px, 3.65vw, 14px);
-    line-height: 1.28;
-    letter-spacing: .055em;
-  }
-
-  .golden-visa-page .gv-hero-actions,
-  html[lang='el'] .golden-visa-page .gv-hero-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    margin: 24px 0 0;
-  }
-
-  .golden-visa-page .gv-hero-actions .btn-hero,
-  .golden-visa-page .gv-hero-actions .badge-visa,
-  html[lang='el'] .golden-visa-page .gv-hero-actions .btn-hero,
-  html[lang='el'] .golden-visa-page .gv-hero-actions .badge-visa {
-    width: 100%;
-    max-width: none;
-    height: 48px;
-    min-height: 48px;
-    box-sizing: border-box;
-  }
-}
 
 @media (max-width: 760px) {
   .project-page .mobile-lang-selector,
