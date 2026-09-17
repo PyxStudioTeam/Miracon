@@ -35,7 +35,7 @@ const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, 
     </nav>
 
     <div class="header-actions">
-      <a class="lang-selector glass-gradient" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span class="lang-current">{m['common.languageCode']}</span></a>
+      <a class="lang-selector glass-gradient" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span class="lang-current">{m['common.switchLanguageCode']}</span></a>
       <div class="contact-menu">
         <a href={contactsHref} class="contact-btn" aria-haspopup="true">
           <span class="contact-btn-icon"></span>
@@ -68,7 +68,7 @@ const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, 
     </div>
 
     <a class="mobile-lang-selector" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
-      <span>{m['common.languageCode']}</span>
+      <span>{m['common.switchLanguageCode']}</span>
     </a>
     <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label={m['common.openMenu']} aria-controls="mobileNav" aria-expanded="false">
       <span aria-hidden="true"></span>

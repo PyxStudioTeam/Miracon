@@ -32,6 +32,7 @@ const aboutHref = localizePath('/#about', locale);
 const contactsHref = localizePath('/#contacts', locale);
 const goldenVisaHref = localizePath('/golden-visa', locale);
 const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
+const privacyPolicyHref = siteSettings.footerPrivacyPdfUrl || localizePath('/privacy-policy', locale);
 const homeStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -117,7 +118,7 @@ const homeStructuredData = {
 
       <div class="header-actions">
         <a class="lang-selector glass-gradient" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
-          <span class="lang-current">{m['common.languageCode']}</span>
+          <span class="lang-current">{m['common.switchLanguageCode']}</span>
         </a>
         <div class="contact-menu">
           <a href={contactsHref} class="contact-btn" aria-haspopup="true">
@@ -155,7 +156,7 @@ const homeStructuredData = {
       </div>
 
       <a class="mobile-lang-selector" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
-        <span>{m['common.languageCode']}</span>
+        <span>{m['common.switchLanguageCode']}</span>
       </a>
       <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label={m['common.openMenu']} aria-controls="mobileNav" aria-expanded="false">
         <span aria-hidden="true"></span>
@@ -409,8 +410,8 @@ const homeStructuredData = {
             </article>
             <article class="stage-card">
               <span class="stage-number">04</span>
-              <h3>{m['stages.purchase']}</h3>
-              <p>{m['stages.purchaseText']}</p>
+              <h3>{m['stages.contract']}</h3>
+              <p>{m['stages.contractText']}</p>
             </article>
             <article class="stage-card">
               <span class="stage-number">05</span>
@@ -461,21 +462,21 @@ const homeStructuredData = {
           <form class="consultation-form" data-consultation-form novalidate>
             <div class="form-row">
               <label class="form-group">
-                <span>{m['form.name']}</span>
+                <span>{m['form.name']} *</span>
                 <input type="text" name="name" class="form-input" placeholder={m['form.name']} maxlength="120" required>
               </label>
               <label class="form-group">
-                <span>{m['form.phone']}</span>
-                <input type="tel" name="phone" class="form-input" placeholder={m['form.phone']} maxlength="40">
+                <span>{m['form.phone']} *</span>
+                <input type="tel" name="phone" class="form-input" placeholder={m['form.phone']} maxlength="40" required>
               </label>
               <label class="form-group">
-                <span>{m['form.email']}</span>
-                <input type="email" name="email" class="form-input" placeholder={m['form.email']} maxlength="254">
+                <span>{m['form.email']} *</span>
+                <input type="email" name="email" class="form-input" placeholder={m['form.email']} maxlength="254" required>
               </label>
             </div>
 
             <label class="form-group form-message">
-              <span>{m['form.message']}</span>
+              <span>{m['form.message']} *</span>
               <textarea name="message" class="form-input form-textarea" placeholder={m['form.message']} maxlength="3000" required></textarea>
             </label>
 
@@ -483,7 +484,7 @@ const homeStructuredData = {
               <input type="checkbox" name="consent" class="form-consent-input" required>
               <span class="form-consent-box" aria-hidden="true"></span>
               <span class="form-consent-text">{m['form.consentBefore']} <a
-                  href="#">{m['common.privacy']}</a> {m['form.consentAfter']}</span>
+                  href={privacyPolicyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a> {m['form.consentAfter']}</span>
             </label>
 
             <button type="submit" class="btn-submit" disabled>
@@ -528,11 +529,11 @@ const homeStructuredData = {
       <div class="footer-bottom">
         <div class:list={['footer-links', { 'footer-links--empty': !siteSettings.footerTermsVisible && !siteSettings.footerPrivacyVisible && !siteSettings.footerCookieVisible }]}>
           <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
-          <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>{m['common.privacy']}</a>
+          <a href={privacyPolicyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>
           <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
         </div>
         <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
-          <span>{m['common.languageName']}</span>
+          <span>{m['common.switchLanguage']}</span>
           <span class="lang-refresh" aria-hidden="true">
             <img src="img/Vector.svg" alt="">
           </span>

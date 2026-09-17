@@ -9,7 +9,7 @@ const project = sourceProject ? localizeProject(sourceProject, locale) : null;
 Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 
 if (!project) {
-  return Astro.rewrite('/404');
+  return Astro.redirect(locale === 'el' ? '/el/#projects' : '/#projects', 302);
 }
 ---
 

@@ -1,0 +1,22 @@
+# Deny direct access to hidden files and sensitive configuration files
+<FilesMatch "^\.(env|git|htaccess|htpasswd|ini|log|sh|bak|conf)$">
+    Require all denied
+</FilesMatch>
+
+# Fallback for older Apache 2.2 versions
+<IfModule !mod_authz_core.c>
+    <FilesMatch "^\.(env|git|htaccess|htpasswd|ini|log|sh|bak|conf)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# Return 404 for sensitive files
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^\.(env|git) - [R=404,L]
+    RewriteRule ^package(-lock)?\.json$ - [R=404,L]
+</IfModule>
+
+# Prevent directory indexing
+Options -Indexes

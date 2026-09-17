@@ -6,6 +6,18 @@ const developmentConnections = import.meta.env.DEV
   : '';
 
 export const onRequest = defineMiddleware(async ({ url }, next) => {
+  const normalizedPath = url.pathname.toLowerCase();
+  if (
+    normalizedPath === '/.env' ||
+    normalizedPath.startsWith('/.env.') ||
+    normalizedPath.startsWith('/.git') ||
+    normalizedPath === '/package.json' ||
+    normalizedPath === '/package-lock.json' ||
+    normalizedPath.startsWith('/.htaccess')
+  ) {
+    return new Response(null, { status: 404 });
+  }
+
   const redirect = getPublicIdentityRedirect(url, getSiteOrigin(url));
   if (redirect) return new Response(null, { status: 308, headers: { Location: redirect } });
 

@@ -10,6 +10,7 @@ const { locale = getLocale(Astro.originPathname) } = Astro.props;
 const siteSettings = await getSiteSettings();
 const m = getMessages(locale);
 const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
+const privacyHref = siteSettings.footerPrivacyPdfUrl || localizePath('/privacy-policy', locale);
 ---
 
 <footer class="footer">
@@ -32,10 +33,10 @@ const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, 
     <div class="footer-bottom">
       <div class:list={['footer-links', { 'footer-links--empty': !siteSettings.footerTermsVisible && !siteSettings.footerPrivacyVisible && !siteSettings.footerCookieVisible }]}>
         <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
-        <a href={siteSettings.footerPrivacyPdfUrl || '#'} target={siteSettings.footerPrivacyPdfUrl ? '_blank' : undefined} rel={siteSettings.footerPrivacyPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerPrivacyVisible}>{m['common.privacy']}</a>
+        <a href={privacyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>
         <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
       </div>
-      <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span>{m['common.languageName']}</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></a>
+      <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span>{m['common.switchLanguage']}</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></a>
     </div>
     <p class="footer-copyright">{m['common.copyright']}</p>
   </div>
