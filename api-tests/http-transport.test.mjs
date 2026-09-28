@@ -123,14 +123,17 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     assert.equal(homepageVideosBody.videos[0].id, 'postgres-home-video');
     assert.ok('currentRevisionId' in homepageVideosBody);
 
+    const currentSettingsResponse = await fetch(`${baseUrl}/api/admin/site-settings`, { headers: authHeaders });
+    assert.equal(currentSettingsResponse.status, 200);
+    const currentSettings = (await currentSettingsResponse.json()).settings;
+
     // Legal documents must resolve to an uploaded catalog PDF, so external URLs are rejected.
     await assertApiError(fetch(`${baseUrl}/api/admin/site-settings`, {
       method: 'PUT',
       headers: authHeaders,
       body: JSON.stringify({
+        ...currentSettings,
         footerTermsVisible: true, footerTermsPdfUrl: 'https://miracon.test/terms.pdf',
-        footerPrivacyVisible: false, footerPrivacyPdfUrl: '',
-        footerCookieVisible: false, footerCookiePdfUrl: '',
       }),
     }), 400, 'invalid_media');
 
@@ -145,9 +148,10 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
       method: 'PUT',
       headers: authHeaders,
       body: JSON.stringify({
+        ...currentSettings,
         footerTermsVisible: true, footerTermsPdfUrl: termsPdfUrl,
-        footerPrivacyVisible: false, footerPrivacyPdfUrl: '',
-        footerCookieVisible: false, footerCookiePdfUrl: '',
+        homeCopy: { ...currentSettings.homeCopy, el: { ...currentSettings.homeCopy.el, heroTitleLine1: 'Νέα κατοικία' } },
+        footerPhone: '+30 210 123 4567',
       }),
     });
     assert.equal(siteSettings.status, 200);
@@ -166,6 +170,8 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     const greekHomeHtml = await greekHome.text();
     assert.match(greekHomeHtml, /Δημόσιο έργο PostgreSQL/u);
     assert.doesNotMatch(greekHomeHtml, /Πρόχειρο έργο PostgreSQL/u);
+    assert.match(greekHomeHtml, /Νέα κατοικία/u);
+    assert.match(greekHomeHtml, /tel:\+302101234567/u);
 
     const publicProject = await fetch(`${baseUrl}/projects/postgres-public-project`);
     assert.equal(publicProject.status, 200);
@@ -343,7 +349,7 @@ function projectFixture({
   return {
     id, slug, title, address: '', cardAddress: '', price: '', shortDescription: '', fullDescription: '', introTitle: '', categories: [], status, sortOrder: 0,
     coverUrl: '', coverFocalX: 50, coverFocalY: 50, heroType: 'image', heroVariant: 'standard', heroSoundEnabled: false, heroIdleUi: false, heroUrl: '', heroMobileUrl: null, heroPosterUrl: null, heroVideos: [],
-    walkthroughVideoEnabled: false, walkthroughVideoTitle: '', walkthroughVideoDesktopUrl: '', walkthroughVideoMobileUrl: null, walkthroughVideoPosterUrl: null, walkthroughVideos: [], heroFocalX: 50, heroFocalY: 50,
+    walkthroughVideoEnabled: false, walkthroughVideoTitle: '', walkthroughVideoDesktopUrl: '', walkthroughVideoMobileUrl: null, walkthroughVideoPosterUrl: null, walkthroughVideos: [], virtualTourUrl: '', heroFocalX: 50, heroFocalY: 50,
     introImageUrl: '', brochureUrl: null, mapQuery: '', mapUrl: '', cardImages: [], gallery: [], characteristics: [], benefits: [], floorPlanGroups: [], nearbyPlaces: [], seoTitle: '', seoDescription: '',
     remainingUnits: null,
     ...(translations ? { translations } : {}),

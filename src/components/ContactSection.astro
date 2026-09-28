@@ -1,24 +1,28 @@
 ---
 import { getContactDescriptionLines, getMessages, localizePath, type SiteLocale } from '../lib/i18n';
-import { getSiteSettings } from '../lib/site-settings';
+import { defaultSiteSettings, getSiteSettings } from '../lib/site-settings';
+import type { SiteSettings } from '../lib/site-settings-shared';
 
 interface Props {
   locale?: SiteLocale;
+  settings?: SiteSettings;
 }
 
-const { locale = 'en' } = Astro.props;
-const siteSettings = await getSiteSettings();
+const { locale = 'en', settings } = Astro.props;
+const siteSettings = settings ?? await getSiteSettings();
 const m = getMessages(locale);
-const descriptionLines = getContactDescriptionLines(locale);
+const contactCopy = siteSettings.contactCopy[locale];
 const privacyHref = siteSettings.footerPrivacyPdfUrl || localizePath('/privacy-policy', locale);
 ---
 
 <section id="contacts" class="contacts-section">
   <div class="container">
     <div class="form-container">
-      <h2 class="section-title">{m['form.title']}</h2>
+      <h2 class="section-title">{contactCopy.title}</h2>
       <p class="section-subtitle form-description-copy">
-        {descriptionLines.map((line) => <span>{line}</span>)}
+        {contactCopy.description === defaultSiteSettings.contactCopy[locale].description
+          ? getContactDescriptionLines(locale).map((line) => <span>{line}</span>)
+          : <span>{contactCopy.description}</span>}
       </p>
       <form class="consultation-form" data-consultation-form novalidate>
         <div class="form-row">

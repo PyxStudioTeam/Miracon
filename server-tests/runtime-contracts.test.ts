@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { seedProjects } from '../src/data/projects';
 import { fallbackHomeHeroVideos, getHomeHeroVideos } from '../src/lib/home-hero';
+import { defaultSiteSettings } from '../src/lib/site-settings-shared';
 import {
   SiteOriginConfigurationError,
   getPublicIdentityRedirect,
@@ -42,6 +43,16 @@ describe('runtime contracts', () => {
     // Then
     expect(accepted.every((result) => result.success)).toBe(true);
     expect(rejected.every((result) => !result.success)).toBe(true);
+  });
+
+  it('accepts only empty or HTTPS external project tours', () => {
+    const project = seedProjects[0];
+    if (!project) throw new Error('Project schema fixture is required');
+    expect(projectSchema.safeParse(project).success).toBe(true);
+    expect(projectSchema.safeParse({ ...project, virtualTourUrl: 'https://tours.example.com/360?unit=1' }).success).toBe(true);
+    for (const virtualTourUrl of ['http://tours.example.com/360', 'HTTPS://tours.example.com/360', 'https://tours.example.com/tour with space', 'javascript:alert(1)', '/projects/other', 'https://']) {
+      expect(projectSchema.safeParse({ ...project, virtualTourUrl }).success).toBe(false);
+    }
   });
 
   it('uses truthful remaining-unit values in project seeds', () => {
@@ -215,12 +226,9 @@ describe('runtime contracts', () => {
   it('accepts local media legal documents and rejects other relative URLs', () => {
     // Given
     const settings = {
+      ...defaultSiteSettings,
       footerTermsVisible: true,
       footerTermsPdfUrl: '/media/legal/terms.pdf',
-      footerPrivacyVisible: false,
-      footerPrivacyPdfUrl: '',
-      footerCookieVisible: false,
-      footerCookiePdfUrl: '',
     };
 
     // When

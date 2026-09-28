@@ -122,6 +122,7 @@ export interface Project {
   walkthroughVideoMobileUrl: string | null;
   walkthroughVideoPosterUrl: string | null;
   walkthroughVideos: ProjectVideoItem[];
+  virtualTourUrl: string;
   heroFocalX: number;
   heroFocalY: number;
   introImageUrl: string;

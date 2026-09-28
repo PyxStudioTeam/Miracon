@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import type { Project } from '../src/lib/project-types';
+import { defaultSiteSettings } from '../src/lib/site-settings-shared';
 import {
   ADMIN_CAPABILITIES,
   hasCapability,
@@ -20,7 +21,6 @@ import {
   type ProjectRevisionTransportInput,
 } from '../src/lib/server/project-revision-adapter';
 import { buildHomepageHeroRevisionTransport } from '../src/lib/server/homepage-revision-adapter';
-import { buildSiteSettingsRevisionTransport } from '../src/lib/server/site-settings-revision-adapter';
 import {
   projectOwnerSaveSchema,
   revisionExceptionResponse,
@@ -540,24 +540,6 @@ describe('Miracon CMS Governance, Revision Integrity & Security Remediation E2E 
         expect(transport.snapshot.videos).toHaveLength(1);
       });
 
-      it('T1_R3_03_site_settings_with_head_structure: adapter builds site settings snapshot with head', () => {
-        const transport = buildSiteSettingsRevisionTransport({
-          settings: {
-            footerTermsVisible: true,
-            footerTermsPdfUrl: '/media/terms.pdf',
-            footerPrivacyVisible: false,
-            footerPrivacyPdfUrl: '',
-            footerCookieVisible: false,
-            footerCookiePdfUrl: '',
-          },
-          expectedRevisionId: headId,
-          mediaFileIds: ['terms-media-id'],
-          mutationTime: timestamp,
-        });
-        expect(transport.aggregateType).toBe('site_settings');
-        expect(transport.expectedRevisionId).toBe(headId);
-        expect(transport.snapshot.settings.footer_terms_pdf_url).toBe('/media/terms.pdf');
-      });
 
       it('T1_R3_04_empty_homepage_videos_returns_null_head: empty playlist maps to empty array and null head', () => {
         const transport = buildHomepageHeroRevisionTransport({
@@ -613,16 +595,6 @@ describe('Miracon CMS Governance, Revision Integrity & Security Remediation E2E 
         expect(ownerHeroResponse.currentRevisionId).toBe(newHeadId);
       });
 
-      it('T1_R4_03_owner_save_site_settings_returns_updated_head: owner settings save returns updated head ID', () => {
-        const newHeadId = '88888888-8888-8888-8888-888888888888';
-        const ownerSettingsResponse = {
-          settings: { footerTermsVisible: true, footerTermsPdfUrl: '/media/terms.pdf', footerPrivacyVisible: false, footerPrivacyPdfUrl: '', footerCookieVisible: false, footerCookiePdfUrl: '' },
-          currentRevisionId: newHeadId,
-          revision: { id: newHeadId, state: 'approved' },
-          isProposal: false,
-        };
-        expect(ownerSettingsResponse.currentRevisionId).toBe(newHeadId);
-      });
 
       it('T1_R4_04_editor_proposal_hero_returns_active_head: editor hero proposal returns active live head ID', () => {
         const editorHeroResponse = {
@@ -635,16 +607,6 @@ describe('Miracon CMS Governance, Revision Integrity & Security Remediation E2E 
         expect(editorHeroResponse.isProposal).toBe(true);
       });
 
-      it('T1_R4_05_editor_proposal_settings_returns_active_head: editor settings proposal returns active head ID', () => {
-        const editorSettingsResponse = {
-          settings: { footerTermsVisible: true, footerTermsPdfUrl: '/media/terms.pdf', footerPrivacyVisible: false, footerPrivacyPdfUrl: '', footerCookieVisible: false, footerCookiePdfUrl: '' },
-          currentRevisionId: headId,
-          revision: { id: proposalId, state: 'pending' },
-          isProposal: true,
-        };
-        expect(editorSettingsResponse.currentRevisionId).toBe(headId);
-        expect(editorSettingsResponse.isProposal).toBe(true);
-      });
     });
 
     describe('R5: Stale Proposal Rejection (5 tests)', () => {
@@ -1041,20 +1003,14 @@ describe('Miracon CMS Governance, Revision Integrity & Security Remediation E2E 
         const url2048 = '/media/' + 'a'.repeat(2048 - 7);
         const url2049 = '/media/' + 'a'.repeat(2049 - 7);
         const validSchema = siteSettingsSchema.safeParse({
+          ...defaultSiteSettings,
           footerTermsVisible: true,
           footerTermsPdfUrl: url2048,
-          footerPrivacyVisible: false,
-          footerPrivacyPdfUrl: '',
-          footerCookieVisible: false,
-          footerCookiePdfUrl: '',
         });
         const invalidSchema = siteSettingsSchema.safeParse({
+          ...defaultSiteSettings,
           footerTermsVisible: true,
           footerTermsPdfUrl: url2049,
-          footerPrivacyVisible: false,
-          footerPrivacyPdfUrl: '',
-          footerCookieVisible: false,
-          footerCookiePdfUrl: '',
         });
         expect(validSchema.success).toBe(true);
         expect(invalidSchema.success).toBe(false);

@@ -45,6 +45,8 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { AdminApi, type AdminUser, type PendingProposal, type RevisionHistoryItem, type SessionState } from './admin-api';
+import ContactsManager from './ContactsManager';
+import PagesSettingsFields from './PagesSettingsFields';
 import { isValidRemainingUnits, parseRemainingUnitsInput } from './remaining-units';
 import { seedProjects } from '../data/projects';
 import {
@@ -67,7 +69,7 @@ import {
 } from '../lib/site-settings-shared';
 
 type AdminSection = 'content' | 'specs' | 'media' | 'plans' | 'seo';
-type AdminView = 'projects' | 'home-hero' | 'site-settings' | 'proposals' | 'users';
+type AdminView = 'projects' | 'home-hero' | 'pages' | 'contacts' | 'site-settings' | 'proposals' | 'users';
 type Toast = { tone: 'success' | 'error'; message: string } | null;
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -158,6 +160,7 @@ const emptyProject = (sortOrder: number): Project => ({
   walkthroughVideoDesktopUrl: '',
   walkthroughVideoMobileUrl: null,
   walkthroughVideoPosterUrl: null,
+  virtualTourUrl: '',
   walkthroughVideos: [],
   heroFocalX: 50,
   heroFocalY: 50,
@@ -254,14 +257,14 @@ function pruneTranslations(project: Project): Project {
 }
 
 function BrandMark() {
-  return <div className="admin-brand-mark"><img src="/img/logo_mark.svg" alt="MIRACON" /></div>;
+  return <div className="admin-brand-mark"><img src="/img/logo_mark.svg" alt="" /></div>;
 }
 
-function BrandLockup() {
+function BrandLockup({ siteName = 'MIRACON' }: { siteName?: string }) {
   return (
     <div className="admin-brand-lockup">
-      <BrandMark />
-      <div><strong>MIRACON</strong><span>DESK</span></div>
+      {siteName === 'MIRACON' && <BrandMark />}
+      <div><strong>{siteName}</strong><span>DESK</span></div>
     </div>
   );
 }
@@ -276,14 +279,14 @@ function LoadingScreen() {
   );
 }
 
-function LoginScreen({ onLogin, error, loading }: { onLogin: (email: string, password: string) => Promise<void>; error: string; loading: boolean }) {
+function LoginScreen({ onLogin, error, loading, siteName }: { onLogin: (email: string, password: string) => Promise<void>; error: string; loading: boolean; siteName: string }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   return (
     <div className="admin-login">
       <div className="login-visual">
-        <BrandLockup />
+        <BrandLockup siteName={siteName} />
         <div>
           <span className="login-index">01 / ADMINISTRATION</span>
           <h2>A Place<br /><em>of Your Own</em></h2>
@@ -419,6 +422,7 @@ function ProjectList({
   onImport,
   canImport,
   canReorder = true,
+  siteName,
 }: {
   projects: Project[];
   onOpen: (project: Project) => void;
@@ -427,6 +431,7 @@ function ProjectList({
   onImport: () => void;
   canImport: boolean;
   canReorder?: boolean;
+  siteName: string;
 }) {
   const [query, setQuery] = useState('');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
@@ -440,7 +445,7 @@ function ProjectList({
     <main className="admin-main">
       <header className="list-header">
         <div>
-          <span className="eyebrow">Miracon portfolio</span>
+          <span className="eyebrow">{siteName} portfolio</span>
           <h1>Projects <sup>{projects.length.toString().padStart(2, '0')}</sup></h1>
           <p>Organize, edit and publish real estate developments</p>
         </div>
@@ -779,6 +784,7 @@ function SiteSettingsManager({
   onToast,
   role,
   currentRevisionId,
+  mode,
 }: {
   initialSettings: SiteSettings;
   api: AdminApi;
@@ -786,6 +792,7 @@ function SiteSettingsManager({
   onToast: (toast: Toast) => void;
   role: 'owner' | 'editor';
   currentRevisionId?: string | null;
+  mode: 'pages' | 'site-settings';
 }) {
   const [settings, setSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
   const [savedSettings, setSavedSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
@@ -879,9 +886,9 @@ function SiteSettingsManager({
     <main className="admin-main site-settings-manager">
       <header className="list-header">
         <div>
-          <span className="eyebrow">Website / Legal documents</span>
-          <h1>Site settings</h1>
-          <p>Control legal PDFs displayed in the public footer</p>
+          <span className="eyebrow">Website / {mode === 'pages' ? 'Pages & contacts' : 'Legal documents'}</span>
+          <h1>{mode === 'pages' ? 'Pages' : 'Site settings'}</h1>
+          <p>{mode === 'pages' ? 'Edit English and Greek page text, stages, footer contacts and social links' : 'Control legal PDFs displayed in the public footer'}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="secondary-button" onClick={() => setHistoryOpen(true)} title="View revision history"><History size={17} />History</button>
@@ -893,7 +900,8 @@ function SiteSettingsManager({
       </header>
 
       <div className="site-settings-list">
-        {documents.map((document) => (
+        {mode === 'pages' && <PagesSettingsFields settings={settings} onChange={setSettings} />}
+        {mode === 'site-settings' && documents.map((document) => (
           <section className="site-settings-card" key={document.urlKey}>
             <header>
               <span className="site-settings-icon"><FileText size={22} /></span>
@@ -1760,6 +1768,7 @@ function ProjectEditor({
   onDeleted,
   api,
   role,
+  siteName,
 }: {
   initialProject: Project;
   onBack: () => void;
@@ -1767,6 +1776,7 @@ function ProjectEditor({
   onDeleted: (id: string) => void;
   api: AdminApi;
   role: 'owner' | 'editor';
+  siteName: string;
 }) {
   const [project, setProject] = useState<Project>(() => ({ ...initialProject }));
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialProject));
@@ -1846,7 +1856,7 @@ function ProjectEditor({
       slug,
       status,
       updatedAt: new Date().toISOString(),
-      seoTitle: project.seoTitle || `${project.title} — MIRACON`,
+      seoTitle: project.seoTitle || `${project.title} — ${siteName}`,
       seoDescription: project.seoDescription || project.shortDescription,
     })));
 
@@ -2076,6 +2086,7 @@ function ProjectEditor({
               <Field label="Remaining units" hint="Shared availability (leave blank if unspecified, 0 for sold out)"><input type="number" min={0} step={1} value={project.remainingUnits ?? ''} onChange={(e) => { const remainingUnits = parseRemainingUnitsInput(e.target.value); if (remainingUnits === undefined) { showToast({ tone: 'error', message: 'Remaining units must be a nonnegative whole number' }); return; } update('remainingUnits', remainingUnits); }} /></Field>
               <Field label="Map coordinates or search query"><input value={project.mapQuery} onChange={(e) => update('mapQuery', e.target.value)} /></Field>
               <Field label="Google Maps link"><input value={project.mapUrl} onChange={(e) => update('mapUrl', e.target.value)} /></Field>
+              <Field label="Virtual tour URL" hint="Optional HTTPS link to an external 360° tour"><input type="url" inputMode="url" placeholder="https://example.com/tour" value={project.virtualTourUrl} onChange={(e) => update('virtualTourUrl', e.target.value)} /></Field>
               <Field label="Categories" wide><div className="category-select">{PROJECT_CATEGORIES.map((category) => <button type="button" key={category} className={project.categories.includes(category) ? 'active' : ''} onClick={() => toggleCategory(category)}>{project.categories.includes(category) && <Check size={14} />}{categoryLabels[category]}</button>)}</div></Field>
               <Field label="Short card description" wide hint={`${project.shortDescription.length}/420`}><textarea rows={4} maxLength={420} value={project.shortDescription} onChange={(e) => update('shortDescription', e.target.value)} /></Field>
               <Field label="Page intro heading" wide><input value={project.introTitle} onChange={(e) => update('introTitle', e.target.value)} /></Field>
@@ -2325,13 +2336,13 @@ function ProjectEditor({
             <div className="section-heading"><span>05 / SEO &amp; URL</span><h2>Search engine optimization</h2><p>Custom URL slug, meta tags and search preview</p></div>
             <div className="editor-form-grid">
               <Field label="URL slug" wide hint="Unique lowercase path segment"><input value={project.slug} onChange={(e) => update('slug', normalizedSlug(e.target.value))} /></Field>
-              <Field label="SEO meta title" wide hint={`${project.seoTitle.length}/60`}><input maxLength={60} value={project.seoTitle} placeholder={`${project.title} — MIRACON`} onChange={(e) => update('seoTitle', e.target.value)} /></Field>
+              <Field label="SEO meta title" wide hint={`${project.seoTitle.length}/60`}><input maxLength={60} value={project.seoTitle} placeholder={`${project.title} — ${siteName}`} onChange={(e) => update('seoTitle', e.target.value)} /></Field>
               <Field label="SEO meta description" wide hint={`${project.seoDescription.length}/160`}><textarea rows={4} maxLength={160} value={project.seoDescription} placeholder={project.shortDescription} onChange={(e) => update('seoDescription', e.target.value)} /></Field>
             </div>
             <div className="search-preview">
               <span>miracon.gr › projects › {project.slug}</span>
-              <h3>{project.seoTitle || `${project.title} — MIRACON`}</h3>
-              <p>{project.seoDescription || project.shortDescription || 'Exclusive modern villas and residences in Greece by MIRACON.'}</p>
+              <h3>{project.seoTitle || `${project.title} — ${siteName}`}</h3>
+              <p>{project.seoDescription || project.shortDescription || `Exclusive modern villas and residences in Greece by ${siteName}.`}</p>
             </div>
           </>}
         </section>
@@ -2347,7 +2358,7 @@ function ProjectEditor({
   );
 }
 
-export default function AdminApp() {
+export default function AdminApp({ siteName = 'MIRACON' }: { siteName?: string }) {
   const [ready, setReady] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>({ authenticated: false });
   const [loginError, setLoginError] = useState('');
@@ -2507,7 +2518,7 @@ export default function AdminApp() {
   }
 
   if (!ready) return <LoadingScreen />;
-  if (!sessionState.authenticated) return <LoginScreen onLogin={login} error={loginError} loading={loginLoading} />;
+  if (!sessionState.authenticated) return <LoginScreen onLogin={login} error={loginError} loading={loginLoading} siteName={siteName} />;
 
   const userRole = sessionState.role ?? 'editor';
   const isOwner = userRole === 'owner';
@@ -2516,7 +2527,7 @@ export default function AdminApp() {
     <div className="admin-app">
       {!selected && (
         <aside className="admin-rail">
-          <BrandLockup />
+          <BrandLockup siteName={siteSettings.siteName} />
           <nav>
             <button className={view === 'projects' ? 'active' : ''} title="Projects" onClick={() => setView('projects')}>
               <LayoutGrid size={19} />
@@ -2525,6 +2536,14 @@ export default function AdminApp() {
             <button className={view === 'home-hero' ? 'active' : ''} title="Homepage hero" onClick={() => setView('home-hero')}>
               <Film size={19} />
               <span>Home hero</span>
+            </button>
+            <button className={view === 'pages' ? 'active' : ''} title="Pages" onClick={() => setView('pages')}>
+              <FileText size={19} />
+              <span>Pages</span>
+            </button>
+            <button className={view === 'contacts' ? 'active' : ''} title="Applications" onClick={() => setView('contacts')}>
+              <Inbox size={19} />
+              <span>Applications</span>
             </button>
             <button className={view === 'site-settings' ? 'active' : ''} title="Site settings" onClick={() => setView('site-settings')}>
               <FileText size={19} />
@@ -2567,6 +2586,7 @@ export default function AdminApp() {
           onDeleted={deleteFromState}
           api={api}
           role={userRole}
+          siteName={siteSettings.siteName}
         />
       ) : view === 'home-hero' ? (
         <HomeHeroManager
@@ -2583,7 +2603,7 @@ export default function AdminApp() {
           role={userRole}
           currentRevisionId={homeHeroRevisionId}
         />
-      ) : view === 'site-settings' ? (
+      ) : (view === 'site-settings' || view === 'pages') ? (
         <SiteSettingsManager
           initialSettings={siteSettings}
           api={api}
@@ -2596,7 +2616,10 @@ export default function AdminApp() {
           onToast={setGlobalToast}
           role={userRole}
           currentRevisionId={siteSettingsRevisionId}
+          mode={view}
         />
+      ) : view === 'contacts' ? (
+        <ContactsManager api={api} />
       ) : view === 'proposals' && isOwner ? (
         <ProposalsManager
           api={api}
@@ -2615,6 +2638,7 @@ export default function AdminApp() {
       ) : (
         <ProjectList
           projects={projects}
+          siteName={siteSettings.siteName}
           onOpen={setSelected}
           onCreate={() => setSelected(emptyProject(projects.length))}
           onReorder={reorder}

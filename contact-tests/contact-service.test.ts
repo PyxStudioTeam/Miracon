@@ -106,18 +106,25 @@ describe('contact intake service', () => {
     expect(repository.submission?.isSpam).toBe(true);
   });
 
-  it('rejects unknown request fields and missing contact methods at the boundary', () => {
-    // Given
-    const unknownField = { ...validSubmission, unexpected: true };
-    const missingContactMethod = { ...validSubmission, email: undefined, phone: undefined };
+  it('rejects unknown fields, missing phone, missing email, and malformed email before acceptance', () => {
+    const inputs = [
+      { ...validSubmission, unexpected: true },
+      { ...validSubmission, phone: '' },
+      { ...validSubmission, phone: '12345' },
+      { ...validSubmission, phone: 'call-me-please' },
+      { ...validSubmission, email: '' },
+      { ...validSubmission, email: 'not-an-email' },
+      { ...validSubmission, phone: undefined },
+      { ...validSubmission, email: undefined },
+    ];
 
-    // When
-    const unknownResult = contactSubmissionSchema.safeParse(unknownField);
-    const missingResult = contactSubmissionSchema.safeParse(missingContactMethod);
-
-    // Then
-    expect(unknownResult.success).toBe(false);
-    expect(missingResult.success).toBe(false);
+    for (const input of inputs) {
+      expect(contactSubmissionSchema.safeParse(input).success).toBe(false);
+    }
+    expect(contactSubmissionSchema.parse(validSubmission)).toMatchObject({
+      phone: '+30 210 000 0000',
+      email: 'ada@example.test',
+    });
   });
 
   it('normalizes equivalent content into the same duplicate digest', async () => {

@@ -1,0 +1,29 @@
+---
+import { externalSocialUrl, whatsappLink, type SiteSettings } from '../lib/site-settings-shared';
+import { getMessages, type SiteLocale } from '../lib/i18n';
+
+interface Props { settings: SiteSettings; locale: SiteLocale }
+const { settings, locale } = Astro.props;
+const m = getMessages(locale);
+const phoneDigits = settings.footerPhone.replace(/[^0-9+]/g, '');
+const whatsappHref = settings.whatsappVisible ? whatsappLink(settings) : null;
+const networks = [
+  { name: 'Facebook', href: settings.facebookVisible ? externalSocialUrl(settings.facebookUrl) : null, letter: 'f' },
+  { name: 'Instagram', href: settings.instagramVisible ? externalSocialUrl(settings.instagramUrl) : null, letter: '◎' },
+  { name: 'LinkedIn', href: settings.linkedinVisible ? externalSocialUrl(settings.linkedinUrl) : null, letter: 'in' },
+];
+---
+<nav class="footer-socials site-social-links" aria-label={m['common.contactLinks']}>
+  {settings.footerEmail && <a href={`mailto:${settings.footerEmail}`} aria-label={`${m['form.email']}: ${settings.footerEmail}`} title={settings.footerEmail}>
+    <img src="/img/contact_header/Group 37313 (1).svg" alt="">
+  </a>}
+  {phoneDigits && <a href={`tel:${phoneDigits}`} aria-label={`${m['form.phone']}: ${settings.footerPhone}`} title={settings.footerPhone}>
+    <img src="/img/contact_header/Vector (1).svg" alt="">
+  </a>}
+  {networks.map(({ name, href, letter }) => href && <a href={href} target="_blank" rel="noopener noreferrer" aria-label={name} title={name}>
+    <span class="site-social-glyph" aria-hidden="true">{letter}</span>
+  </a>)}
+  {whatsappHref && <a href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${settings.whatsappPhone}`} title="WhatsApp">
+    <img src="/img/footer-whatsapp.svg" alt="">
+  </a>}
+</nav>

@@ -136,7 +136,7 @@ npm run build
 npm run browser:contact:test
 ```
 
-`npm run browser:contact:test` drives the localized public contact client through real Chromium with same-origin API responses and requires no database. `npm run browser:test:db` uses the same destructive disposable-database safeguards as the other `:db` suites and covers the built standalone service, PostgreSQL persistence, and admin contact review/delete. Set `DATABASE_TEST_ALLOW_RESET=1` and a `DATABASE_TEST_URL` whose database name contains a distinct `test`, `testing`, `ci`, `disposable`, or `tmp` segment; never use development, staging, or production data.
+`npm run browser:contact:test` drives the localized public contact client through real Chromium with same-origin API responses and requires no database. `npm run browser:test:db` uses the same destructive disposable-database safeguards as the other `:db` suites and covers built standalone public routes, localization, mobile navigation, and availability. Database-backed contact storage and admin access are covered by the guarded API suites; confirm the admin list and CSV export during staging acceptance. Set `DATABASE_TEST_ALLOW_RESET=1` and a `DATABASE_TEST_URL` whose database name contains a distinct `test`, `testing`, `ci`, `disposable`, or `tmp` segment; never use development, staging, or production data.
 
 ```bash
 DATABASE_TEST_ALLOW_RESET=1 \
@@ -171,6 +171,10 @@ Exact staging prerequisites:
 
 The release package contract requires `app.js`, `dist/server/entry.mjs`, package manifests, the production release runbook, ordered PostgreSQL migrations, the migration runner, administrator provisioner, and retained import/verification tools. It excludes secrets, tests, logs, local agent/browser/editor state, QA/deploy output, temporary files, and workstation-only export tools.
 
+The existing Render Free preview uses `render.yaml` and deploys from Git, not from `release-output/`. Its start script migrates the database and seeds an empty catalog; it does not provision or rotate administrator credentials. Provision a fresh administrator explicitly with `npm run admin:provision -- --email=... --password-stdin`. Before updating an existing preview, back up PostgreSQL and uploaded media; the configured `MEDIA_ROOT=/tmp/miracon-media` is ephemeral and is not durable storage. Rotate any administrator credentials established by earlier preview startup scripts and revoke their sessions before treating the preview as safe for use.
+
+The homepage retains the original 1280×720, 60 fps `public/img/hero-bg-mobile.mp4`. The client selects exactly one initial video source, waits to preload the next clip until playback starts, and shows the poster and a Play button when autoplay fails or loading stalls. If a mobile video cannot be decoded, it tries the existing desktop 30 fps source without altering the original. Real-device Opera acceptance remains necessary after deployment; browser emulation cannot guarantee a device's decoder or autoplay policy.
+
 ## Content and media operations
 
 - Draft projects and previews require an administrator session; published projects appear at `/projects/[slug]`.
@@ -178,6 +182,11 @@ The release package contract requires `app.js`, `dist/server/entry.mjs`, package
 - Project, gallery, and homepage ordering are stored explicitly in PostgreSQL.
 - Uploads are written beneath `MEDIA_ROOT`; the database stores same-origin URLs and relative paths.
 - Preview responses remain private and non-indexable.
+- In `/admin`, **Pages** edits the English/Greek homepage, Golden Visa copy, contact-section text, five shared stages, site/company name, footer phone/email/address, and visible social links. Each locale has its own copy; both carousel loops and both pages read the same five stage records. Owner changes publish through the existing revision flow; editor changes remain proposals until approved.
+- Site/company names and the brand mentions in public default copy/metadata update through Pages. Original SVG logo/favicons, the DNS origin, and the legally approved privacy-policy entity/contact text are separate assets/content and must be reviewed independently during a rebrand; the Pages editor warns about this.
+- **Applications** is a read-only, paginated list of stored submissions with full message and source page. CSV export includes all stored submissions, UTF-8/Excel encoding, and spreadsheet-formula protection. Telephone, email, name, message, and consent are required for new submissions; historical partial submissions remain readable.
+- A project accepts an optional HTTPS virtual-tour URL. Its public EN/EL button opens in a new tab only when populated. Unpublished project URLs redirect to the localized `#projects` listing; a published project with `remaining_units=0` stays visible with a sold-out label.
+- Publishing a release does not remove pre-existing files from the hosting document root. Use the [production release runbook](docs/production-release-runbook.md) for explicit backup verification, legacy `.env`/`.git` removal, unauthenticated admin API checks, and live 404 acceptance.
 
 Media cleanup defaults to dry-run:
 

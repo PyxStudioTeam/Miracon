@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     mute: 'Σίγαση',
     openMenu: 'Άνοιγμα μενού',
     closeMenu: 'Κλείσιμο μενού',
-    missingContact: 'Συμπληρώστε το όνομά σας και τουλάχιστον ένα στοιχείο επικοινωνίας',
+    missingContact: 'Συμπληρώστε το όνομά σας, το τηλέφωνο και το email σας',
+    invalidPhone: 'Συμπληρώστε έναν έγκυρο αριθμό τηλεφώνου',
     invalidEmail: 'Συμπληρώστε μια έγκυρη διεύθυνση email',
     sendError: 'Δεν ήταν δυνατή η αποστολή του αιτήματος. Δοκιμάστε ξανά',
     waitMoment: 'Περιμένετε λίγο και δοκιμάστε ξανά',
@@ -29,7 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
     mute: 'Mute',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
-    missingContact: 'Please enter your name and at least one contact detail',
+    missingContact: 'Please enter your name, phone number and email address',
+    invalidPhone: 'Please enter a valid phone number',
     invalidEmail: 'Please enter a valid email address',
     sendError: 'Unable to send your request. Please try again',
     waitMoment: 'Please wait a moment and try again',
@@ -57,24 +59,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (playlist.length) {
-      const mobileMedia = window.matchMedia('(max-width: 600px)');
+      const mobileMedia = window.matchMedia('(max-width: 600px), (pointer: coarse)');
+      const playButton = homeHeroPlaylist.querySelector('.hero-video-play');
+      const prefersStillImage = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        || navigator.connection?.saveData === true;
+      let playbackTimeout;
+      const showPlayButton = () => {
+        if (playButton) playButton.hidden = false;
+      };
+      const hidePlayButton = () => {
+        if (playButton) playButton.hidden = true;
+      };
       let currentIndex = 0;
       let activeSlotIndex = 0;
       let switching = false;
-      let failedAdvances = 0;
+      const failedItems = new Set();
+      const desktopFallbacks = new Set();
 
       function videoUrl(item) {
-        return mobileMedia.matches && item.mobileUrl ? item.mobileUrl : item.desktopUrl;
+        return mobileMedia.matches && item.mobileUrl && !desktopFallbacks.has(item.id)
+          ? item.mobileUrl
+          : item.desktopUrl;
+      }
+
+      function needsDesktopFallback(video, item) {
+        return mobileMedia.matches && item.mobileUrl && item.mobileUrl !== item.desktopUrl
+          && !desktopFallbacks.has(item.id) && video.dataset.playlistSrc === item.mobileUrl
+          && (video.error?.code === 3 || video.error?.code === 4);
+      }
+      function findNextIndex() {
+        for (let offset = 1; offset < playlist.length; offset += 1) {
+          const index = (currentIndex + offset) % playlist.length;
+          if (!failedItems.has(index)) return index;
+        }
+        return -1;
       }
 
       function loadSlot(video, item, preload = 'metadata') {
         const nextUrl = videoUrl(item);
         if (!nextUrl) return;
+        video.classList.remove('is-failed');
         video.autoplay = false;
-        const preloadChanged = video.preload !== preload;
         video.preload = preload;
         if (video.dataset.playlistSrc === nextUrl) {
-          if (preloadChanged && preload === 'auto') video.load();
+          if (video.error) video.load();
           return;
         }
         video.pause();
@@ -82,13 +110,39 @@ document.addEventListener('DOMContentLoaded', () => {
         video.dataset.playlistSrc = nextUrl;
         video.load();
       }
+      function attemptPlay(video) {
+        window.clearTimeout(playbackTimeout);
+        playbackTimeout = window.setTimeout(() => {
+          if (video.classList.contains('is-active') && video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) showPlayButton();
+        }, 7_000);
+        video.classList.remove('is-failed');
+        video.muted = true;
+        video.playsInline = true;
+        try {
+          return Promise.resolve(video.play()).then(() => {
+            if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+              window.clearTimeout(playbackTimeout);
+              hidePlayButton();
+            }
+          }, (error) => {
+            window.clearTimeout(playbackTimeout);
+            showPlayButton();
+            throw error;
+          });
+        } catch (error) {
+          window.clearTimeout(playbackTimeout);
+          showPlayButton();
+          return Promise.reject(error);
+        }
+      }
 
       function primeNextSlot() {
         const activeVideo = homeHeroVideoSlots[activeSlotIndex];
         activeVideo.loop = playlist.length === 1;
         if (playlist.length === 1) return;
 
-        const nextIndex = (currentIndex + 1) % playlist.length;
+        const nextIndex = findNextIndex();
+        if (nextIndex < 0) return;
         const standbyVideo = homeHeroVideoSlots[1 - activeSlotIndex];
         standbyVideo.loop = false;
         loadSlot(standbyVideo, playlist[nextIndex], 'metadata');
@@ -96,19 +150,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
       function advancePlaylist() {
         if (switching || playlist.length < 2) return;
+        const nextIndex = findNextIndex();
+        if (nextIndex < 0) {
+          homeHeroVideoSlots[activeSlotIndex].loop = true;
+          return;
+        }
         switching = true;
 
         const outgoingVideo = homeHeroVideoSlots[activeSlotIndex];
         const incomingSlotIndex = 1 - activeSlotIndex;
         const incomingVideo = homeHeroVideoSlots[incomingSlotIndex];
-        const nextIndex = (currentIndex + 1) % playlist.length;
         loadSlot(incomingVideo, playlist[nextIndex], 'auto');
         incomingVideo.currentTime = 0;
         incomingVideo.muted = true;
 
-        const playPromise = incomingVideo.play();
-        Promise.resolve(playPromise).then(() => {
-          failedAdvances = 0;
+        attemptPlay(incomingVideo).catch((error) => {
+          const item = playlist[nextIndex];
+          if (!needsDesktopFallback(incomingVideo, item)) throw error;
+          desktopFallbacks.add(item.id);
+          loadSlot(incomingVideo, item, 'auto');
+          return attemptPlay(incomingVideo);
+        }).then(() => {
+          failedItems.delete(nextIndex);
           outgoingVideo.pause();
           incomingVideo.classList.add('is-active');
           outgoingVideo.classList.remove('is-active');
@@ -122,29 +185,51 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 680);
         }).catch(() => {
           switching = false;
-          failedAdvances += 1;
-          currentIndex = nextIndex;
-          if (failedAdvances < playlist.length) {
+          failedItems.add(nextIndex);
+          if (findNextIndex() >= 0 && !prefersStillImage) {
             advancePlaylist();
           } else {
             outgoingVideo.loop = true;
-            outgoingVideo.play().catch(() => {});
+            if (prefersStillImage) showPlayButton();
+            else attemptPlay(outgoingVideo).catch(() => {});
           }
         });
       }
 
       function reloadForViewport() {
+        failedItems.clear();
         const activeVideo = homeHeroVideoSlots[activeSlotIndex];
         const standbyVideo = homeHeroVideoSlots[1 - activeSlotIndex];
         standbyVideo.classList.remove('is-active');
         loadSlot(activeVideo, playlist[currentIndex], 'auto');
         activeVideo.classList.add('is-active');
         activeVideo.muted = true;
-        activeVideo.play().catch(() => {});
-        primeNextSlot();
+        if (prefersStillImage) showPlayButton();
+        else attemptPlay(activeVideo).catch(() => {});
       }
 
       homeHeroVideoSlots.forEach((video) => {
+        video.addEventListener('error', () => {
+          if (video.classList.contains('is-active') && needsDesktopFallback(video, playlist[currentIndex])) {
+            desktopFallbacks.add(playlist[currentIndex].id);
+            loadSlot(video, playlist[currentIndex], 'auto');
+            attemptPlay(video).catch(() => {});
+            return;
+          }
+          video.classList.add('is-failed');
+          if (video.classList.contains('is-active')) showPlayButton();
+        });
+        for (const event of ['waiting', 'stalled']) {
+          video.addEventListener(event, () => {
+            if (video.classList.contains('is-active')) showPlayButton();
+          });
+        }
+        video.addEventListener('playing', () => {
+          if (!video.classList.contains('is-active')) return;
+          window.clearTimeout(playbackTimeout);
+          hidePlayButton();
+          primeNextSlot();
+        });
         video.addEventListener('ended', () => {
           if (video.classList.contains('is-active')) advancePlaylist();
         });
@@ -152,12 +237,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const initialVideo = homeHeroVideoSlots[activeSlotIndex];
       initialVideo.autoplay = false;
-      initialVideo.dataset.playlistSrc = initialVideo.currentSrc || videoUrl(playlist[0]);
       initialVideo.loop = playlist.length === 1;
       initialVideo.muted = true;
-      initialVideo.play().catch(() => {});
-      primeNextSlot();
-      mobileMedia.addEventListener('change', reloadForViewport);
+      if (prefersStillImage) {
+        showPlayButton();
+      } else {
+        loadSlot(initialVideo, playlist[0], 'auto');
+        attemptPlay(initialVideo).catch(() => {});
+      }
+      playButton?.addEventListener('click', () => {
+        const activeVideo = homeHeroVideoSlots[activeSlotIndex];
+        loadSlot(activeVideo, playlist[currentIndex], 'auto');
+        attemptPlay(activeVideo).catch(() => {});
+      });
+      if (mobileMedia.addEventListener) mobileMedia.addEventListener('change', reloadForViewport);
+      else mobileMedia.addListener(reloadForViewport);
+      document.addEventListener('visibilitychange', () => {
+        const activeVideo = homeHeroVideoSlots[activeSlotIndex];
+        if (!document.hidden && !prefersStillImage && activeVideo.paused && !activeVideo.error) {
+          attemptPlay(activeVideo).catch(() => {});
+        }
+      });
     }
   }
 
@@ -1059,14 +1159,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const message = String(formData.get('message') || '').trim();
       const website = String(formData.get('website') || '');
       const emailInput = consultationForm.querySelector('[name="email"]');
+      const phoneInput = consultationForm.querySelector('[name="phone"]');
       const now = Date.now();
 
-      if (!name || !message || (!phone && !email) || !consent?.checked) {
+      if (!name || !message || !phone || !email || !consent?.checked) {
         setStatus(ui.missingContact, 'error');
         return;
       }
 
-      if (email && emailInput && !emailInput.checkValidity()) {
+      const phoneDigits = phone.replace(/\D/g, '').length;
+      if (phone.length > 40 || !/^\+?[0-9][0-9\s().-]*$/.test(phone) || phoneDigits < 6 || phoneDigits > 20 || (phoneInput && !phoneInput.checkValidity())) {
+        setStatus(ui.invalidPhone, 'error');
+        return;
+      }
+
+      if (emailInput && !emailInput.checkValidity()) {
         setStatus(ui.invalidEmail, 'error');
         return;
       }
@@ -1108,8 +1215,8 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
             body: JSON.stringify({
               name,
-              ...(email ? { email } : {}),
-              ...(phone ? { phone } : {}),
+              email,
+              phone,
               message,
               consent: true,
               locale: isGreek ? 'el' : 'en',

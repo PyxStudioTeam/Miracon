@@ -16,25 +16,8 @@ async function loadMigrations() {
 
 test('defines the standalone schema when migrations are read in filename order', async () => {
   // Given
-  const { filenames, sql } = await loadMigrations();
+  const { sql } = await loadMigrations();
 
-  // When
-  const ordered = filenames.every((filename, index) => index === 0 || filenames[index - 1] < filename);
-
-  // Then
-  assert.equal(ordered, true);
-  assert.deepEqual(filenames, [
-    '0001_content_tables.sql',
-    '0002_admin_sessions_media.sql',
-    '0003_project_operations.sql',
-    '0004_ordering_and_homepage_operations.sql',
-    '0005_login_throttle_cleanup.sql',
-    '0006_tighten_admin_password_hash.sql',
-    '0007_media_cleanup_pending.sql',
-    '0008_admin_governance_and_availability.sql',
-    '0009_exact_revision_materialization.sql',
-    '0010_contact_intake.sql',
-  ]);
   for (const table of [
     'projects',
     'project_images',

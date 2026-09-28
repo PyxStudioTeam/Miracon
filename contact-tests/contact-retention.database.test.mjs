@@ -29,9 +29,9 @@ test('retention deletes 91-day contacts but retains 89-day and exact 90-day cont
     const createdAt = new Date(now.getTime() - ageDays * 86_400_000);
     await pool.query(
       `insert into miracon.contact_submissions
-         (id, name, email, message, consented_at, locale, source_path,
+         (id, name, email, phone, message, consented_at, locale, source_path,
           client_digest, duplicate_digest, created_at)
-       values ($1, $2, $3, $4, $5, 'en', '/retention-test', $6, $7, $5)`,
+       values ($1, $2, $3, '+30 210 000 0000', $4, $5, 'en', '/retention-test', $6, $7, $5)`,
       [`00000000-0000-4000-8000-${String(id).padStart(12, '0')}`, `${ageDays} days`,
         `${ageDays}@example.test`, 'Retention boundary', createdAt, Buffer.alloc(32, id), Buffer.alloc(32, id + 1)],
     );

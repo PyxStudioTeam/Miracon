@@ -452,3 +452,16 @@
   .golden-visa-page .project-price { font-size: 22px; }
   .golden-visa-page .learn-more { font-size: 14px; }
 }
+
+@media (max-width: 1279px) {
+  .header .logo:has(.site-name-wordmark) {
+    min-width: 0;
+    max-width: calc(100vw - 140px);
+    transform: none;
+  }
+
+  .header .logo .site-name-wordmark {
+    max-width: min(58vw, 260px);
+    font-size: clamp(16px, 2.2vw, 24px);
+  }
+}

@@ -1,12 +1,15 @@
 ---
 import { getLocale, getMessages, localizePath, oppositeLocale, type SiteLocale } from '../lib/i18n';
-
+import { getSiteSettings } from '../lib/site-settings';
+import type { SiteSettings } from '../lib/site-settings-shared';
 interface Props {
   projectCategory?: string;
   locale?: SiteLocale;
+  settings?: SiteSettings;
+  goldenVisaActive?: boolean;
 }
-
-const { projectCategory, locale = getLocale(Astro.originPathname) } = Astro.props;
+const { projectCategory, locale = getLocale(Astro.originPathname), settings, goldenVisaActive = false } = Astro.props;
+const siteSettings = settings ?? await getSiteSettings();
 const m = getMessages(locale);
 const projectsHref = localizePath(projectCategory ? `/?filter=${projectCategory}#projects` : '/#projects', locale);
 const homeHref = localizePath('/', locale);
@@ -14,22 +17,24 @@ const goldenVisaHref = localizePath('/golden-visa', locale);
 const aboutHref = localizePath('/#about', locale);
 const contactsHref = localizePath(`${Astro.originPathname}#contacts`, locale);
 const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
+const phoneHref = siteSettings.footerPhone.replace(/[^0-9+]/g, '');
+const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteSettings.footerAddress[locale])}`;
 ---
 
 <header class="header notranslate" translate="no">
   <div class="header-container">
-    <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
-      <img src="/img/logo_mark.svg" alt="" class="logo-img">
-      <div class="logo-letters" aria-hidden="true">
-        {['M', 'I', 'R', 'A', 'C', 'O', 'N'].map((letter) => (
-          <img src={`/img/logo_letters/${letter}.svg`} alt="" class="logo-letter">
-        ))}
-      </div>
+    <a href={homeHref} class="logo" aria-label={`${siteSettings.siteName} — ${m['common.home']}`}>
+      {siteSettings.siteName === 'MIRACON' && <img src="/img/logo_mark.svg" alt="" class="logo-img">}
+      {siteSettings.siteName === 'MIRACON'
+        ? <div class="logo-letters" aria-hidden="true">
+            {['M', 'I', 'R', 'A', 'C', 'O', 'N'].map((letter) => <img src={`/img/logo_letters/${letter}.svg`} alt="" class="logo-letter">)}
+          </div>
+        : <span class="site-name-wordmark">{siteSettings.siteName}</span>}
     </a>
 
     <nav class="nav-menu glass-gradient" aria-label={m['common.mainNavigation']}>
       <a href={projectsHref} class="nav-link">{m['common.projects']}</a>
-      <a href={goldenVisaHref} class="nav-link">{m['common.goldenVisa']}</a>
+      <a href={goldenVisaHref} class:list={['nav-link', { 'nav-link-current': goldenVisaActive }]} aria-current={goldenVisaActive ? 'page' : undefined}>{m['common.goldenVisa']}</a>
       <a href={aboutHref} class="nav-link">{m['common.aboutUs']}</a>
       <a href={contactsHref} class="nav-link">{m['common.contacts']}</a>
     </nav>
@@ -45,24 +50,18 @@ const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, 
           </span>
         </a>
         <div class="contact-dropdown" aria-label={m['common.quickContacts']}>
-          <a href="tel:+306955340416" class="contact-dropdown-link contact-dropdown-link--phone">
-            <span class="contact-dropdown-text">+306955340416</span>
+          {phoneHref && <a href={`tel:${phoneHref}`} class="contact-dropdown-link contact-dropdown-link--phone" aria-label={`${m['form.phone']}: ${siteSettings.footerPhone}`}>
+            <span class="contact-dropdown-text">{siteSettings.footerPhone}</span>
             <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Vector (1).svg" alt=""></span>
-          </a>
-          <a href="mailto:info@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail">
-            <span class="contact-dropdown-text">info@miracon.gr</span>
+          </a>}
+          {siteSettings.footerEmail && <a href={`mailto:${siteSettings.footerEmail}`} class="contact-dropdown-link contact-dropdown-link--mail" aria-label={`${m['form.email']}: ${siteSettings.footerEmail}`}>
+            <span class="contact-dropdown-text">{siteSettings.footerEmail}</span>
             <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Group 37313 (1).svg" alt=""></span>
-          </a>
-          <a
-            href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece"
-            class="contact-dropdown-link contact-dropdown-link--geo"
-            target="_blank"
-            rel="noreferrer"
-            aria-label={m['common.openAddress']}
-          >
-            <span class="contact-dropdown-text">{m['common.address']}</span>
+          </a>}
+          {siteSettings.footerAddress[locale] && <a href={mapHref} class="contact-dropdown-link contact-dropdown-link--geo" target="_blank" rel="noopener noreferrer" aria-label={`${m['common.openAddress']}: ${siteSettings.footerAddress[locale]}`}>
+            <span class="contact-dropdown-text">{siteSettings.footerAddress[locale]}</span>
             <span class="contact-dropdown-circle" aria-hidden="true"><img src="/img/contact_header/Vector (2).svg" alt=""></span>
-          </a>
+          </a>}
         </div>
       </div>
     </div>
@@ -75,15 +74,15 @@ const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, 
     </button>
     <nav class="mobile-nav" id="mobileNav" aria-label={m['common.mobileNavigation']}>
       <a href={projectsHref} class="mobile-nav-link">{m['common.projects']}</a>
-      <a href={goldenVisaHref} class="mobile-nav-link">{m['common.goldenVisa']}</a>
+      <a href={goldenVisaHref} class="mobile-nav-link" aria-current={goldenVisaActive ? 'page' : undefined}>{m['common.goldenVisa']}</a>
       <a href={aboutHref} class="mobile-nav-link">{m['common.aboutUs']}</a>
       <button class="mobile-nav-contact" type="button" aria-expanded="false" aria-controls="mobileContactDetails">
         <span>{m['common.contacts']}</span><span aria-hidden="true">+</span>
       </button>
       <div class="mobile-nav-contacts" id="mobileContactDetails">
-        <a href="tel:+306955340416">+30 695 534 0416</a>
-        <a href="mailto:info@miracon.gr">info@miracon.gr</a>
-        <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">{m['common.addressShort']}</a>
+        {phoneHref && <a href={`tel:${phoneHref}`}>{siteSettings.footerPhone}</a>}
+        {siteSettings.footerEmail && <a href={`mailto:${siteSettings.footerEmail}`}>{siteSettings.footerEmail}</a>}
+        {siteSettings.footerAddress[locale] && <a href={mapHref} target="_blank" rel="noopener noreferrer">{siteSettings.footerAddress[locale]}</a>}
       </div>
     </nav>
   </div>

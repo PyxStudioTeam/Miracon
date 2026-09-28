@@ -1,0 +1,31 @@
+---
+import type { SiteLocale } from '../lib/i18n';
+import type { SiteSettings } from '../lib/site-settings-shared';
+
+interface Props { settings: SiteSettings; locale: SiteLocale }
+const { settings, locale } = Astro.props;
+const copy = settings.stagesCopy[locale];
+---
+<section class="stages-section">
+  <div class="container stages-container">
+    <div class="stages-intro">
+      <h2 class="section-title">{copy.title}</h2>
+      <p class="section-subtitle">{copy.description}</p>
+    </div>
+  </div>
+  <div class="stages-carousel" aria-label={copy.title}>
+    <div class="stages-carousel-track">
+      {[false, true].map((duplicate) => (
+        <div class="stages-carousel-set" aria-hidden={duplicate ? 'true' : undefined}>
+          {copy.steps.map((step, index) => (
+            <article class="stage-card">
+              <span class="stage-number">{String(index + 1).padStart(2, '0')}</span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </article>
+          ))}
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

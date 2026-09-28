@@ -52,6 +52,20 @@ const mediaSchema = z.object({
   height: z.number().int().positive().optional(),
 });
 const mediaResponseSchema = z.object({ media: mediaSchema });
+const contactSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+  message: z.string(),
+  locale: z.enum(['en', 'el']),
+  sourcePath: z.string(),
+  createdAt: z.iso.datetime(),
+});
+const contactsResponseSchema = z.object({ contacts: z.array(contactSchema) });
+const contactDetailResponseSchema = z.object({
+  contact: contactSchema.extend({ consentedAt: z.iso.datetime() }),
+});
 const errorSchema = z.object({ error: z.object({ code: z.string(), message: z.string() }) });
 
 const adminUserSchema = z.object({
@@ -120,6 +134,7 @@ export type SessionState = {
 };
 export type AdminUser = z.infer<typeof adminUserSchema>;
 export type PendingProposal = z.infer<typeof pendingProposalSchema>;
+export type AdminContact = z.infer<typeof contactSchema>;
 export type RevisionHistoryItem = z.infer<typeof revisionHistoryItemSchema>;
 
 export type SaveProjectResult = {
@@ -347,6 +362,23 @@ export class AdminApi {
       revision: data.revision,
       isProposal: data.isProposal,
     };
+  }
+
+  // Contacts
+  async listContacts(limit = 50, offset = 0): Promise<AdminContact[]> {
+    const response = await this.#fetcher(`/api/admin/contacts?limit=${limit}&offset=${offset}`, { credentials: 'same-origin' });
+    return (await this.#response(response, contactsResponseSchema)).contacts;
+  }
+
+  async getContact(id: string): Promise<AdminContact & { consentedAt: string }> {
+    const response = await this.#fetcher(`/api/admin/contacts/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
+    return (await this.#response(response, contactDetailResponseSchema)).contact;
+  }
+
+  async exportContactsCsv(): Promise<Blob> {
+    const response = await this.#fetcher('/api/admin/contacts/export', { credentials: 'same-origin' });
+    if (!response.ok) await this.#response(response, z.never());
+    return response.blob();
   }
 
   // Media

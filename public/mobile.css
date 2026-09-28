@@ -2264,3 +2264,46 @@
     transform-origin: center top;
   }
 }
+
+@media (max-width: 600px) {
+  .footer .footer-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .footer .footer-top .footer-contact-details {
+    position: static;
+    order: 3;
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    font-size: 13px;
+  }
+
+  .footer .site-social-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+    flex: 1 0 100%;
+    width: 100%;
+  }
+
+  .footer .site-social-links a {
+    width: 44px;
+    height: 44px;
+  }
+
+  .footer .site-social-links img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .footer .site-social-links .site-social-glyph {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+}

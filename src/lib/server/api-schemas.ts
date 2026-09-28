@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isValidTermsPdfUrl } from '../site-settings-shared';
+import { homeCopyKeys, goldenVisaCopyKeys, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from '../site-settings-shared';
 
 const nullableUrl = z.string().max(2_048).nullable();
 const optionalNullableUrl = nullableUrl.optional();
@@ -89,6 +89,7 @@ export const projectSchema = z.object({
   walkthroughVideoMobileUrl: nullableUrl,
   walkthroughVideoPosterUrl: nullableUrl,
   walkthroughVideos: z.array(projectVideoSchema),
+  virtualTourUrl: z.union([z.literal(''), z.url({ protocol: /^https$/ }).max(2_048).refine((value) => value.startsWith('https://') && !/\s/u.test(value))]),
   heroFocalX: z.number().min(0).max(100),
   heroFocalY: z.number().min(0).max(100),
   introImageUrl: z.string().max(2_048),
@@ -127,6 +128,19 @@ const homepageVideoSchema = z.object({
 export const homepageVideosSchema = z.object({ videos: z.array(homepageVideoSchema) });
 
 const siteDocumentUrl = z.string().max(2_048).refine((value) => value === '' || isValidTermsPdfUrl(value));
+const copyText = z.string().max(8_000);
+const localized = <T extends z.ZodType>(schema: T) => z.object({ en: schema, el: schema });
+const copyFields = <T extends string>(keys: readonly T[]) =>
+  z.object(Object.fromEntries(keys.map((key) => [key, copyText])) as Record<T, typeof copyText>);
+const stageStepSchema = z.object({ title: copyText, text: copyText });
+const stagesSchema = z.object({
+  title: copyText,
+  description: copyText,
+  steps: z.tuple([stageStepSchema, stageStepSchema, stageStepSchema, stageStepSchema, stageStepSchema]),
+});
+const socialUrlSchema = z.string().max(2_048).refine((value) => value === '' || externalSocialUrl(value) !== null, 'Use an HTTPS URL');
+const phoneSchema = z.string().max(40).refine((value) => value === '' || /^\+?[0-9 ()-]{7,40}$/.test(value), 'Use an international phone number');
+const whatsappPhoneSchema = phoneSchema.refine((value) => !value || whatsappLink({ whatsappPhone: value, whatsappMessage: '' }) !== null, 'Use an international number with 7–15 digits');
 
 export const siteSettingsSchema = z.object({
   footerTermsVisible: z.boolean(),
@@ -135,4 +149,22 @@ export const siteSettingsSchema = z.object({
   footerPrivacyPdfUrl: siteDocumentUrl,
   footerCookieVisible: z.boolean(),
   footerCookiePdfUrl: siteDocumentUrl,
+  siteName: copyText.trim().min(1),
+  companyName: copyText.trim().min(1),
+  homeCopy: localized(copyFields(homeCopyKeys)),
+  goldenVisaCopy: localized(copyFields(goldenVisaCopyKeys)),
+  contactCopy: localized(z.object({ title: copyText, description: copyText })),
+  stagesCopy: localized(stagesSchema),
+  footerPhone: phoneSchema,
+  footerEmail: z.union([z.literal(''), z.email().max(254)]),
+  footerAddress: localized(copyText),
+  facebookVisible: z.boolean(),
+  facebookUrl: socialUrlSchema,
+  instagramVisible: z.boolean(),
+  instagramUrl: socialUrlSchema,
+  linkedinVisible: z.boolean(),
+  linkedinUrl: socialUrlSchema,
+  whatsappVisible: z.boolean(),
+  whatsappPhone: whatsappPhoneSchema,
+  whatsappMessage: z.string().max(2_000),
 });

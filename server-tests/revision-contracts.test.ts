@@ -38,7 +38,7 @@ const project = (overrides: Partial<CanonicalProjectRow> = {}): CanonicalProject
   cover_url: '', cover_focal_x: 50, cover_focal_y: 50, image_variants: {}, hero_type: 'image', hero_variant: 'standard',
   hero_sound_enabled: false, hero_idle_ui: false, hero_url: '', hero_mobile_url: null, hero_poster_url: null, hero_videos: [],
   walkthrough_video_enabled: false, walkthrough_video_title: 'Walkthrough', walkthrough_video_desktop_url: '',
-  walkthrough_video_mobile_url: null, walkthrough_video_poster_url: null, walkthrough_videos: [], hero_focal_x: 50,
+  walkthrough_video_mobile_url: null, walkthrough_video_poster_url: null, walkthrough_videos: [], virtual_tour_url: '', hero_focal_x: 50,
   hero_focal_y: 50, intro_image_url: '', brochure_url: null, map_query: '', map_url: '', characteristics: [], benefits: [],
   floor_plan_groups: [], nearby_places: [], translations: {}, seo_title: '', seo_description: '', published_at: null,
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z', remaining_units: null,
@@ -102,6 +102,15 @@ describe('revision contracts', () => {
     const parsed = [projectSnapshotSchema.safeParse(activeProject), homepageHeroSnapshotSchema.safeParse(homepage), siteSettingsSnapshotSchema.safeParse(settings), contentSnapshotSchema.safeParse(settings)];
     // Then
     expect(parsed.every((result) => result.success)).toBe(true);
+  });
+
+  it('reads historical project revisions without a tour link and rejects unsafe tour protocols', () => {
+    const previous = projectSnapshot();
+    const { virtual_tour_url: _absent, ...historicalProject } = previous.project!;
+    const historical = projectSnapshot({ project: historicalProject as CanonicalProjectRow });
+    expect(projectSnapshotSchema.parse(historical).project?.virtual_tour_url).toBe('');
+    expect(projectSnapshotSchema.safeParse(projectSnapshot({ project: project({ virtual_tour_url: 'javascript:alert(1)' }) })).success).toBe(false);
+    expect(projectSnapshotSchema.safeParse(projectSnapshot({ project: project({ virtual_tour_url: 'https://tours.example/360' }) })).success).toBe(true);
   });
 
   it('accepts a deleted project only when its content is absent', () => {

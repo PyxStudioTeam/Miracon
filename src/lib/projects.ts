@@ -245,6 +245,7 @@ export function mapProjectRow(row: ProjectRow): Project {
     walkthroughVideoMobileUrl: row.walkthrough_video_mobile_url ? String(row.walkthrough_video_mobile_url) : null,
     walkthroughVideoPosterUrl: row.walkthrough_video_poster_url ? String(row.walkthrough_video_poster_url) : null,
     walkthroughVideos,
+    virtualTourUrl: String(row.virtual_tour_url ?? ''),
     heroFocalX: Number(row.hero_focal_x ?? 50),
     heroFocalY: Number(row.hero_focal_y ?? 50),
     introImageUrl: String(row.intro_image_url ?? ''),

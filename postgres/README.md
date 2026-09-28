@@ -6,9 +6,9 @@ This directory is the Phase 1 schema foundation for the pragmatic migration away
 
 Apply `migrations/*.sql` in filename order. The final schema lives in the `miracon` namespace and preserves:
 
-- draft and published projects, stable text IDs and slugs, nullable non-negative remaining-unit availability, explicit ordering, publication/update timestamps, presentation fields, JSON content, translation overlays, and hero/walkthrough playlists;
+- draft and published projects, stable text IDs and slugs, nullable non-negative remaining-unit availability, optional HTTPS virtual-tour URLs, explicit ordering, publication/update timestamps, presentation fields, JSON content, translation overlays, and hero/walkthrough playlists;
 - ordered project images with project-delete cascade and ordered homepage videos whose optional project reference becomes null when a project is deleted;
-- the singleton legal-document site settings row, including HTTPS compatibility and same-domain `/media/` URLs;
+- the singleton site settings row for legal documents, localized page/stages/contact copy, brand identity, footer contacts, and configurable social links;
 - owner/editor administrator rows, with `id=1` reserved as the sole owner and sequence-backed editor identifiers beginning at `2`, while retaining the `smallint` key and all session/media references, plus Argon2id password hashes, hashed session and CSRF tokens, expiry/revocation, and hashed login-throttle keys;
 - local media metadata using a same-domain `/media/...` URL and a relative filesystem path;
 - constrained complete-snapshot revisions and heads for project-plus-images, the homepage playlist, and singleton Site settings, with revision-media references and append-only complete-snapshot audit events;
@@ -23,6 +23,8 @@ Migration `0008_admin_governance_and_availability.sql` is additive. It preserves
 Migration `0009_exact_revision_materialization.sql` adds the approved-revision materialization boundary without changing migrations `0001` through `0008`. The invoker-only routine accepts an approved revision identifier, applies every canonical column including timestamps and complete translation objects, reconstructs the live aggregate, and returns that readback for equality checking before head or audit advancement. Timestamp triggers preserve supplied values only inside the routine's transaction-local context and retain their ordinary `now()` behavior for every other write. Project deletion takes the homepage aggregate and playlist-replacement locks in order and rejects deletion while a homepage video references the project, preventing implicit `ON DELETE SET NULL` drift.
 
 Project `remaining_units` is either `NULL` for unknown availability or a non-negative integer, where `0` means sold out. Legacy project saves that omit the field preserve the stored value.
+
+Migrations `0010_contact_intake.sql` through `0013_contact_details.sql` add guarded contact intake, bilingual site copy/branding/social fields, optional HTTPS project virtual-tour links, and required email/phone for new contacts. Legacy immutable revision snapshots keep their historical shapes for rollback; new snapshots include the new columns. The contact-details constraint uses `NOT VALID` so historical partial submissions remain readable without weakening checks on newly inserted rows.
 
 ## Apply migrations
 

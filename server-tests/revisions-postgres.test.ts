@@ -82,6 +82,7 @@ describe('PostgreSQL revision service', () => {
     expect(await liveTitle()).toBe('Approved title');
     expect(await currentHead()).toBe(proposal.value.id);
     expect(await loadProjectSnapshot()).toEqual(approvedSnapshot);
+    expect((await loadProjectSnapshot()).project?.virtual_tour_url).toBe('https://tours.example.com/revision');
     expect(await projectHeadSnapshot()).toEqual(approvedSnapshot);
     expect(await auditAfterSnapshot(proposal.value.id, 'approve')).toEqual(approvedSnapshot);
 
@@ -105,6 +106,7 @@ describe('PostgreSQL revision service', () => {
       action: 'rollback', targetRevisionId: baselineRevisionId, expectedCurrentRevisionId: proposal.value.id,
     });
     if (!rollback.ok) throw new Error('Rollback failed');
+    expect((await loadProjectSnapshot()).project?.virtual_tour_url).toBe('');
     const deletion = await service.execute(ownerSession.sessionToken, {
       action: 'delete', aggregateType: 'project', aggregateId: projectId, expectedCurrentRevisionId: rollback.value.id,
     });
@@ -116,6 +118,7 @@ describe('PostgreSQL revision service', () => {
     // Then
     expect(restore.ok).toBe(true);
     expect(await liveTitle()).toBe('Approved title');
+    expect((await loadProjectSnapshot()).project?.virtual_tour_url).toBe('https://tours.example.com/revision');
     expect(await loadProjectSnapshot()).toEqual(approvedSnapshot);
     const evidence = await pool.query(`select
       (select array_agg(revision_number order by revision_number) from miracon.content_revisions where aggregate_id = $1) as numbers,
@@ -290,6 +293,7 @@ function exactProjectSnapshot(title: string): ProjectSnapshot {
     project: {
       ...baselineSnapshot.project,
       title,
+      virtual_tour_url: 'https://tours.example.com/revision',
       translations: { el: { title: 'Ακριβής τίτλος' } },
       created_at: '2001-02-03T04:05:06.000Z',
       updated_at: '2002-03-04T05:06:07.000Z',

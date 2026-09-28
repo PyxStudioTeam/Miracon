@@ -84,14 +84,7 @@ export async function PUT({ request }: ApiContext): Promise<Response> {
 
   const mediaFileIds = [...new Set([...(input.value.mediaFileIds ?? []), ...resolvedMediaIds])];
 
-  const settings = {
-    footerTermsVisible: input.value.footerTermsVisible,
-    footerTermsPdfUrl: input.value.footerTermsPdfUrl,
-    footerPrivacyVisible: input.value.footerPrivacyVisible,
-    footerPrivacyPdfUrl: input.value.footerPrivacyPdfUrl,
-    footerCookieVisible: input.value.footerCookieVisible,
-    footerCookiePdfUrl: input.value.footerCookiePdfUrl,
-  };
+  const { expectedRevisionId: _expectedRevisionId, mediaFileIds: _mediaFileIds, ...settings } = input.value;
 
   const transport = buildSiteSettingsRevisionTransport({
     settings,

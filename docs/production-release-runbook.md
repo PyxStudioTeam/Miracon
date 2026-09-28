@@ -23,7 +23,8 @@ The cPanel operator must complete and record these steps outside the repository:
 - [ ] Leave `CONTACT_SMTP_ENABLED=false` unless optional notification is approved. To enable it, inject `CONTACT_SMTP_ENABLED=true`, `CONTACT_SMTP_HOST`, `CONTACT_SMTP_PORT`, `CONTACT_SMTP_USER`, `CONTACT_SMTP_PASSWORD`, `CONTACT_SMTP_FROM`, and one internal `CONTACT_SMTP_TO` outside the release and `public_html`; never use `PUBLIC_*` names.
 - [ ] For enabled SMTP, use only port `465` implicit TLS or port `587` required STARTTLS. Certificate verification is mandatory; the application makes one bounded attempt with no pooling or retry.
 - [ ] Restrict secret files to the hosting account, normally mode `0600`, and keep them out of shell history, logs, archives, and the release manifest.
-- [ ] Run `npm run postgres:migrate`, then provision or deliberately rotate the administrator using `--password-stdin`.
+- [ ] Inspect the active `public_html`/document root before cutover. After preserving an offline operator-controlled backup, remove any legacy `.env`, `.env.*`, `.git/`, source tree, and obsolete release files from that public directory; publishing a clean artifact alone does not remove files already on the server. Store runtime secrets only in protected cPanel/Passenger configuration outside both the document root and release.
+- [ ] Verify or configure the database and media backups in section 6, capture the pre-migration copies, then run `npm run postgres:migrate` and provision or deliberately rotate the administrator using `--password-stdin`.
 
 ## 3. Passenger and proxy boundary
 
@@ -43,10 +44,13 @@ The cPanel operator must complete and record these steps outside the repository:
 
 - [ ] Start or restart Passenger and confirm `/api/health` reports HTTP 200 with database and media checks true.
 - [ ] Verify English and Greek public routes, canonical metadata, static assets, brochure redirects, and the `www` redirect.
-- [ ] Submit one English and one Greek consultation through the public form; verify visible success, PostgreSQL persistence, admin list/detail access, and deletion.
+- [ ] On a real Android phone in Opera, including opening the site from a Yandex search result, verify that the original 1280×720, 60 fps homepage MP4 plays on Wi-Fi and mobile data. If autoplay is blocked, verify that the poster and **Play video** control appear and that a tap starts playback; if the mobile codec fails, verify that the existing desktop 30 fps version is used instead. Repeat for `/el/`. Desktop browser emulation alone does not satisfy this check.
+- [ ] Submit one English and one Greek consultation through the public form; verify visible success, PostgreSQL persistence, read-only admin list/detail, full UTF-8 CSV export, and retention cleanup in the guarded maintenance workflow.
 - [ ] First submit with SMTP disabled and verify `201` plus PostgreSQL persistence. If SMTP is enabled, submit once more and verify one internal plain-text notification; a delivery failure must still return `201` and retain the row.
 - [ ] Inspect notification warnings for only `event`, contact ID, and safe failure category. They must not contain credentials, SMTP provider detail, message content, submitted contact fields, raw client address, or abuse digests.
 - [ ] Verify administrator login, owner/editor authorization, CSRF-protected mutations, previews, and one media write/read flow.
+- [ ] Without logging in, request `/api/admin/projects`, `/api/admin/site-settings`, `/api/admin/contacts`, and `/api/admin/contacts/export`; each must return HTTP 401 without private data. Public `/api/health` and consultation endpoints are intentionally accessible and are not admin endpoints.
+- [ ] After cutover, request `/.env`, `/.env.local`, `/.git/HEAD`, and any other formerly deployed sensitive path through the public origin. Require HTTP 404 (not HTTP 403); HTTP 403 means the files may still exist in the document root. Also verify the deployed release manifest contains neither `.git` nor `.env*`.
 - [ ] Inspect browser console and network activity for CSP violations or requests to obsolete Web3Forms, hCaptcha, or Supabase runtime origins.
 
 SMTP account provisioning, DNS configuration, and provider administration are outside this repository and this runbook.
@@ -54,6 +58,8 @@ SMTP account provisioning, DNS configuration, and provider administration are ou
 ## 6. Backup, activation, and rollback
 
 - [ ] Capture database and media backups and retain the previous release before activation.
+- [ ] **Backup status is not verified by this repository.** Before release, the hosting operator must record whether production PostgreSQL and `MEDIA_ROOT` backups already run, their actual schedule, owner, off-host destination, encryption/access controls, retention, latest successful run, and latest successful restore test. Do not treat a 403 on a live secret path as evidence that backups or cleanup are configured.
+- [ ] If no verifiable backup exists, configure a daily consistent PostgreSQL dump (`pg_dump` with noninteractive protected credentials), a daily backup of `MEDIA_ROOT`, and a backup immediately before migrations or release activation. Keep encrypted copies outside `public_html`, the release, and the hosting account where possible; retain at least 30 daily copies and alert on missing or failed jobs. Test restoration of both database and files into an isolated disposable environment at least monthly. Record who restores, recovery steps, and the last tested restore before activating production.
 - [ ] Record the release-manifest hash, migration level, active release path, Node version, and acceptance operator.
 - [ ] Activate only after all prerequisites pass. Deployment, DNS, and cPanel changes require separate operator authorization.
 - [ ] If acceptance fails, restore the previous release path and restart Passenger. Roll back data only with a reviewed database recovery plan; PostgreSQL migrations are forward-applied and are not reversed automatically.

@@ -576,6 +576,25 @@ button:disabled { cursor: wait; opacity: .55; }
 .site-settings-state { display: flex; min-height: 54px; padding: 14px 24px; align-items: center; gap: 9px; border-top: 1px solid rgba(8,47,93,.08); background: rgba(244,241,234,.72); color: var(--admin-green); font-size: 11px; }
 .site-settings-state.error { color: var(--admin-red); }
 .site-settings-state a { display: inline-flex; margin-left: auto; align-items: center; gap: 5px; color: var(--admin-navy); font-weight: 700; }
+.pages-settings-fields { display: grid; gap: 22px; }
+.pages-settings-fields > p { margin: -12px 0 0; color: var(--admin-muted); font-size: 12px; line-height: 1.6; }
+.pages-settings-fields > h3 { margin: 12px 0 0; font: 400 24px Georgia, serif; color: var(--admin-navy); }
+.pages-settings-fields > section,
+.pages-settings-fields fieldset { display: grid; min-width: 0; gap: 16px; padding: 22px; border: 1px solid var(--admin-line); border-radius: 12px; background: white; }
+.pages-settings-fields fieldset { margin: 0; background: #faf9f6; }
+.pages-settings-fields > section { gap: 24px; }
+.pages-settings-fields > section > h3 { margin: 0; font: 400 24px Georgia, serif; }
+.pages-settings-fields legend { padding: 0 8px; color: var(--admin-navy); font: 600 14px 'Plus Jakarta Sans', sans-serif; }
+.pages-settings-fields label { display: grid; min-width: 0; gap: 7px; color: var(--admin-navy); font-size: 12px; font-weight: 600; }
+.pages-settings-fields label:has(input[type="checkbox"]) { display: flex; align-items: center; gap: 10px; }
+.pages-settings-fields input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
+.pages-settings-fields input:not([type="checkbox"]),
+.pages-settings-fields textarea { width: 100%; min-width: 0; padding: 11px 13px; border: 1px solid var(--admin-line); border-radius: 7px; background: white; color: var(--admin-navy); font: 400 14px/1.45 'Plus Jakarta Sans', sans-serif; }
+.pages-settings-fields textarea { min-height: 72px; resize: vertical; }
+.pages-settings-fields input:focus-visible,
+.pages-settings-fields textarea:focus-visible { outline: 2px solid var(--admin-navy); outline-offset: 2px; }
+.pages-settings-fields fieldset > div { display: grid; gap: 12px; padding: 12px 0; border-top: 1px solid var(--admin-line); }
+.pages-settings-fields fieldset > div strong { font-size: 13px; }
 
 @media (max-width: 680px) {
   .site-settings-manager .list-header { align-items: stretch; flex-direction: column; }

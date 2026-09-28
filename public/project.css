@@ -2604,3 +2604,20 @@ body.js-enabled .project-page .project-brochure-link {
     to { transform: translateX(calc(-50% - 9px)); }
   }
 }
+
+.project-virtual-tour { padding-block: clamp(24px, 4vw, 64px); }
+.project-virtual-tour a {
+  display: inline-flex;
+  min-height: 48px;
+  padding: 12px 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  background: #003075;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.project-virtual-tour a:hover { background: #164c91; }
+.project-virtual-tour a:focus-visible { outline: 3px solid #003075; outline-offset: 3px; }

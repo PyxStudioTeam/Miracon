@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { seedProjects } from '../src/data/projects';
+import { defaultSiteSettings } from '../src/lib/site-settings-shared';
 import { migrate } from '../scripts/postgres-migrate.mjs';
 import { provisionSingletonAdmin } from '../scripts/provision-admin.mjs';
 import { GET as getSession } from '../src/pages/api/auth/session';
@@ -230,7 +231,21 @@ describe('Phase 2 server API', () => {
        on conflict (id) do nothing`,
       [createHash('sha256').update('terms.pdf').digest()],
     );
-    const settings = { footerTermsVisible: true, footerTermsPdfUrl: '/media/legal/terms.pdf', footerPrivacyVisible: false, footerPrivacyPdfUrl: '', footerCookieVisible: false, footerCookiePdfUrl: '' };
+    const settings = {
+      ...structuredClone(defaultSiteSettings),
+      footerTermsVisible: true,
+      footerTermsPdfUrl: '/media/legal/terms.pdf',
+      siteName: 'New Brand',
+      footerPhone: '+30 210 123 4567',
+      footerEmail: 'office@example.com',
+      footerAddress: { en: 'Athens office', el: 'Γραφείο Αθήνας' },
+      whatsappVisible: true,
+      whatsappPhone: '302101234567',
+      whatsappMessage: 'Please contact me',
+      linkedinVisible: true,
+      linkedinUrl: 'https://www.linkedin.com/company/example/',
+      homeCopy: { ...defaultSiteSettings.homeCopy, en: { ...defaultSiteSettings.homeCopy.en, heroTitleLine1: 'New homepage headline' } },
+    };
 
     // When
     const heroUpdate = await putHero(context('/api/admin/home-hero', { method: 'PUT', headers: auth.headers, body: JSON.stringify({ videos }) }));

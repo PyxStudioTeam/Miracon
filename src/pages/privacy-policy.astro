@@ -3,14 +3,16 @@ import SeoHead from '../components/SeoHead.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import { getLocale, getMessages, localizePath } from '../lib/i18n';
+import { getSiteSettings } from '../lib/site-settings';
 
 const locale = getLocale(Astro.originPathname);
 const isGreek = locale === 'el';
 const m = getMessages(locale);
+const siteSettings = await getSiteSettings();
 
 const pageTitle = isGreek
-  ? 'Πολιτική Απορρήτου — MIRACON'
-  : 'Privacy Policy — MIRACON';
+  ? `Πολιτική Απορρήτου — ${siteSettings.siteName}`
+  : `Privacy Policy — ${siteSettings.siteName}`;
 const pageDescription = isGreek
   ? 'Ενημερωθείτε για την πολιτική απορρήτου και την προστασία των προσωπικών δεδομένων σας από τη MIRACON Μονοπρόσωπη Ι.Κ.Ε.'
   : 'Learn about how MIRACON protects and processes your personal data in accordance with the GDPR.';
@@ -26,11 +28,12 @@ const pageDescription = isGreek
     title={pageTitle}
     description={pageDescription}
     locale={locale}
+    siteName={siteSettings.siteName}
   />
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="legal-page">
-  <SiteHeader locale={locale} />
+  <SiteHeader locale={locale} settings={siteSettings} />
 
   <main class="legal-main">
     <div class="container legal-container">
@@ -292,7 +295,7 @@ const pageDescription = isGreek
     </div>
   </main>
 
-  <SiteFooter locale={locale} />
+  <SiteFooter locale={locale} settings={siteSettings} />
 </body>
 </html>
 

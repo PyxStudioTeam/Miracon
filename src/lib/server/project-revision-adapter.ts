@@ -86,6 +86,7 @@ export function buildProjectRevisionTransport(input: ProjectRevisionTransportInp
       walkthrough_video_mobile_url: project.walkthroughVideoMobileUrl,
       walkthrough_video_poster_url: project.walkthroughVideoPosterUrl,
       walkthrough_videos: project.walkthroughVideos,
+      virtual_tour_url: project.virtualTourUrl,
       hero_focal_x: project.heroFocalX,
       hero_focal_y: project.heroFocalY,
       intro_image_url: project.introImageUrl,

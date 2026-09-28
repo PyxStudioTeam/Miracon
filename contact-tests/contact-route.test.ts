@@ -191,6 +191,7 @@ function contactContext() {
   const submission = contactSubmissionSchema.parse({
     name: 'Ada Lovelace',
     email: 'ada@example.test',
+    phone: '+30 210 000 0000',
     message: 'Please contact me about a property.',
     consent: true,
     locale: 'en',

@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { seedProjects } from '../src/data/projects';
 import type { Project } from '../src/lib/project-types';
+import { defaultSiteSettings } from '../src/lib/site-settings-shared';
 import { migrate } from '../scripts/postgres-migrate.mjs';
 import { DATABASE_POOL_MAX_CONNECTIONS, createDatabasePool } from '../src/lib/server/database';
 import {
@@ -99,6 +100,7 @@ describe('PostgreSQL projects repository', () => {
         { id: 'server-round-trip-walkthrough-1', desktopUrl: '/media/legacy-walkthrough.mp4', mobileUrl: '/media/legacy-walkthrough-mobile.mp4', posterUrl: '/media/legacy-walkthrough.webp' },
         { id: 'server-round-trip-walkthrough-2', desktopUrl: '/media/walkthrough-second.mp4', mobileUrl: null, posterUrl: null },
       ],
+      virtualTourUrl: 'https://tours.example.com/360/round-trip',
       cardImages: [{ id: 'server-round-trip-card', url: '/media/card.webp', storagePath: 'projects/server-round-trip/card.webp', alt: 'Card', role: 'card' as const, sortOrder: 0, width: 1_200, height: 800, focalX: 35, focalY: 65 }],
       gallery: [{ id: 'server-round-trip-gallery', url: '/media/gallery.webp', storagePath: 'projects/server-round-trip/gallery.webp', alt: 'Gallery', role: 'gallery' as const, sortOrder: 0, width: 1_600, height: 900, focalX: 45, focalY: 55 }],
       translations: { el: { title: 'Ελληνικός τίτλος', imageAlts: { 'server-round-trip-card': 'Ελληνική κάρτα' } } },
@@ -112,12 +114,23 @@ describe('PostgreSQL projects repository', () => {
     expect(stored?.heroIdleUi).toBe(false);
     expect(stored?.heroVideos).toEqual(project.heroVideos);
     expect(stored?.walkthroughVideos).toEqual(project.walkthroughVideos);
+    expect(stored?.virtualTourUrl).toBe(project.virtualTourUrl);
     expect(stored?.heroUrl).toBe(project.heroUrl);
     expect(stored?.walkthroughVideoDesktopUrl).toBe(project.walkthroughVideoDesktopUrl);
     expect(stored?.translations).toEqual(project.translations);
     expect(stored?.cardImages).toEqual(project.cardImages);
     expect(stored?.gallery).toEqual(project.gallery);
     expect(stored?.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/u);
+  });
+
+  it('updates and removes external tours without changing walkthrough videos', async () => {
+    const original = projectFixture('server-tour-update', 'server-tour-update', 'draft', 5);
+    const withTour = { ...original, virtualTourUrl: 'https://tours.example.com/360/updated' };
+    await saveProject(pool, withTour);
+    const cleared = await saveProject(pool, { ...withTour, virtualTourUrl: '' });
+    expect(cleared.virtualTourUrl).toBe('');
+    expect(cleared.walkthroughVideos).toEqual(original.walkthroughVideos);
+    await expect(pool.query('update miracon.projects set virtual_tour_url = $1 where id = $2', ['javascript:alert(1)', original.id])).rejects.toThrow();
   });
 
   it('round-trips null, zero, and positive remaining units distinctly', async () => {
@@ -209,12 +222,34 @@ describe('PostgreSQL site settings repository', () => {
   it('returns and atomically updates the singleton settings row', async () => {
     // Given
     const settings = {
+      ...structuredClone(defaultSiteSettings),
       footerTermsVisible: true,
       footerTermsPdfUrl: 'https://example.com/terms.pdf',
       footerPrivacyVisible: true,
       footerPrivacyPdfUrl: 'https://example.com/privacy.pdf',
       footerCookieVisible: false,
       footerCookiePdfUrl: '',
+      siteName: 'Changed Brand',
+      footerPhone: '+30 210 123 4567',
+      footerEmail: 'contact@example.com',
+      footerAddress: { en: 'New office', el: 'Νέο γραφείο' },
+      facebookVisible: true,
+      facebookUrl: 'https://facebook.com/example',
+      homeCopy: {
+        ...defaultSiteSettings.homeCopy,
+        el: { ...defaultSiteSettings.homeCopy.el, heroTitleLine1: 'Νέος τίτλος' },
+      },
+      stagesCopy: {
+        ...defaultSiteSettings.stagesCopy,
+        en: {
+          ...defaultSiteSettings.stagesCopy.en,
+          steps: [
+            ...defaultSiteSettings.stagesCopy.en.steps.slice(0, 3),
+            { title: 'Contract', text: 'Documents signed, payment schedule fixed' },
+            defaultSiteSettings.stagesCopy.en.steps[4],
+          ] as typeof defaultSiteSettings.stagesCopy.en.steps,
+        },
+      },
     };
 
     // When

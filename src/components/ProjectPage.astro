@@ -3,6 +3,7 @@ import type { Project } from '../lib/project-types';
 import { formatMessage, getMessages, type SiteLocale } from '../lib/i18n';
 import { getImageVariantSet, getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
 import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
+import { getSiteSettings } from '../lib/site-settings';
 import ContactSection from './ContactSection.astro';
 import OptimizedImage from './OptimizedImage.astro';
 import SeoHead from './SeoHead.astro';
@@ -17,6 +18,10 @@ interface Props {
 
 const { project, preview = false, locale = 'en' } = Astro.props;
 const m = getMessages(locale);
+const siteSettings = await getSiteSettings();
+const seoTitle = project.seoTitle === `${project.title} - MIRACON` || project.seoTitle === `${project.title} — MIRACON`
+  ? `${project.title} — ${siteSettings.siteName}`
+  : project.seoTitle;
 const iconUrls = {
   bed: '/img/olympus-detail/icons/spec-bed.svg',
   bath: '/img/olympus-detail/icons/spec-bath.svg',
@@ -94,7 +99,7 @@ const projectStructuredData = {
       '@type': 'WebPage',
       '@id': `${publicUrl}#webpage`,
       url: publicUrl,
-      name: project.seoTitle,
+      name: seoTitle,
       description: project.seoDescription,
       image: absoluteSiteUrl(project.coverUrl, Astro.url),
       dateModified: project.updatedAt,
@@ -120,7 +125,8 @@ const projectStructuredData = {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
-    title={preview ? `${m['project.previewPrefix']} ${project.seoTitle}` : project.seoTitle}
+    title={preview ? `${m['project.previewPrefix']} ${seoTitle}` : seoTitle}
+    siteName={siteSettings.siteName}
     description={project.seoDescription}
     path={publicPath}
     image={project.coverUrl}
@@ -141,7 +147,7 @@ const projectStructuredData = {
 </head>
 <body class:list={['project-page', `project-page--${heroVariant}`, { 'project-page--idle-hero': hideHeroUiOnIdle }]}>
   {preview && <div class="project-preview-banner">{m['project.preview']} <span>{m['project.previewOnly']}</span></div>}
-  <SiteHeader projectCategory={primaryCategory} locale={locale} />
+  <SiteHeader projectCategory={primaryCategory} locale={locale} settings={siteSettings} />
   <main>
     <section
       class:list={['project-hero', `project-hero--${heroVariant}`]}
@@ -296,6 +302,12 @@ const projectStructuredData = {
       </section>
     )}
 
+    {project.virtualTourUrl && (
+      <div class="container project-virtual-tour">
+        <a href={project.virtualTourUrl} target="_blank" rel="noopener noreferrer">{m['project.virtualTour']} ↗</a>
+      </div>
+    )}
+
     {project.floorPlanGroups.length > 0 && (
       <section class="project-floor-plans" aria-labelledby="project-floor-title">
         <div class="container">
@@ -329,9 +341,9 @@ const projectStructuredData = {
       )}
     </section>
 
-    <ContactSection locale={locale} />
+    <ContactSection locale={locale} settings={siteSettings} />
   </main>
-  <SiteFooter locale={locale} />
+  <SiteFooter locale={locale} settings={siteSettings} />
   <script is:inline src="/site.js"></script>
 </body>
 </html>
@@ -340,4 +352,7 @@ const projectStructuredData = {
   .project-description-full { white-space: pre-line; }
   .project-preview-banner { position: fixed; z-index: 100; top: 12px; left: 50%; padding: 10px 18px; border-radius: 999px; background: #b68a3d; color: white; font: 600 13px/1.2 Arial, sans-serif; transform: translateX(-50%); box-shadow: 0 8px 30px rgba(0, 48, 117, .25); }
   .project-preview-banner span { margin-left: 10px; opacity: .75; font-weight: 400; }
+  .project-virtual-tour { margin-block: 36px 64px; text-align: center; }
+  .project-virtual-tour a { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; border: 1px solid currentColor; color: #073466; font-weight: 600; text-decoration: none; }
+  .project-virtual-tour a:hover, .project-virtual-tour a:focus-visible { background: #073466; color: white; }
 </style>

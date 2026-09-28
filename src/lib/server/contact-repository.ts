@@ -43,10 +43,10 @@ export type ContactSummary = {
   readonly locale: 'en' | 'el';
   readonly sourcePath: string;
   readonly createdAt: Date;
+  readonly message: string;
 };
 
 export type ContactDetail = ContactSummary & {
-  readonly message: string;
   readonly consentedAt: Date;
 };
 
@@ -66,11 +66,11 @@ interface ContactRow extends QueryResultRow {
   readonly phone: string | null;
   readonly locale: 'en' | 'el';
   readonly source_path: string;
+  readonly message: string;
   readonly created_at: Date;
 }
 
 interface ContactDetailRow extends ContactRow {
-  readonly message: string;
   readonly consented_at: Date;
 }
 
@@ -139,8 +139,8 @@ export class PostgresContactRepository implements ContactIntakeRepository {
   }
 
   async list(limit: number, offset: number): Promise<readonly ContactSummary[]> {
-    const result = await this.database.query<ContactDetailRow>(
-      `select id::text, name, email, phone, locale, source_path, created_at
+    const result = await this.database.query<ContactRow>(
+      `select id::text, name, email, phone, message, locale, source_path, created_at
        from miracon.contact_submissions
        order by created_at desc, id desc
        limit $1 offset $2`,
@@ -150,19 +150,28 @@ export class PostgresContactRepository implements ContactIntakeRepository {
   }
 
   async get(id: ContactId): Promise<ContactDetail | null> {
-    const result = await this.database.query<ContactRow>(
+    const result = await this.database.query<ContactDetailRow>(
       `select id::text, name, email, phone, message, consented_at, locale, source_path, created_at
        from miracon.contact_submissions where id = $1`,
       [id],
     );
     const row = result.rows[0];
     if (!row) return null;
-    return { ...mapSummary(row), message: row.message, consentedAt: row.consented_at };
+    return { ...mapSummary(row), consentedAt: row.consented_at };
   }
 
   async delete(id: ContactId): Promise<boolean> {
     const result = await this.database.query('delete from miracon.contact_submissions where id = $1', [id]);
     return result.rowCount === 1;
+  }
+
+  async exportAll(): Promise<readonly ContactSummary[]> {
+    const result = await this.database.query<ContactRow>(
+      `select id::text, name, email, phone, message, locale, source_path, created_at
+       from miracon.contact_submissions
+       order by created_at desc, id desc`,
+    );
+    return result.rows.map(mapSummary);
   }
 
   private async acceptInTransaction(
@@ -212,7 +221,7 @@ export class PostgresContactRepository implements ContactIntakeRepository {
          (id, name, email, phone, message, consented_at, locale, source_path,
           client_digest, duplicate_digest, created_at)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $6)`,
-      [record.id, record.name, record.email ?? null, record.phone ?? null, record.message,
+      [record.id, record.name, record.email, record.phone, record.message,
         record.createdAt, record.locale, record.sourcePath, record.clientDigest, record.duplicateDigest],
     );
     return { kind: 'accepted', id: record.id };
@@ -224,6 +233,7 @@ function mapSummary(row: ContactRow): ContactSummary {
     id: contactIdSchema.parse(row.id),
     name: row.name,
     email: row.email,
+    message: row.message,
     phone: row.phone,
     locale: row.locale,
     sourcePath: row.source_path,

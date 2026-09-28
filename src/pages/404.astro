@@ -1,11 +1,14 @@
 ---
 import SeoHead from '../components/SeoHead.astro';
 import { getLocale, getMessages, localizePath } from '../lib/i18n';
+import { getSiteSettings } from '../lib/site-settings';
+import { brandCopy } from '../lib/site-settings-shared';
 
 Astro.response.status = 404;
 Astro.response.statusText = 'Not Found';
 const locale = getLocale(Astro.originPathname);
 const m = getMessages(locale);
+const siteSettings = await getSiteSettings();
 ---
 
 <!DOCTYPE html>
@@ -15,19 +18,20 @@ const m = getMessages(locale);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
-    title={m['notFound.seoTitle']}
-    description={m['notFound.seoDescription']}
+    title={brandCopy(m['notFound.seoTitle'], siteSettings)}
+    description={brandCopy(m['notFound.seoDescription'], siteSettings)}
     noindex
     canonical={false}
     locale={locale}
+    siteName={siteSettings.siteName}
   />
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="not-found-page">
   <header class="not-found-header">
-    <a href={localizePath('/', locale)} class="not-found-logo" aria-label={m['common.logoHome']}>
-      <img src="/img/logo_mark.svg" alt="">
-      <span>MIRACON</span>
+    <a href={localizePath('/', locale)} class="not-found-logo" aria-label={`${siteSettings.siteName} ${m['common.home']}`}>
+      {siteSettings.siteName === 'MIRACON' && <img src="/img/logo_mark.svg" alt="">}
+      <span>{siteSettings.siteName}</span>
     </a>
     <a href={localizePath('/#contacts', locale)} class="not-found-contact">{m['notFound.contact']}</a>
   </header>
@@ -37,20 +41,20 @@ const m = getMessages(locale);
       <p class="not-found-code" aria-hidden="true">404</p>
       <p class="not-found-kicker">{m['notFound.kicker']}</p>
       <h1>{m['notFound.title']}</h1>
-      <p class="not-found-text">{m['notFound.text']}</p>
+      <p class="not-found-text">{brandCopy(m['notFound.text'], siteSettings)}</p>
       <div class="not-found-actions">
         <a href={localizePath('/', locale)} class="not-found-primary">{m['notFound.back']} <span aria-hidden="true">→</span></a>
         <a href={localizePath('/#projects', locale)} class="not-found-secondary">{m['notFound.explore']}</a>
       </div>
     </div>
-    <div class="not-found-mark" aria-hidden="true">
+    {siteSettings.siteName === 'MIRACON' && <div class="not-found-mark" aria-hidden="true">
       <img src="/img/logo_mark.svg" alt="">
-    </div>
+    </div>}
   </main>
 
   <footer class="not-found-footer">
     <span>{m['notFound.footer']}</span>
-    <a href="tel:+306955340416">+30 695 534 0416</a>
+    <a href={`tel:${siteSettings.footerPhone.replace(/[^\d+]/g, '')}`}>{siteSettings.footerPhone}</a>
   </footer>
 </body>
 </html>

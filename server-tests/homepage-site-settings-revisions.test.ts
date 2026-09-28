@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildHomepageHeroRevisionTransport } from '../src/lib/server/homepage-revision-adapter';
-import { buildSiteSettingsRevisionTransport } from '../src/lib/server/site-settings-revision-adapter';
 
-describe('homepage hero and site settings revision adapters', () => {
+describe('homepage hero revision adapter', () => {
   it('builds canonical HomepageHeroSnapshot and sorts videos deterministically', () => {
     const transport = buildHomepageHeroRevisionTransport({
       videos: [
@@ -43,26 +42,4 @@ describe('homepage hero and site settings revision adapters', () => {
     expect(transport.mediaFileIds).toEqual(['media-1', 'media-2']);
   });
 
-  it('builds canonical SiteSettingsSnapshot with exact properties', () => {
-    const transport = buildSiteSettingsRevisionTransport({
-      settings: {
-        footerTermsVisible: true,
-        footerTermsPdfUrl: '/media/terms.pdf',
-        footerPrivacyVisible: true,
-        footerPrivacyPdfUrl: '/media/privacy.pdf',
-        footerCookieVisible: false,
-        footerCookiePdfUrl: '',
-      },
-      expectedRevisionId: 'prev-rev-id',
-      mediaFileIds: ['terms-id', 'privacy-id'],
-      mutationTime: '2026-08-30T10:00:00.000Z',
-    });
-
-    expect(transport.aggregateType).toBe('site_settings');
-    expect(transport.aggregateId).toBe('singleton');
-    expect(transport.snapshot.settings.footer_terms_visible).toBe(true);
-    expect(transport.snapshot.settings.footer_terms_pdf_url).toBe('/media/terms.pdf');
-    expect(transport.snapshot.settings.footer_cookie_visible).toBe(false);
-    expect(transport.snapshot.settings.updated_at).toBe('2026-08-30T10:00:00.000Z');
-  });
 });

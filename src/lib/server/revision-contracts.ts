@@ -32,6 +32,7 @@ export const canonicalProjectRowSchema = z.object({
   cover_url: z.string(), cover_focal_x: z.number(), cover_focal_y: z.number(), image_variants: jsonValueSchema, hero_type: z.enum(['image', 'video']), hero_variant: z.enum(['standard', 'immersive']),
   hero_sound_enabled: z.boolean(), hero_idle_ui: z.boolean(), hero_url: z.string(), hero_mobile_url: z.string().nullable(), hero_poster_url: z.string().nullable(), hero_videos: jsonValueSchema,
   walkthrough_video_enabled: z.boolean(), walkthrough_video_title: z.string(), walkthrough_video_desktop_url: z.string(), walkthrough_video_mobile_url: z.string().nullable(), walkthrough_video_poster_url: z.string().nullable(), walkthrough_videos: jsonValueSchema,
+  virtual_tour_url: z.union([z.literal(''), z.url({ protocol: /^https$/ }).max(2_048).refine((value) => value.startsWith('https://') && !/\s/u.test(value))]).default(''),
   hero_focal_x: z.number(), hero_focal_y: z.number(), intro_image_url: z.string(), brochure_url: z.string().nullable(), map_query: z.string(), map_url: z.string(), characteristics: jsonValueSchema, benefits: jsonValueSchema,
   floor_plan_groups: jsonValueSchema, nearby_places: jsonValueSchema, translations: jsonValueSchema, seo_title: z.string(), seo_description: z.string(), published_at: isoDateTimeSchema.nullable(),
   created_at: isoDateTimeSchema, updated_at: isoDateTimeSchema, remaining_units: nonnegativeIntegerSchema.nullable(),
@@ -52,7 +53,17 @@ export type CanonicalHomepageVideoRow = z.infer<typeof canonicalHomepageVideoRow
 
 export const canonicalSiteSettingsRowSchema = z.object({
   id: z.literal(1), footer_terms_visible: z.boolean(), footer_terms_pdf_url: z.string(), footer_privacy_visible: z.boolean(), footer_privacy_pdf_url: z.string(),
-  footer_cookie_visible: z.boolean(), footer_cookie_pdf_url: z.string(), updated_at: isoDateTimeSchema,
+  footer_cookie_visible: z.boolean(), footer_cookie_pdf_url: z.string(),
+  site_name: z.string().nullable().default(null), company_name: z.string().nullable().default(null),
+  home_copy: z.unknown().nullable().default(null), golden_visa_copy: z.unknown().nullable().default(null),
+  contact_copy: z.unknown().nullable().default(null), stages_copy: z.unknown().nullable().default(null),
+  footer_phone: z.string().nullable().default(null), footer_email: z.string().nullable().default(null),
+  footer_address: z.unknown().nullable().default(null),
+  facebook_visible: z.boolean().nullable().default(null), facebook_url: z.string().nullable().default(null),
+  instagram_visible: z.boolean().nullable().default(null), instagram_url: z.string().nullable().default(null),
+  linkedin_visible: z.boolean().nullable().default(null), linkedin_url: z.string().nullable().default(null),
+  whatsapp_visible: z.boolean().nullable().default(null), whatsapp_phone: z.string().nullable().default(null),
+  whatsapp_message: z.string().nullable().default(null), updated_at: isoDateTimeSchema,
 }).strict();
 export type CanonicalSiteSettingsRow = z.infer<typeof canonicalSiteSettingsRowSchema>;
 

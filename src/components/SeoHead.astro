@@ -13,6 +13,7 @@ interface Props {
   canonical?: boolean;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
   locale?: SiteLocale;
+  siteName?: string;
 }
 
 const {
@@ -26,6 +27,7 @@ const {
   canonical = true,
   jsonLd,
   locale = getLocale(Astro.originPathname),
+  siteName = 'MIRACON',
 } = Astro.props;
 
 const m = getMessages(locale);
@@ -51,7 +53,7 @@ const structuredData = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
 {canonical && !noindex && <link rel="alternate" hreflang="el" href={greekUrl}>}
 {canonical && !noindex && <link rel="alternate" hreflang="x-default" href={englishUrl}>}
 
-<meta property="og:site_name" content="MIRACON">
+<meta property="og:site_name" content={siteName}>
 <meta property="og:locale" content={locale === 'el' ? 'el_GR' : 'en_GR'}>
 <meta property="og:type" content={type}>
 <meta property="og:title" content={cleanTitle}>

@@ -12,8 +12,8 @@ const validChallenge = (token, expiresAt = Date.now() + 60_000) => ({
 const accepted = { status: 201, body: { id: '11111111-1111-4111-8111-111111111111' } };
 
 for (const fixture of [
-  { locale: 'en', path: '/golden-visa', missingText: 'Please enter your name and at least one contact detail', successText: 'Thank you. Your request has been sent' },
-  { locale: 'el', path: '/el/golden-visa', missingText: 'Συμπληρώστε το όνομά σας και τουλάχιστον ένα στοιχείο επικοινωνίας', successText: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε' },
+  { locale: 'en', path: '/golden-visa', missingText: 'Please enter your name, phone number and email address', successText: 'Thank you. Your request has been sent' },
+  { locale: 'el', path: '/el/golden-visa', missingText: 'Συμπληρώστε το όνομά σας, το τηλέφωνο και το email σας', successText: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε' },
 ]) {
   test(`submits the ${fixture.locale} contact form through same-origin JSON`, async () => {
     await withContactPage({
@@ -33,6 +33,7 @@ for (const fixture of [
       assert.deepEqual(submissions, [{
         name: 'Browser Client Contact',
         email: 'browser@example.test',
+        phone: '+30 210 000 0000',
         message: 'Browser client contract message',
         consent: true,
         locale: fixture.locale,
@@ -43,6 +44,25 @@ for (const fixture of [
     });
   });
 }
+
+test('rejects either missing contact detail before requesting a challenge', async () => {
+  await withContactPage({
+    challenges: [{ status: 200, body: validChallenge('M') }],
+    contacts: [accepted],
+  }, async ({ form, submissions }) => {
+    await form.locator('[name="name"]').fill('Browser Client Contact');
+    await form.locator('[name="message"]').fill('Browser client contract message');
+    await form.locator('[name="consent"]').check();
+    await form.locator('[name="email"]').fill('browser@example.test');
+    await form.locator('.btn-submit').click();
+    await expectStatus(form, 'phone number and email address');
+    await form.locator('[name="email"]').fill('');
+    await form.locator('[name="phone"]').fill('+30 210 000 0000');
+    await form.locator('.btn-submit').click();
+    await expectStatus(form, 'phone number and email address');
+    assert.equal(submissions.length, 0);
+  });
+});
 
 test('retries challenge acquisition after an initial failure without toggling consent', async () => {
   await withContactPage({
@@ -218,6 +238,7 @@ async function prepareValidForm(form) {
 
 async function fillValidContact(form) {
   await form.locator('[name="name"]').fill('Browser Client Contact');
+  await form.locator('[name="phone"]').fill('+30 210 000 0000');
   await form.locator('[name="email"]').fill('browser@example.test');
 }
 

@@ -1,23 +1,28 @@
 ---
 import ProjectCard from '../components/ProjectCard.astro';
 import OptimizedImage from '../components/OptimizedImage.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import StagesCarousel from '../components/StagesCarousel.astro';
 import SeoHead from '../components/SeoHead.astro';
 import { getHomeHeroVideos } from '../lib/home-hero';
-import { getContactDescriptionLines, getLocale, getMessages, localizePath, oppositeLocale } from '../lib/i18n';
+import { getContactDescriptionLines, getLocale, getMessages, localizePath } from '../lib/i18n';
 import { getPublishedProjects, localizeProject } from '../lib/projects';
 import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
-import { getSiteSettings } from '../lib/site-settings';
+import { defaultSiteSettings, getSiteSettings } from '../lib/site-settings';
+import { brandCopy } from '../lib/site-settings-shared';
 
 const locale = getLocale(Astro.originPathname);
 const m = getMessages(locale);
-const contactDescriptionLines = getContactDescriptionLines(locale);
+// Keep the form DOM stable for the shared consultation script.
 const [sourceProjects, homeHeroVideos, siteSettings] = await Promise.all([
   getPublishedProjects(),
   getHomeHeroVideos(),
   getSiteSettings(),
 ]);
 const projects = sourceProjects.map((project) => localizeProject(project, locale));
-const firstHomeHeroVideo = homeHeroVideos[0];
+const homeCopy = siteSettings.homeCopy[locale];
+const contactCopy = siteSettings.contactCopy[locale];
 Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
   id: video.id,
@@ -26,12 +31,8 @@ const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
   mobileUrl: video.mobileUrl,
 })));
 const homeUrl = absoluteLocalizedUrl('/', locale, Astro.url);
-const homeHref = localizePath('/', locale);
 const projectsHref = localizePath('/#projects', locale);
-const aboutHref = localizePath('/#about', locale);
-const contactsHref = localizePath('/#contacts', locale);
 const goldenVisaHref = localizePath('/golden-visa', locale);
-const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 const privacyPolicyHref = siteSettings.footerPrivacyPdfUrl || localizePath('/privacy-policy', locale);
 const homeStructuredData = {
   '@context': 'https://schema.org',
@@ -40,27 +41,24 @@ const homeStructuredData = {
       '@type': 'WebSite',
       '@id': `${homeUrl}#website`,
       url: homeUrl,
-      name: 'MIRACON',
+      name: siteSettings.siteName,
       inLanguage: locale,
     },
     {
       '@type': 'Organization',
       '@id': `${homeUrl}#organization`,
-      name: 'MIRACON',
-      url: homeUrl,
-      logo: {
+      name: siteSettings.companyName,
+      ...(siteSettings.siteName === 'MIRACON' ? { logo: {
         '@type': 'ImageObject',
         url: absoluteSiteUrl('/favicon.svg', Astro.url),
         width: 512,
         height: 512,
-      },
+      } } : {}),
       image: absoluteSiteUrl('/img/figma_hero.png', Astro.url),
-      telephone: '+306955340416',
+      telephone: siteSettings.footerPhone,
       address: {
         '@type': 'PostalAddress',
-        streetAddress: 'Egnatia 84',
-        postalCode: '54623',
-        addressLocality: 'Thessaloniki',
+        streetAddress: siteSettings.footerAddress[locale],
         addressCountry: 'GR',
       },
     },
@@ -76,12 +74,13 @@ const homeStructuredData = {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
-    title={m['home.seoTitle']}
-    description={m['home.seoDescription']}
+    title={brandCopy(m['home.seoTitle'], siteSettings)}
+    description={brandCopy(m['home.seoDescription'], siteSettings)}
     path="/"
     image="/img/figma_hero.png"
-    imageAlt={m['home.seoImageAlt']}
+    imageAlt={brandCopy(m['home.seoImageAlt'], siteSettings)}
     jsonLd={homeStructuredData}
+    siteName={siteSettings.siteName}
     locale={locale}
   />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -94,102 +93,19 @@ const homeStructuredData = {
 </head>
 
 <body>
-  <header class="header notranslate" translate="no">
-    <div class="header-container">
-      <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
-        <img src="img/logo_mark.svg" alt="" class="logo-img">
-        <div class="logo-letters" aria-hidden="true">
-          <img src="img/logo_letters/M.svg" alt="" class="logo-letter">
-          <img src="img/logo_letters/I.svg" alt="" class="logo-letter">
-          <img src="img/logo_letters/R.svg" alt="" class="logo-letter">
-          <img src="img/logo_letters/A.svg" alt="" class="logo-letter">
-          <img src="img/logo_letters/C.svg" alt="" class="logo-letter">
-          <img src="img/logo_letters/O.svg" alt="" class="logo-letter">
-          <img src="img/logo_letters/N.svg" alt="" class="logo-letter">
-        </div>
-      </a>
-
-      <nav class="nav-menu glass-gradient" aria-label={m['common.mainNavigation']}>
-        <a href={projectsHref} class="nav-link">{m['common.projects']}</a>
-        <a href={goldenVisaHref} class="nav-link">{m['common.goldenVisa']}</a>
-        <a href={aboutHref} class="nav-link">{m['common.aboutUs']}</a>
-        <a href={contactsHref} class="nav-link">{m['common.contacts']}</a>
-      </nav>
-
-      <div class="header-actions">
-        <a class="lang-selector glass-gradient" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
-          <span class="lang-current">{m['common.switchLanguageCode']}</span>
-        </a>
-        <div class="contact-menu">
-          <a href={contactsHref} class="contact-btn" aria-haspopup="true">
-            <span class="contact-btn-icon"></span>
-            <span>{m['common.contact']}</span>
-            <span class="contact-btn-arrow" aria-hidden="true">
-              <img src="img/contact_header/Vector 12.svg" alt="">
-            </span>
-          </a>
-          <div class="contact-dropdown" aria-label={m['common.quickContacts']}>
-            <a href="tel:+306955340416" class="contact-dropdown-link contact-dropdown-link--phone"
-              aria-label={m['common.callPhone']}>
-              <span class="contact-dropdown-text">+306955340416</span>
-              <span class="contact-dropdown-circle" aria-hidden="true">
-                <img src="img/contact_header/Vector (1).svg" alt="">
-              </span>
-            </a>
-            <a href="mailto:info@miracon.gr" class="contact-dropdown-link contact-dropdown-link--mail"
-              aria-label={m['common.email']}>
-              <span class="contact-dropdown-text">info@miracon.gr</span>
-              <span class="contact-dropdown-circle" aria-hidden="true">
-                <img src="img/contact_header/Group 37313 (1).svg" alt="">
-              </span>
-            </a>
-            <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece"
-              class="contact-dropdown-link contact-dropdown-link--geo" target="_blank" rel="noreferrer"
-              aria-label={m['common.openAddress']}>
-              <span class="contact-dropdown-text">{m['common.address']}</span>
-              <span class="contact-dropdown-circle" aria-hidden="true">
-                <img src="img/contact_header/Vector (2).svg" alt="">
-              </span>
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <a class="mobile-lang-selector" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
-        <span>{m['common.switchLanguageCode']}</span>
-      </a>
-      <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label={m['common.openMenu']} aria-controls="mobileNav" aria-expanded="false">
-        <span aria-hidden="true"></span>
-      </button>
-      <nav class="mobile-nav" id="mobileNav" aria-label={m['common.mobileNavigation']}>
-        <a href={projectsHref} class="mobile-nav-link">{m['common.projects']}</a>
-        <a href={goldenVisaHref} class="mobile-nav-link">{m['common.goldenVisa']}</a>
-        <a href={aboutHref} class="mobile-nav-link">{m['common.aboutUs']}</a>
-        <button class="mobile-nav-contact" type="button" aria-expanded="false" aria-controls="mobileContactDetails">
-          <span>{m['common.contacts']}</span><span aria-hidden="true">+</span>
-        </button>
-        <div class="mobile-nav-contacts" id="mobileContactDetails">
-          <a href="tel:+306955340416">+30 695 534 0416</a>
-          <a href="mailto:info@miracon.gr">info@miracon.gr</a>
-          <a href="https://www.google.com/maps/search/?api=1&query=Egnatia+84%2C+54623+Thessaloniki%2C+Greece" target="_blank" rel="noreferrer">{m['common.addressShort']}</a>
-        </div>
-      </nav>
-    </div>
-  </header>
+  <SiteHeader locale={locale} settings={siteSettings} />
 
   <main>
-    <section class="hero-pin" aria-label={m['home.heroLabel']}>
+    <section class="hero-pin" aria-label={brandCopy(m['home.heroLabel'], siteSettings)}>
       <div class="hero">
         <div class="hero-media" data-home-hero-playlist={serializedHomeHeroVideos}>
-          <video class="hero-video is-active" autoplay muted loop={homeHeroVideos.length === 1} playsinline preload="auto" poster="/img/figma_hero.png">
-            <source media="(max-width: 600px)" src={firstHomeHeroVideo.mobileUrl ?? firstHomeHeroVideo.desktopUrl} type="video/mp4">
-            <source src={firstHomeHeroVideo.desktopUrl} type="video/mp4">
-          </video>
+          <video class="hero-video is-active" muted loop={homeHeroVideos.length === 1} playsinline preload="none" poster="/img/figma_hero.png"></video>
           <video class="hero-video" muted playsinline preload="none" poster="/img/figma_hero.png" aria-hidden="true"></video>
+          <button class="hero-video-play" type="button" aria-label={m['project.playVideo']} hidden>{m['project.playVideo']}</button>
         </div>
         <div class="container hero-content notranslate" translate="no">
-          <p class="hero-subtitle">{m['home.heroLocation']}</p>
-          <h1 class="hero-title">{m['home.heroTitleLine1']}<br>{m['home.heroTitleLine2']}</h1>
+          <p class="hero-subtitle">{homeCopy.heroLocation}</p>
+          <h1 class="hero-title">{homeCopy.heroTitleLine1}<br>{homeCopy.heroTitleLine2}</h1>
           <div class="hero-actions">
             <a href={projectsHref} class="btn-hero">
               <span class="btn-arrow btn-arrow-left"></span>
@@ -206,8 +122,8 @@ const homeStructuredData = {
 
     <section id="projects" class="projects-section">
       <div class="container">
-        <h2 class="section-title">{m['home.projectsTitle']}</h2>
-        <p class="section-subtitle">{m['home.projectsDescription']}</p>
+        <h2 class="section-title">{homeCopy.projectsTitle}</h2>
+        <p class="section-subtitle">{homeCopy.projectsDescription}</p>
 
         <div class="filter-tabs notranslate" translate="no" aria-label={m['home.projectFilters']}>
           <button class="filter-tab active" type="button" data-filter="all" aria-pressed="true" aria-controls="projectsList"><span>{m['common.categoryAll']}</span></button>
@@ -225,72 +141,74 @@ const homeStructuredData = {
     <section id="about" class="about-section">
       <div class="container about-container">
         <div class="about-copy">
-          <h2 class="about-heading about-reveal" aria-label={m['home.aboutLabel']}>
+          <h2 class="about-heading about-reveal" aria-label={`${m['home.about']} ${siteSettings.siteName}`}>
             <span class="about-title-word" aria-hidden="true">{m['home.about']}</span>
             <span class="about-brand" aria-hidden="true">
-              <span class="about-brand-letter about-brand-letter-m"></span>
-              <span class="about-brand-letter about-brand-letter-i"></span>
-              <span class="about-brand-letter about-brand-letter-r"></span>
-              <span class="about-brand-letter about-brand-letter-a"></span>
-              <span class="about-brand-letter about-brand-letter-c"></span>
-              <span class="about-brand-letter about-brand-letter-o"></span>
-              <span class="about-brand-letter about-brand-letter-n"></span>
+              {siteSettings.siteName === 'MIRACON' ? <>
+                <span class="about-brand-letter about-brand-letter-m"></span>
+                <span class="about-brand-letter about-brand-letter-i"></span>
+                <span class="about-brand-letter about-brand-letter-r"></span>
+                <span class="about-brand-letter about-brand-letter-a"></span>
+                <span class="about-brand-letter about-brand-letter-c"></span>
+                <span class="about-brand-letter about-brand-letter-o"></span>
+                <span class="about-brand-letter about-brand-letter-n"></span>
+              </> : <span class="site-name-wordmark">{siteSettings.siteName}</span>}
             </span>
           </h2>
-          <p class="section-subtitle about-reveal">{m['home.aboutTagline']}</p>
+          <p class="section-subtitle about-reveal">{homeCopy.aboutTagline}</p>
           <div class="about-text about-reveal">
-            <p>{m['home.aboutParagraph1']}</p>
-            <p>{m['home.aboutParagraph2']}</p>
+            <p>{brandCopy(homeCopy.aboutParagraph1, siteSettings)}</p>
+            <p>{homeCopy.aboutParagraph2}</p>
           </div>
         </div>
         <OptimizedImage src="/img/about_bg.png" alt={m['home.aboutImageAlt']} class="about-image about-reveal" loading="lazy" decoding="async" />
       </div>
 
-      <div class="about-carousel" aria-label={m['home.benefitsLabel']}>
+      <div class="about-carousel" aria-label={brandCopy(m['home.benefitsLabel'], siteSettings)}>
         <div class="about-carousel-track">
           <div class="about-carousel-set">
             <article class="about-card about-card-direct">
               <img src="img/about_carousel/Group 2136141923.svg" alt="" class="about-card-icon">
-              <h3>{m['home.benefitDirectTitle']}</h3>
-              <p>{m['home.benefitDirectText']}</p>
+              <h3>{homeCopy.benefitDirectTitle}</h3>
+              <p>{homeCopy.benefitDirectText}</p>
             </article>
             <article class="about-card about-card-legal">
               <img src="img/about_carousel/Group 2136141905.svg" alt="" class="about-card-icon">
-              <h3>{m['home.benefitLegalTitle']}</h3>
-              <p>{m['home.benefitLegalText']}</p>
+              <h3>{homeCopy.benefitLegalTitle}</h3>
+              <p>{homeCopy.benefitLegalText}</p>
             </article>
             <article class="about-card about-card-personal">
               <img src="img/about_carousel/Group 2136141924.svg" alt="" class="about-card-icon">
-              <h3>{m['home.benefitPersonalTitle']}</h3>
-              <p>{m['home.benefitPersonalText']}</p>
+              <h3>{homeCopy.benefitPersonalTitle}</h3>
+              <p>{homeCopy.benefitPersonalText}</p>
             </article>
             <article class="about-card about-card-locations">
               <img src="img/about_carousel/Group 2136141925.svg" alt="" class="about-card-icon">
-              <h3>{m['home.benefitLocationTitle']}</h3>
-              <p>{m['home.benefitLocationText']}</p>
+              <h3>{homeCopy.benefitLocationTitle}</h3>
+              <p>{homeCopy.benefitLocationText}</p>
             </article>
           </div>
 
           <div class="about-carousel-set" aria-hidden="true">
             <article class="about-card about-card-direct">
               <img src="img/about_carousel/Group 2136141923.svg" alt="" class="about-card-icon">
-              <h3>{m['home.benefitDirectTitle']}</h3>
-              <p>{m['home.benefitDirectText']}</p>
+              <h3>{homeCopy.benefitDirectTitle}</h3>
+              <p>{homeCopy.benefitDirectText}</p>
             </article>
             <article class="about-card about-card-legal">
               <img src="img/about_carousel/Group 2136141905.svg" alt="" class="about-card-icon">
-              <h3>{m['home.benefitLegalTitle']}</h3>
-              <p>{m['home.benefitLegalText']}</p>
+              <h3>{homeCopy.benefitLegalTitle}</h3>
+              <p>{homeCopy.benefitLegalText}</p>
             </article>
             <article class="about-card about-card-personal">
               <img src="img/about_carousel/Group 2136141924.svg" alt="" class="about-card-icon">
-              <h3>{m['home.benefitPersonalTitle']}</h3>
-              <p>{m['home.benefitPersonalText']}</p>
+              <h3>{homeCopy.benefitPersonalTitle}</h3>
+              <p>{homeCopy.benefitPersonalText}</p>
             </article>
             <article class="about-card about-card-locations">
               <img src="img/about_carousel/Group 2136141925.svg" alt="" class="about-card-icon">
-              <h3>{m['home.benefitLocationTitle']}</h3>
-              <p>{m['home.benefitLocationText']}</p>
+              <h3>{homeCopy.benefitLocationTitle}</h3>
+              <p>{homeCopy.benefitLocationText}</p>
             </article>
           </div>
         </div>
@@ -307,25 +225,25 @@ const homeStructuredData = {
                   <source media="(max-width: 600px)" srcset="/img/figma-mobile/golden-visa.avif" type="image/avif">
                   <source media="(max-width: 600px)" srcset="/img/figma-mobile/golden-visa.png">
                   <source srcset="/img/figma_golden_visa.avif" type="image/avif">
-                  <img src="/img/figma_golden_visa.png" alt={m['home.visaResidencyTitle']} loading="lazy" decoding="async">
+                  <img src="/img/figma_golden_visa.png" alt={homeCopy.visaResidencyTitle} loading="lazy" decoding="async">
                 </picture>
               </div>
               <div class="golden-carousel-face">
                 <picture>
                   <source srcset="/img/golden_visa_2.avif" type="image/avif">
-                  <img src="/img/golden_visa_2.png" alt={m['home.visaThresholdTitle']} loading="lazy" decoding="async">
+                  <img src="/img/golden_visa_2.png" alt={homeCopy.visaThresholdTitle} loading="lazy" decoding="async">
                 </picture>
               </div>
               <div class="golden-carousel-face">
                 <picture>
                   <source srcset="/img/golden_visa_3.avif" type="image/avif">
-                  <img src="/img/golden_visa_3.png" alt={m['home.visaFamilyTitle']} loading="lazy" decoding="async">
+                  <img src="/img/golden_visa_3.png" alt={homeCopy.visaFamilyTitle} loading="lazy" decoding="async">
                 </picture>
               </div>
               <div class="golden-carousel-face">
                 <picture>
                   <source srcset="/img/golden_visa_4.avif" type="image/avif">
-                  <img src="/img/golden_visa_4.png" alt={m['home.visaSchengenTitle']} loading="lazy" decoding="async">
+                  <img src="/img/golden_visa_4.png" alt={homeCopy.visaSchengenTitle} loading="lazy" decoding="async">
                 </picture>
               </div>
             </div>
@@ -338,37 +256,37 @@ const homeStructuredData = {
 
         <div class="golden-content">
           <h2 class="section-title">{m['common.goldenVisa']}</h2>
-          <p class="section-subtitle">{m['home.visaDescription']}</p>
+          <p class="section-subtitle">{homeCopy.visaDescription}</p>
 
           <div class="slider-wrapper" aria-label={m['home.visaBenefits']}>
             <div class="slider-slides">
               <article class="slide active">
                 <h3 class="slide-title">
                   <img src="img/golden_visa/Subtract_1.svg" alt="" class="slide-icon">
-                  {m['home.visaResidencyTitle']}
+                  {homeCopy.visaResidencyTitle}
                 </h3>
-                <p class="slide-text">{m['home.visaResidencyText']}</p>
+                <p class="slide-text">{homeCopy.visaResidencyText}</p>
               </article>
               <article class="slide">
                 <h3 class="slide-title">
                   <img src="img/golden_visa/trending-up_2.svg" alt="" class="slide-icon">
-                  {m['home.visaThresholdTitle']}
+                  {homeCopy.visaThresholdTitle}
                 </h3>
-                <p class="slide-text">{m['home.visaThresholdText']}</p>
+                <p class="slide-text">{brandCopy(homeCopy.visaThresholdText, siteSettings)}</p>
               </article>
               <article class="slide">
                 <h3 class="slide-title">
                   <img src="img/golden_visa/Vector_3.svg" alt="" class="slide-icon">
-                  {m['home.visaFamilyTitle']}
+                  {homeCopy.visaFamilyTitle}
                 </h3>
-                <p class="slide-text">{m['home.visaFamilyText']}</p>
+                <p class="slide-text">{homeCopy.visaFamilyText}</p>
               </article>
               <article class="slide">
                 <h3 class="slide-title">
                   <img src="img/golden_visa/keypad_4.svg" alt="" class="slide-icon">
-                  {m['home.visaSchengenTitle']}
+                  {homeCopy.visaSchengenTitle}
                 </h3>
-                <p class="slide-text slide-text-short">{m['home.visaSchengenText']}</p>
+                <p class="slide-text slide-text-short">{homeCopy.visaSchengenText}</p>
               </article>
             </div>
 
@@ -382,81 +300,16 @@ const homeStructuredData = {
       </div>
     </section>
 
-    <section class="stages-section">
-      <div class="container stages-container">
-        <div class="stages-intro">
-          <h2 class="section-title">{m['stages.title']}</h2>
-          <p class="section-subtitle">{m['stages.description']}</p>
-        </div>
-      </div>
-
-      <div class="stages-carousel" aria-label={m['stages.label']}>
-        <div class="stages-carousel-track">
-          <div class="stages-carousel-set">
-            <article class="stage-card">
-              <span class="stage-number">01</span>
-              <h3>{m['stages.consultation']}</h3>
-              <p>{m['stages.consultationText']}</p>
-            </article>
-            <article class="stage-card">
-              <span class="stage-number">02</span>
-              <h3>{m['stages.reservation']}</h3>
-              <p>{m['stages.reservationText']}</p>
-            </article>
-            <article class="stage-card">
-              <span class="stage-number">03</span>
-              <h3>{m['stages.dueDiligence']}</h3>
-              <p>{m['stages.dueDiligenceText']}</p>
-            </article>
-            <article class="stage-card">
-              <span class="stage-number">04</span>
-              <h3>{m['stages.contract']}</h3>
-              <p>{m['stages.contractText']}</p>
-            </article>
-            <article class="stage-card">
-              <span class="stage-number">05</span>
-              <h3>{m['stages.handover']}</h3>
-              <p>{m['stages.handoverText']}</p>
-            </article>
-          </div>
-
-          <div class="stages-carousel-set" aria-hidden="true">
-            <article class="stage-card">
-              <span class="stage-number">01</span>
-              <h3>{m['stages.consultation']}</h3>
-              <p>{m['stages.consultationText']}</p>
-            </article>
-            <article class="stage-card">
-              <span class="stage-number">02</span>
-              <h3>{m['stages.reservation']}</h3>
-              <p>{m['stages.reservationText']}</p>
-            </article>
-            <article class="stage-card">
-              <span class="stage-number">03</span>
-              <h3>{m['stages.dueDiligence']}</h3>
-              <p>{m['stages.dueDiligenceText']}</p>
-            </article>
-            <article class="stage-card">
-              <span class="stage-number">04</span>
-              <h3>{m['stages.contract']}</h3>
-              <p>{m['stages.contractText']}</p>
-            </article>
-            <article class="stage-card">
-              <span class="stage-number">05</span>
-              <h3>{m['stages.handover']}</h3>
-              <p>{m['stages.handoverText']}</p>
-            </article>
-          </div>
-        </div>
-      </div>
-    </section>
+    <StagesCarousel settings={siteSettings} locale={locale} />
 
     <section id="contacts" class="contacts-section">
       <div class="container">
         <div class="form-container">
-          <h2 class="section-title">{m['form.title']}</h2>
+          <h2 class="section-title">{contactCopy.title}</h2>
           <p class="section-subtitle form-description-copy">
-            {contactDescriptionLines.map((line) => <span>{line}</span>)}
+            {contactCopy.description === defaultSiteSettings.contactCopy[locale].description
+              ? getContactDescriptionLines(locale).map((line) => <span>{line}</span>)
+              : <span>{contactCopy.description}</span>}
           </p>
 
           <form class="consultation-form" data-consultation-form novalidate>
@@ -499,49 +352,7 @@ const homeStructuredData = {
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="container footer-container">
-      <div class="footer-top">
-        <a href={homeHref} class="logo" aria-label={m['common.logoHome']}>
-          <img src="img/logo_mark.svg" alt="" class="logo-img">
-          <div class="logo-letters" aria-hidden="true">
-            <img src="img/logo_letters/M.svg" alt="" class="logo-letter">
-            <img src="img/logo_letters/I.svg" alt="" class="logo-letter">
-            <img src="img/logo_letters/R.svg" alt="" class="logo-letter">
-            <img src="img/logo_letters/A.svg" alt="" class="logo-letter">
-            <img src="img/logo_letters/C.svg" alt="" class="logo-letter">
-            <img src="img/logo_letters/O.svg" alt="" class="logo-letter">
-            <img src="img/logo_letters/N.svg" alt="" class="logo-letter">
-          </div>
-        </a>
-        <nav class="footer-socials" aria-label={m['common.contactLinks']}>
-          <a href="mailto:info@miracon.gr" aria-label={m['common.email']} title="info@miracon.gr">
-            <img src="img/contact_header/Group 37313 (1).svg" alt="">
-          </a>
-          <a href="tel:+306955340416" aria-label={m['common.callPhone']} title="+30 695 534 0416">
-            <img src="img/contact_header/Vector (1).svg" alt="">
-          </a>
-          <a href="https://wa.me/306955340416" target="_blank" rel="noreferrer" aria-label="WhatsApp +30 695 534 0416" title="WhatsApp">
-            <img src="img/footer-whatsapp.svg" alt="">
-          </a>
-        </nav>
-      </div>
-      <div class="footer-bottom">
-        <div class:list={['footer-links', { 'footer-links--empty': !siteSettings.footerTermsVisible && !siteSettings.footerPrivacyVisible && !siteSettings.footerCookieVisible }]}>
-          <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
-          <a href={privacyPolicyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>
-          <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
-        </div>
-        <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}>
-          <span>{m['common.switchLanguage']}</span>
-          <span class="lang-refresh" aria-hidden="true">
-            <img src="img/Vector.svg" alt="">
-          </span>
-        </a>
-      </div>
-      <p class="footer-copyright">{m['common.copyright']}</p>
-    </div>
-  </footer>
+  <SiteFooter locale={locale} settings={siteSettings} />
 
   <script is:inline src="/site.js"></script>
 </body>

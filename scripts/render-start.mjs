@@ -3,7 +3,6 @@ import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import pg from 'pg';
 import { migrate } from './postgres-migrate.mjs';
-import { provisionSingletonAdmin } from './provision-admin.mjs';
 
 async function main() {
   console.log('[Render Start] Initializing Miracon preview environment...');
@@ -45,38 +44,6 @@ async function main() {
     await client.connect();
 
     try {
-      // Provision/rotate Owner account (admin@miracon.local)
-      const ownerResult = await client.query('select id from miracon.admin_users where id = 1');
-      if (ownerResult.rows.length === 0) {
-        console.log('[Render Start] Provisioning initial owner (admin@miracon.local)...');
-        await provisionSingletonAdmin({
-          databaseUrl: process.env.DATABASE_URL,
-          email: 'admin@miracon.local',
-          password: 'MiraconSecureAdmin2026!',
-          operation: { kind: 'provision-owner', email: 'admin@miracon.local' },
-        });
-      } else {
-        console.log('[Render Start] Owner exists; ensuring active credentials (admin@miracon.local)...');
-        await provisionSingletonAdmin({
-          databaseUrl: process.env.DATABASE_URL,
-          email: 'admin@miracon.local',
-          password: 'MiraconSecureAdmin2026!',
-          operation: { kind: 'rotate-owner', email: 'admin@miracon.local' },
-        });
-      }
-
-      // Provision Editor account (editor@miracon.local)
-      const editorResult = await client.query("select id from miracon.admin_users where role = 'editor' and email = 'editor@miracon.local'");
-      if (editorResult.rows.length === 0) {
-        console.log('[Render Start] Provisioning initial editor (editor@miracon.local)...');
-        await provisionSingletonAdmin({
-          databaseUrl: process.env.DATABASE_URL,
-          email: 'editor@miracon.local',
-          password: 'MiraconSecureEditor2026!',
-          operation: { kind: 'provision-editor', email: 'editor@miracon.local' },
-        });
-      }
-
       // Seed initial projects if empty
       const countResult = await client.query('select count(*)::int as count from miracon.projects');
       if (countResult.rows[0].count === 0) {
@@ -115,6 +82,7 @@ async function main() {
             walkthrough_video_mobile_url: project.walkthroughVideoMobileUrl,
             walkthrough_video_poster_url: project.walkthroughVideoPosterUrl,
             walkthrough_videos: project.walkthroughVideos,
+            virtual_tour_url: project.virtualTourUrl ?? '',
             hero_focal_x: project.heroFocalX,
             hero_focal_y: project.heroFocalY,
             intro_image_url: project.introImageUrl,

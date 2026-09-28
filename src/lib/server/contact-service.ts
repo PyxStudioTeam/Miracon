@@ -52,8 +52,8 @@ export async function submitContact(
 ): Promise<SubmitContactResult> {
   const duplicateSource = [
     request.submission.name,
-    request.submission.email ?? '',
-    request.submission.phone ?? '',
+    request.submission.email,
+    request.submission.phone,
     request.submission.message,
   ].map(normalizeDuplicatePart).join('\0');
   return repository.acceptSubmission({

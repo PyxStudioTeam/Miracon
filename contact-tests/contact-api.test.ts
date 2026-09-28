@@ -7,6 +7,7 @@ import { POST as issueChallenge } from '../src/pages/api/contact/challenge';
 import { POST as submitContact, createContactPost } from '../src/pages/api/contact';
 import { ContactNotificationError } from '../src/lib/server/contact-notifications';
 import { GET as listContacts } from '../src/pages/api/admin/contacts/index';
+import { GET as exportContacts } from '../src/pages/api/admin/contacts/export';
 import { DELETE as deleteContact, GET as getContact } from '../src/pages/api/admin/contacts/[id]';
 import { POST as login } from '../src/pages/api/auth/login';
 
@@ -146,6 +147,41 @@ describe('contact API', () => {
     expect((await getContact(context(`/api/admin/contacts/${createdBody.id}`, {
       headers: { cookie: auth.cookie },
     }, { id: createdBody.id }))).status).toBe(404);
+  });
+
+  it('exports every stored request beyond the list page without spreadsheet formulas', async () => {
+    await pool.query(
+      `insert into miracon.contact_submissions
+        (id, name, email, phone, message, consented_at, locale, source_path,
+         client_digest, duplicate_digest, created_at)
+       select ('10000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
+         case when i = 1 then $1 else 'Person ' || i end,
+         'person' || i || '@example.test', '+30 210 000 0000',
+         case when i = 2 then $2 else 'Full request ' || i end,
+         now(), 'en', '/projects/source',
+         decode(repeat('00', 32), 'hex'), decode(repeat('11', 32), 'hex'), now()
+       from generate_series(1, 101) as i`,
+      [' =HYPERLINK("https://attacker.test")', '-2+3,"quoted"\nsecond line'],
+    );
+    const unauthenticated = await exportContacts(context('/api/admin/contacts/export'));
+    expect(unauthenticated.status).toBe(401);
+
+    const auth = await loginAs('editor@miracon.test', 'editor password long enough');
+    const listed = await listContacts(context('/api/admin/contacts?limit=50', { headers: { cookie: auth.cookie } }));
+    const csvResponse = await exportContacts(context('/api/admin/contacts/export', { headers: { cookie: auth.cookie } }));
+    const csv = await csvResponse.text();
+
+    expect((await listed.json()).contacts).toHaveLength(50);
+    expect(csvResponse.status).toBe(200);
+    expect(csvResponse.headers.get('cache-control')).toBe('private, no-store');
+    expect(csvResponse.headers.get('content-type')).toContain('text/csv; charset=utf-8');
+    expect(csv.codePointAt(0)).toBe(0xFEFF);
+    expect(csv).toContain(`"' =HYPERLINK(""https://attacker.test"")"`);
+    expect(csv).toContain(`"'-2+3,""quoted""\nsecond line"`);
+    expect(csv).toContain('"Person 101"');
+    expect(csv).toContain('"Person 50"');
+    expect(csv).toContain('"/projects/source"');
+    expect(csv.match(/"Person \d+"/gu)).toHaveLength(100);
   });
 });
 
