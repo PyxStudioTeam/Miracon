@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { copyFile, mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -96,18 +96,8 @@ test('repeat application leaves one complete migration ledger', async () => {
   const applied = await client.query('select filename from miracon_meta.schema_migrations order by filename');
 
   // Then
-  assert.deepEqual(applied.rows.map((row) => row.filename), [
-    '0001_content_tables.sql',
-    '0002_admin_sessions_media.sql',
-    '0003_project_operations.sql',
-    '0004_ordering_and_homepage_operations.sql',
-    '0005_login_throttle_cleanup.sql',
-    '0006_tighten_admin_password_hash.sql',
-    '0007_media_cleanup_pending.sql',
-    '0008_admin_governance_and_availability.sql',
-    '0009_exact_revision_materialization.sql',
-    '0010_contact_intake.sql',
-  ]);
+  const expected = (await readdir(migrationsDirectory)).filter((filename) => filename.endsWith('.sql')).sort();
+  assert.deepEqual(applied.rows.map((row) => row.filename), expected);
 });
 
 test('migrates the existing owner and foreign-key references without changing their identifiers', async () => {

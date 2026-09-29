@@ -4,13 +4,11 @@ import { contactIdSchema, type ContactId, type ContactSubmissionInput } from './
 export const CONTACT_HOURLY_LIMIT = 5;
 export const CONTACT_DUPLICATE_WINDOW_MINUTES = 15;
 export const CONTACT_CHALLENGE_HOURLY_LIMIT = 20;
-export const CONTACT_CHALLENGE_COOLDOWN_MS = 3_000;
 
 export type ContactChallengeRecord = {
   readonly tokenDigest: Buffer;
   readonly clientDigest: Buffer;
   readonly createdAt: Date;
-  readonly notBefore: Date;
   readonly expiresAt: Date;
 };
 
@@ -26,7 +24,6 @@ export type ContactSubmissionRecord = Omit<ContactSubmissionInput, 'challenge' |
 export type ContactSubmissionResult =
   | { readonly kind: 'accepted'; readonly id: ContactId }
   | { readonly kind: 'invalid_challenge' }
-  | { readonly kind: 'too_fast' }
   | { readonly kind: 'rate_limited' }
   | { readonly kind: 'duplicate' }
   | { readonly kind: 'spam' };
@@ -53,10 +50,6 @@ export type ContactDetail = ContactSummary & {
 export interface ContactIntakeRepository {
   createChallenge(record: ContactChallengeRecord): Promise<ContactChallengeIssueResult>;
   acceptSubmission(record: ContactSubmissionRecord): Promise<ContactSubmissionResult>;
-}
-
-interface ChallengeRow extends QueryResultRow {
-  readonly not_before: Date;
 }
 
 interface ContactRow extends QueryResultRow {
@@ -93,25 +86,21 @@ export class PostgresContactRepository implements ContactIntakeRepository {
            and (consumed_at is not null or expires_at <= $3)`,
         [record.clientDigest, hourlyCutoff, record.createdAt],
       );
-      const issuance = await client.query<{ readonly count: number; readonly latest_created_at: Date | null }>(
-         `select count(*)::integer as count, max(created_at) as latest_created_at
+      const issuance = await client.query<{ readonly count: number }>(
+        `select count(*)::integer as count
          from miracon.contact_challenges
          where client_digest = $1 and created_at > $2`,
         [record.clientDigest, hourlyCutoff],
       );
-      const issuanceRow = issuance.rows[0];
-      const withinCooldown = issuanceRow?.latest_created_at !== null
-        && issuanceRow?.latest_created_at !== undefined
-        && issuanceRow.latest_created_at.getTime() > record.createdAt.getTime() - CONTACT_CHALLENGE_COOLDOWN_MS;
-      if ((issuanceRow?.count ?? 0) >= CONTACT_CHALLENGE_HOURLY_LIMIT || withinCooldown) {
+      if ((issuance.rows[0]?.count ?? 0) >= CONTACT_CHALLENGE_HOURLY_LIMIT) {
         await client.query('commit');
         return { kind: 'rate_limited' };
       }
       await client.query(
         `insert into miracon.contact_challenges
-           (token_digest, client_digest, created_at, not_before, expires_at)
-         values ($1, $2, $3, $4, $5)`,
-        [record.tokenDigest, record.clientDigest, record.createdAt, record.notBefore, record.expiresAt],
+           (token_digest, client_digest, created_at, expires_at)
+         values ($1, $2, $3, $4)`,
+        [record.tokenDigest, record.clientDigest, record.createdAt, record.expiresAt],
       );
       await client.query('commit');
       return { kind: 'issued' };
@@ -188,17 +177,15 @@ export class PostgresContactRepository implements ContactIntakeRepository {
        order by lock_key`,
       [record.clientDigest, record.duplicateDigest],
     );
-    const challenge = await client.query<ChallengeRow>(
+    const challenge = await client.query(
       `update miracon.contact_challenges
        set consumed_at = $3
        where token_digest = $1 and client_digest = $2
          and consumed_at is null and expires_at > $3
-       returning not_before`,
+       returning 1`,
       [record.challengeDigest, record.clientDigest, record.createdAt],
     );
-    const challengeRow = challenge.rows[0];
-    if (!challengeRow) return { kind: 'invalid_challenge' };
-    if (challengeRow.not_before > record.createdAt) return { kind: 'too_fast' };
+    if (challenge.rowCount !== 1) return { kind: 'invalid_challenge' };
     if (record.isSpam) return { kind: 'spam' };
 
     const rate = await client.query<{ readonly count: number }>(

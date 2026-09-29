@@ -550,7 +550,6 @@ async function assertPublicContactFlow({ context, baseUrl, database, path, local
     await form.locator('[name="name"]').fill(name);
     await form.locator('[name="phone"]').fill('+30 210 000 0000');
     await form.locator('[name="email"]').fill(`${locale}-browser-contact@example.test`);
-    await page.waitForTimeout(3_100);
     await form.locator('.btn-submit').click();
     await form.locator('.form-status').filter({ hasText: successText }).waitFor({ timeout: 10_000 });
 

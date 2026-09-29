@@ -41,16 +41,12 @@ afterAll(async () => {
 });
 
 describe('contact API', () => {
-  it('accepts a dwelled challenge once and never stores the raw client address', async () => {
+  it('accepts an immediate challenge once and never stores the raw client address', async () => {
     // Given
     const challengeResponse = await issueChallenge(context('/api/contact/challenge', {
       method: 'POST', headers: { origin: siteUrl, 'x-forwarded-for': '198.51.100.200' },
     }));
-    const challenge = await challengeResponse.json() as { readonly challenge: string };
-    await pool.query(`
-      update miracon.contact_challenges
-      set created_at = now() - interval '10 seconds', not_before = now() - interval '1 second'
-    `);
+    const challenge = await challengeResponse.json() as { readonly challenge: string; readonly expiresAt: string };
     // When
     const accepted = await submitContact(contactRequest(challenge.challenge));
     const replayed = await submitContact(contactRequest(challenge.challenge));
@@ -64,7 +60,11 @@ describe('contact API', () => {
 
     // Then
     expect(accepted.status).toBe(201);
+    expect(challengeResponse.status).toBe(200);
+    expect(Object.keys(challenge).sort()).toEqual(['challenge', 'expiresAt']);
+    expect(Date.parse(challenge.expiresAt)).toBeGreaterThan(Date.now());
     expect(replayed.status).toBe(400);
+    expect((await replayed.json()).error.code).toBe('invalid_challenge');
     expect(stored.rows).toEqual([expect.objectContaining({
       name: 'Ada Lovelace',
       client_digest: createHmac('sha256', digestSecret)
@@ -78,7 +78,7 @@ describe('contact API', () => {
 
   it('keeps the accepted row and 201 response when notification delivery fails', async () => {
     // Given
-    const challenge = await newChallenge(true);
+    const challenge = await newChallenge();
     const handler = createContactPost({
       notify: async () => {
         throw new ContactNotificationError('transport_failed');
@@ -96,35 +96,39 @@ describe('contact API', () => {
     expect(stored.rows[0]).toEqual(await response.json());
   });
 
-  it('rejects too-fast, cross-origin, honeypot, duplicate, and hourly-limit submissions', async () => {
-    // Given
-    const challenge = await newChallenge(false);
-
+  it('rejects cross-origin, honeypot, duplicate, and hourly-limit submissions', async () => {
     // When / Then
-    expect((await submitContact(contactRequest(challenge))).status).toBe(429);
+    expect((await issueChallenge(context('/api/contact/challenge', {
+      method: 'POST', headers: { origin: 'https://attacker.test' },
+    }))).status).toBe(403);
+    const challenge = await newChallenge();
     expect((await submitContact(contactRequest(challenge, { origin: 'https://attacker.test' }))).status).toBe(403);
 
-    const honeypotChallenge = await newChallenge(true);
+    const honeypotChallenge = await newChallenge();
     expect((await submitContact(contactRequest(honeypotChallenge, { website: 'filled' }))).status).toBe(400);
 
-    const acceptedChallenge = await newChallenge(true);
+    const acceptedChallenge = await newChallenge();
     expect((await submitContact(contactRequest(acceptedChallenge))).status).toBe(201);
-    const duplicateChallenge = await newChallenge(true);
-    expect((await submitContact(contactRequest(duplicateChallenge))).status).toBe(409);
+    const duplicateChallenge = await newChallenge();
+    const duplicate = await submitContact(contactRequest(duplicateChallenge));
+    expect(duplicate.status).toBe(409);
+    expect((await duplicate.json()).error.code).toBe('duplicate_contact');
 
     await pool.query('update miracon.contact_submissions set duplicate_digest = decode(repeat(\'ab\', 32), \'hex\')');
     for (let index = 1; index < 5; index += 1) {
-      const nextChallenge = await newChallenge(true);
+      const nextChallenge = await newChallenge();
       const response = await submitContact(contactRequest(nextChallenge, { message: `Unique message ${index}` }));
       expect(response.status).toBe(201);
     }
-    const limitedChallenge = await newChallenge(true);
-    expect((await submitContact(contactRequest(limitedChallenge, { message: 'Over the limit' }))).status).toBe(429);
+    const limitedChallenge = await newChallenge();
+    const limited = await submitContact(contactRequest(limitedChallenge, { message: 'Over the limit' }));
+    expect(limited.status).toBe(429);
+    expect((await limited.json()).error.code).toBe('rate_limited');
   });
 
   it('allows an editor to list, view, and delete contacts without exposing abuse digests', async () => {
     // Given
-    const challenge = await newChallenge(true);
+    const challenge = await newChallenge();
     const created = await submitContact(contactRequest(challenge));
     const createdBody = await created.json() as { readonly id: string };
     const auth = await loginAs('editor@miracon.test', 'editor password long enough');
@@ -185,22 +189,12 @@ describe('contact API', () => {
   });
 });
 
-async function newChallenge(dwelled: boolean): Promise<string> {
-  await pool.query(`update miracon.contact_challenges set created_at = created_at - interval '4 seconds'`);
+async function newChallenge(): Promise<string> {
   const response = await issueChallenge(context('/api/contact/challenge', {
     method: 'POST', headers: { origin: siteUrl },
   }));
+  expect(response.status).toBe(200);
   const body = await response.json() as { readonly challenge: string };
-  if (dwelled) {
-    await pool.query(
-      `update miracon.contact_challenges
-       set created_at = now() - interval '10 seconds', not_before = now() - interval '1 second'
-       where token_digest = $1`,
-      [createHmac('sha256', digestSecret)
-        .update(`miracon-contact/challenge/v1\0${body.challenge}`, 'utf8')
-        .digest()],
-    );
-  }
   return body.challenge;
 }
 

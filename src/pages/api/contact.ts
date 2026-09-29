@@ -94,8 +94,6 @@ export function createContactPost(
         return json({ id: result.id }, { status: 201 });
       case 'invalid_challenge':
         return jsonError(400, 'invalid_challenge', 'Contact challenge is invalid or expired');
-      case 'too_fast':
-        return jsonError(429, 'challenge_too_fast', 'Contact challenge dwell time was not met');
       case 'rate_limited':
         return jsonError(429, 'rate_limited', 'Too many contact requests');
       case 'duplicate':

@@ -50,12 +50,12 @@ test('retention deletes expired challenges but retains the exact expiry boundary
   // Given
   await pool.query(
     `insert into miracon.contact_challenges
-       (token_digest, client_digest, created_at, not_before, expires_at)
+       (token_digest, client_digest, created_at, expires_at)
      values
-       ($1, $2, $3, $4, $5),
-       ($6, $7, $3, $4, $8)`,
+       ($1, $2, $3, $4),
+       ($5, $6, $3, $7)`,
     [Buffer.alloc(32, 1), Buffer.alloc(32, 2), new Date(now.getTime() - 10_000),
-      new Date(now.getTime() - 5_000), new Date(now.getTime() - 1),
+      new Date(now.getTime() - 1),
       Buffer.alloc(32, 3), Buffer.alloc(32, 4), now],
   );
 

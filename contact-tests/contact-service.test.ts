@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
-  CONTACT_CHALLENGE_DWELL_MS,
+  CONTACT_CHALLENGE_TTL_MS,
   issueContactChallenge,
   submitContact,
 } from '../src/lib/server/contact-service';
@@ -52,7 +52,7 @@ class FakeContactRepository implements ContactIntakeRepository {
 }
 
 describe('contact intake service', () => {
-  it('issues a digest-only challenge with a server-enforced dwell time', async () => {
+  it('issues an opaque digest-only challenge that expires after fifteen minutes', async () => {
     // Given
     const repository = new FakeContactRepository();
 
@@ -62,7 +62,8 @@ describe('contact intake service', () => {
     // Then
     expect(challenge.kind).toBe('issued');
     if (challenge.kind !== 'issued') throw new Error('Expected challenge issuance');
-    expect(challenge.notBefore.getTime()).toBe(now.getTime() + CONTACT_CHALLENGE_DWELL_MS);
+    expect(challenge.expiresAt.getTime()).toBe(now.getTime() + CONTACT_CHALLENGE_TTL_MS);
+    expect(repository.challenge?.createdAt).toEqual(now);
     expect(repository.challenge?.tokenDigest).toHaveLength(32);
     expect(repository.challenge?.clientDigest).toHaveLength(32);
     expect(repository.challenge?.clientDigest).toEqual(contactDigest('client', '203.0.113.7'));

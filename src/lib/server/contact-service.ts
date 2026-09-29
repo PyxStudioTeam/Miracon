@@ -9,7 +9,6 @@ import type {
 } from './contact-repository';
 import { generateOpaqueToken } from './auth/crypto';
 
-export const CONTACT_CHALLENGE_DWELL_MS = 3_000;
 export const CONTACT_CHALLENGE_TTL_MS = 15 * 60 * 1_000;
 
 type ContactRequestContext = {
@@ -23,7 +22,7 @@ type ContactSubmissionRequest = ContactRequestContext & {
 };
 
 export type IssuedContactChallenge =
-  | { readonly kind: 'issued'; readonly token: ContactChallengeToken; readonly notBefore: Date; readonly expiresAt: Date }
+  | { readonly kind: 'issued'; readonly token: ContactChallengeToken; readonly expiresAt: Date }
   | { readonly kind: 'rate_limited' };
 
 export type SubmitContactResult = ContactSubmissionResult;
@@ -33,17 +32,15 @@ export async function issueContactChallenge(
   context: ContactRequestContext,
 ): Promise<IssuedContactChallenge> {
   const token = contactChallengeTokenSchema.parse(generateOpaqueToken());
-  const notBefore = new Date(context.now.getTime() + CONTACT_CHALLENGE_DWELL_MS);
   const expiresAt = new Date(context.now.getTime() + CONTACT_CHALLENGE_TTL_MS);
   const record: ContactChallengeRecord = {
     tokenDigest: contactDigest(context.digestSecret, 'challenge', token),
     clientDigest: contactDigest(context.digestSecret, 'client', context.clientAddress),
     createdAt: context.now,
-    notBefore,
     expiresAt,
   };
   const result: ContactChallengeIssueResult = await repository.createChallenge(record);
-  return result.kind === 'issued' ? { kind: 'issued', token, notBefore, expiresAt } : result;
+  return result.kind === 'issued' ? { kind: 'issued', token, expiresAt } : result;
 }
 
 export async function submitContact(

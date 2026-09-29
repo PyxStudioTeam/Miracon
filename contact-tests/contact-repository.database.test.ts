@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { migrate } from '../scripts/postgres-migrate.mjs';
@@ -33,9 +34,9 @@ describe('contact repository concurrency', () => {
       .digest();
     await pool.query(
       `insert into miracon.contact_challenges
-         (token_digest, client_digest, created_at, not_before, expires_at)
-       values ($1, $2, $3, $4, $5)`,
-      [Buffer.alloc(32, 19), clientDigest, atSecond(-3_601), atSecond(-3_598), atSecond(-2_698)],
+         (token_digest, client_digest, created_at, expires_at)
+       values ($1, $2, $3, $4)`,
+      [Buffer.alloc(32, 19), clientDigest, atSecond(-3_601), atSecond(-2_698)],
     );
 
     // When
@@ -50,6 +51,104 @@ describe('contact repository concurrency', () => {
     expect(retained.rows[0]?.count).toBe(1);
   });
 
+  it('preserves historical challenge rows when the dwell column is removed', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      await client.query(
+        `alter table miracon.contact_challenges
+           drop constraint contact_challenges_expiry_after_creation_check,
+           add column not_before timestamptz not null,
+           add constraint old_dwell_check check (not_before > created_at),
+           add constraint old_expiry_check check (expires_at > not_before)`,
+      );
+      const tokenDigest = Buffer.alloc(32, 77);
+      const expiresAt = atSecond(900);
+      await client.query(
+        `insert into miracon.contact_challenges
+           (token_digest, client_digest, created_at, not_before, expires_at)
+         values ($1, $2, $3, $4, $5)`,
+        [tokenDigest, Buffer.alloc(32, 78), atSecond(0), atSecond(3), expiresAt],
+      );
+
+      const migration = await readFile(
+        new URL('../postgres/migrations/0014_contact_challenge_immediate.sql', import.meta.url), 'utf8',
+      );
+      await client.query(migration);
+      const retained = await client.query<{ readonly token_digest: Buffer; readonly expires_at: Date }>(
+        'select token_digest, expires_at from miracon.contact_challenges where token_digest = $1',
+        [tokenDigest],
+      );
+      const dropped = await client.query(
+        `select 1 from information_schema.columns
+         where table_schema = 'miracon' and table_name = 'contact_challenges' and column_name = 'not_before'`,
+      );
+
+      expect(retained.rows).toEqual([{ token_digest: tokenDigest, expires_at: expiresAt }]);
+      expect(dropped.rowCount).toBe(0);
+      await client.query('savepoint invalid_expiry');
+      await expect(client.query(
+        `insert into miracon.contact_challenges
+           (token_digest, client_digest, created_at, expires_at)
+         values ($1, $2, $3, $4)`,
+        [Buffer.alloc(32, 79), Buffer.alloc(32, 80), atSecond(0), atSecond(0)],
+      )).rejects.toMatchObject({ code: '23514' });
+      await client.query('rollback to savepoint invalid_expiry');
+    } finally {
+      await client.query('rollback');
+      client.release();
+    }
+  });
+
+  it('accepts an immediate submission but never accepts a replay of the same challenge', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const clientAddress = '203.0.113.26';
+    const issued = await challenge(repository, clientAddress, atSecond(0));
+
+    const accepted = await submission({
+      repository, challengeToken: issued, clientAddress, message: 'Immediate submission', now: atSecond(0),
+    });
+    const replayed = await submission({
+      repository, challengeToken: issued, clientAddress, message: 'Immediate submission', now: atSecond(0),
+    });
+
+    expect(accepted.kind).toBe('accepted');
+    expect(replayed.kind).toBe('invalid_challenge');
+    await expect(submissionCount()).resolves.toBe(1);
+  });
+
+  it('rejects a different client without consuming the rightful client challenge', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const token = await challenge(repository, '203.0.113.27', atSecond(0));
+
+    const impostor = await submission({
+      repository, challengeToken: token, clientAddress: '203.0.113.28', message: 'Rightful client',
+      now: atSecond(0),
+    });
+    const rightful = await submission({
+      repository, challengeToken: token, clientAddress: '203.0.113.27', message: 'Rightful client',
+      now: atSecond(0),
+    });
+
+    expect(impostor.kind).toBe('invalid_challenge');
+    expect(rightful.kind).toBe('accepted');
+    await expect(submissionCount()).resolves.toBe(1);
+  });
+
+  it('rejects an expired challenge even when it has not been consumed', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const clientAddress = '203.0.113.29';
+    const token = await challenge(repository, clientAddress, atSecond(0));
+
+    const result = await submission({
+      repository, challengeToken: token, clientAddress, message: 'Expired challenge',
+      now: atSecond(900),
+    });
+
+    expect(result.kind).toBe('invalid_challenge');
+    await expect(submissionCount()).resolves.toBe(0);
+  });
+
   it('accepts exactly one of two concurrent replays of one challenge', async () => {
     // Given
     const repository = new PostgresContactRepository(pool);
@@ -57,8 +156,8 @@ describe('contact repository concurrency', () => {
 
     // When
     const results = await Promise.all([
-      submission({ repository, challengeToken: issued, clientAddress: '203.0.113.20', message: 'Replay test', now: atSecond(4) }),
-      submission({ repository, challengeToken: issued, clientAddress: '203.0.113.20', message: 'Replay test', now: atSecond(4) }),
+      submission({ repository, challengeToken: issued, clientAddress: '203.0.113.20', message: 'Replay test', now: atSecond(0) }),
+      submission({ repository, challengeToken: issued, clientAddress: '203.0.113.20', message: 'Replay test', now: atSecond(0) }),
     ]);
 
     // Then
@@ -74,13 +173,32 @@ describe('contact repository concurrency', () => {
 
     // When
     const results = await Promise.all([
-      submission({ repository, challengeToken: firstChallenge, clientAddress: '203.0.113.21', message: 'Duplicate test', now: atSecond(4) }),
-      submission({ repository, challengeToken: secondChallenge, clientAddress: '203.0.113.22', message: 'Duplicate test', now: atSecond(4) }),
+      submission({ repository, challengeToken: firstChallenge, clientAddress: '203.0.113.21', message: 'Duplicate test', now: atSecond(0) }),
+      submission({ repository, challengeToken: secondChallenge, clientAddress: '203.0.113.22', message: 'Duplicate test', now: atSecond(0) }),
     ]);
 
     // Then
     expect(results.map((result) => result.kind).sort()).toEqual(['accepted', 'duplicate']);
     await expect(submissionCount()).resolves.toBe(1);
+  });
+
+  it('accepts equivalent content again at the fifteen-minute duplicate boundary', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const first = await challenge(repository, '203.0.113.30', atSecond(0));
+    const second = await challenge(repository, '203.0.113.31', atSecond(900));
+
+    const initial = await submission({
+      repository, challengeToken: first, clientAddress: '203.0.113.30',
+      message: 'Boundary submission', now: atSecond(0),
+    });
+    const afterWindow = await submission({
+      repository, challengeToken: second, clientAddress: '203.0.113.31',
+      message: 'Boundary submission', now: atSecond(900),
+    });
+
+    expect(initial.kind).toBe('accepted');
+    expect(afterWindow.kind).toBe('accepted');
+    await expect(submissionCount()).resolves.toBe(2);
   });
 
   it('never accepts more than five same-client submissions in an hour', async () => {
@@ -112,28 +230,21 @@ describe('contact repository concurrency', () => {
     await expect(submissionCount()).resolves.toBe(5);
   });
 
-  it('serializes per-client challenge cooldown and hourly issuance limits', async () => {
-    // Given
+  it('serializes per-client challenge issuance at twenty per hour without a cooldown', async () => {
     const repository = new PostgresContactRepository(pool);
     const clientAddress = '203.0.113.24';
-    const first = await issueContactChallenge(repository, { clientAddress, digestSecret, now: atSecond(0) });
 
-    // When
-    const cooldown = await issueContactChallenge(repository, { clientAddress, digestSecret, now: atSecond(1) });
-    const remaining = [];
-    for (let index = 1; index < 20; index += 1) {
-      remaining.push(await issueContactChallenge(repository, {
+    const results = [];
+    for (let index = 0; index < 20; index += 1) {
+      results.push(await issueContactChallenge(repository, {
         clientAddress,
         digestSecret,
-        now: atSecond(index * 4),
+        now: atSecond(0),
       }));
     }
-    const ceiling = await issueContactChallenge(repository, { clientAddress, digestSecret, now: atSecond(80) });
+    const ceiling = await issueContactChallenge(repository, { clientAddress, digestSecret, now: atSecond(0) });
 
-    // Then
-    expect(first.kind).toBe('issued');
-    expect(cooldown.kind).toBe('rate_limited');
-    expect(remaining.every((result) => result.kind === 'issued')).toBe(true);
+    expect(results.every((result) => result.kind === 'issued')).toBe(true);
     expect(ceiling.kind).toBe('rate_limited');
   });
 
@@ -145,15 +256,15 @@ describe('contact repository concurrency', () => {
       const result = await issueContactChallenge(repository, {
         clientAddress,
         digestSecret,
-        now: atSecond(index * 4),
+        now: atSecond(0),
       });
       expect(result.kind).toBe('issued');
     }
 
     // When
     const results = await Promise.all([
-      issueContactChallenge(repository, { clientAddress, digestSecret, now: atSecond(76) }),
-      issueContactChallenge(repository, { clientAddress, digestSecret, now: atSecond(80) }),
+      issueContactChallenge(repository, { clientAddress, digestSecret, now: atSecond(0) }),
+      issueContactChallenge(repository, { clientAddress, digestSecret, now: atSecond(0) }),
     ]);
 
     // Then
@@ -188,6 +299,7 @@ function submission(fixture: SubmissionFixture) {
     now,
     submission: {
       name: 'Ada Lovelace',
+      phone: '+30 210 000 0000',
       email: 'ada@example.test',
       message,
       consent: true,

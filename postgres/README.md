@@ -26,6 +26,8 @@ Project `remaining_units` is either `NULL` for unknown availability or a non-neg
 
 Migrations `0010_contact_intake.sql` through `0013_contact_details.sql` add guarded contact intake, bilingual site copy/branding/social fields, optional HTTPS project virtual-tour links, and required email/phone for new contacts. Legacy immutable revision snapshots keep their historical shapes for rollback; new snapshots include the new columns. The contact-details constraint uses `NOT VALID` so historical partial submissions remain readable without weakening checks on newly inserted rows.
 
+Migration `0014_contact_challenge_immediate.sql` removes the challenge dwell column without deleting issued challenges, preserving the `expires_at > created_at` invariant. Contacts can be submitted immediately after requesting a single-use challenge; serialized PostgreSQL limits (20 challenges and 5 accepted submissions per client per hour), duplicate detection, expiry, and honeypot remain server-enforced.
+
 ## Apply migrations
 
 Set a server-only connection URL and run:

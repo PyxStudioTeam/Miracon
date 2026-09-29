@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     invalidPhone: 'Συμπληρώστε έναν έγκυρο αριθμό τηλεφώνου',
     invalidEmail: 'Συμπληρώστε μια έγκυρη διεύθυνση email',
     sendError: 'Δεν ήταν δυνατή η αποστολή του αιτήματος. Δοκιμάστε ξανά',
-    waitMoment: 'Περιμένετε λίγο και δοκιμάστε ξανά',
-    waitBeforeRetry: 'Περιμένετε πριν στείλετε νέο αίτημα',
+    rateLimited: 'Έχετε στείλει πάρα πολλά αιτήματα. Δοκιμάστε ξανά αργότερα',
+    alreadyReceived: 'Έχουμε ήδη λάβει αυτό το αίτημα',
     sending: 'Το αίτημά σας αποστέλλεται',
     formUnavailable: 'Η φόρμα δεν είναι προσωρινά διαθέσιμη. Δοκιμάστε ξανά αργότερα',
     success: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε',
@@ -34,8 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
     invalidPhone: 'Please enter a valid phone number',
     invalidEmail: 'Please enter a valid email address',
     sendError: 'Unable to send your request. Please try again',
-    waitMoment: 'Please wait a moment and try again',
-    waitBeforeRetry: 'Please wait before sending another request',
+    rateLimited: 'Too many requests. Please try again later',
+    alreadyReceived: 'We have already received this request',
     sending: 'Sending your request',
     formUnavailable: 'The form is temporarily unavailable. Please try again later',
     success: 'Thank you. Your request has been sent',
@@ -1077,34 +1077,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const consent = consultationForm.querySelector('[name="consent"]');
     const submitBtn = consultationForm.querySelector('.btn-submit');
     const status = consultationForm.querySelector('.form-status');
-    let challenge = null;
-    let challengeRequest = null;
-    const attemptStorageKey = 'miracon-contact-last-attempt';
-    const successStorageKey = 'miracon-contact-last-success';
-
-    const storedTimestamp = (storage, key) => {
-      try {
-        return Number(storage.getItem(key) || 0);
-      } catch {
-        return 0;
-      }
-    };
-
-    const storeTimestamp = (storage, key, value) => {
-      try {
-        storage.setItem(key, String(value));
-      } catch {
-        // Storage can be unavailable in strict privacy modes.
-      }
-    };
-
-    const clearTimestamp = (storage, key) => {
-      try {
-        storage.removeItem(key);
-      } catch {
-        // Storage can be unavailable in strict privacy modes.
-      }
-    };
+    let submitting = false;
 
     const setStatus = (message, type) => {
       if (!status) return;
@@ -1114,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateSubmitState = () => {
-      if (submitBtn && consent) submitBtn.disabled = !consent.checked;
+      if (submitBtn) submitBtn.disabled = !consent?.checked || submitting;
     };
 
     const issueChallenge = async () => {
@@ -1122,36 +1095,22 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { Accept: 'application/json' },
       });
+      if (response.status === 429) throw new Error(ui.rateLimited);
       if (!response.ok) throw new Error(ui.formUnavailable);
       const result = await response.json();
-      const notBefore = Date.parse(result.notBefore);
-      const expiresAt = Date.parse(result.expiresAt);
-      if (typeof result.challenge !== 'string' || result.challenge.length !== 43 || !Number.isFinite(notBefore) || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      const expiresAt = Date.parse(result?.expiresAt);
+      if (typeof result?.challenge !== 'string' || result.challenge.length !== 43 || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
         throw new Error(ui.formUnavailable);
       }
-      challenge = { token: result.challenge, notBefore, expiresAt };
-      return challenge;
+      return result.challenge;
     };
 
     updateSubmitState();
     if (consent) consent.addEventListener('change', updateSubmitState);
-    const obtainChallenge = () => {
-      if (challenge && Date.now() < challenge.expiresAt) return Promise.resolve(challenge);
-      challenge = null;
-      if (!challengeRequest) {
-        challengeRequest = issueChallenge().finally(() => {
-          challengeRequest = null;
-        });
-      }
-      return challengeRequest;
-    };
-    const prepareChallenge = () => {
-      if (consent?.checked) obtainChallenge().catch(() => {});
-    };
-    if (consent) consent.addEventListener('change', prepareChallenge);
 
     consultationForm.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (submitting) return;
       const formData = new FormData(consultationForm);
       const name = String(formData.get('name') || '').trim();
       const phone = String(formData.get('phone') || '').trim();
@@ -1160,7 +1119,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const website = String(formData.get('website') || '');
       const emailInput = consultationForm.querySelector('[name="email"]');
       const phoneInput = consultationForm.querySelector('[name="phone"]');
-      const now = Date.now();
 
       if (!name || !message || !phone || !email || !consent?.checked) {
         setStatus(ui.missingContact, 'error');
@@ -1183,80 +1141,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      let activeChallenge;
-      try {
-        activeChallenge = await obtainChallenge();
-      } catch {
-        setStatus(ui.formUnavailable, 'error');
-        return;
-      }
-      if (now < activeChallenge.notBefore) {
-        setStatus(ui.waitMoment, 'error');
-        return;
-      }
-
-      const lastAttempt = storedTimestamp(sessionStorage, attemptStorageKey);
-      const lastSuccess = storedTimestamp(localStorage, successStorageKey);
-      if (now - lastAttempt < 15000 || now - lastSuccess < 60000) {
-        setStatus(ui.waitBeforeRetry, 'error');
-        return;
-      }
-
-      submitBtn.disabled = true;
+      submitting = true;
+      updateSubmitState();
       setStatus(ui.sending, 'pending');
-      storeTimestamp(sessionStorage, attemptStorageKey, now);
-
-      let succeeded = false;
       try {
-        let mayRetryInvalidChallenge = true;
-        while (activeChallenge) {
-          const response = await fetch('/api/contact', {
-            method: 'POST',
-            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name,
-              email,
-              phone,
-              message,
-              consent: true,
-              locale: isGreek ? 'el' : 'en',
-              sourcePath: window.location.pathname,
-              website,
-              challenge: activeChallenge.token,
-            }),
-          });
-          let result;
-          try {
-            result = await response.json();
-          } catch {
-            throw new Error(response.status === 429 ? ui.waitBeforeRetry : ui.sendError);
-          }
-          if (response.ok && typeof result.id === 'string') {
-            succeeded = true;
-            break;
-          }
-          if (response.status === 400 && result?.error?.code === 'invalid_challenge' && mayRetryInvalidChallenge) {
-            mayRetryInvalidChallenge = false;
-            challenge = null;
-            activeChallenge = await obtainChallenge();
-            const dwellMs = activeChallenge.notBefore - Date.now();
-            if (dwellMs > 0) await new Promise((resolve) => window.setTimeout(resolve, dwellMs));
-            continue;
-          }
-          throw new Error(response.status === 429 ? ui.waitBeforeRetry : ui.sendError);
-        }
+        const challenge = await issueChallenge();
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            email,
+            phone,
+            message,
+            consent: true,
+            locale: isGreek ? 'el' : 'en',
+            sourcePath: window.location.pathname,
+            website,
+            challenge,
+          }),
+        });
+        if (response.status === 429) throw new Error(ui.rateLimited);
+        if (response.status === 409) throw new Error(ui.alreadyReceived);
+        if (!response.ok) throw new Error(ui.sendError);
+        const result = await response.json();
+        if (typeof result?.id !== 'string') throw new Error(ui.sendError);
 
         consultationForm.reset();
-        storeTimestamp(localStorage, successStorageKey, Date.now());
         setStatus(ui.success, 'success');
       } catch (error) {
-        setStatus(error instanceof Error && [ui.formUnavailable, ui.sendError, ui.waitBeforeRetry].includes(error.message) ? error.message.replace(/[.]+$/, '') : ui.sendLater, 'error');
+        const message = error instanceof Error && [ui.formUnavailable, ui.sendError, ui.rateLimited, ui.alreadyReceived].includes(error.message)
+          ? error.message : ui.sendLater;
+        setStatus(message, 'error');
       } finally {
-        challenge = null;
-        if (!succeeded) {
-          clearTimestamp(sessionStorage, attemptStorageKey);
-          prepareChallenge();
-        }
+        submitting = false;
         updateSubmitState();
       }
     });

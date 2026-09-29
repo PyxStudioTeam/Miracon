@@ -49,7 +49,6 @@ test('defines digest-only contact intake with bounded retention and challenge st
     /duplicate_digest bytea[^,]*octet_length\(duplicate_digest\) = 32/iu,
     /create table miracon\.contact_challenges/iu,
     /token_digest bytea[^,]*octet_length\(token_digest\) = 32/iu,
-    /not_before timestamptz not null/iu,
     /consumed_at timestamptz/iu,
   ]) {
     assert.match(sql, contract);

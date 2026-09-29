@@ -23,7 +23,6 @@ export async function POST({ request, clientAddress }: ApiContext): Promise<Resp
   }
   return json({
     challenge: issued.token,
-    notBefore: issued.notBefore.toISOString(),
     expiresAt: issued.expiresAt.toISOString(),
   }, { headers: { 'Cache-Control': 'private, no-store' } });
 }
