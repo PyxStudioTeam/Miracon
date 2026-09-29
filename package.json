@@ -25,7 +25,7 @@
     "api:test:http:db": "node scripts/require-database-test-config.mjs && node --test api-tests/http-transport.test.mjs",
     "admin:provision": "node scripts/provision-admin.mjs",
     "postgres:migrate": "node scripts/postgres-migrate.mjs",
-    "postgres:test:contract": "node --test postgres/tests/schema-contract.test.mjs postgres/tests/migration-ledger.test.mjs postgres/tests/database-test-guard.test.mjs",
+    "postgres:test:contract": "node --test postgres/tests/schema-contract.test.mjs postgres/tests/migration-ledger.test.mjs postgres/tests/database-test-guard.test.mjs postgres/tests/migration-syntax.test.mjs",
     "postgres:test:db": "node scripts/require-database-test-config.mjs && node --test --test-concurrency=1 postgres/tests/database.test.mjs postgres/tests/database-constraints.test.mjs postgres/tests/database-homepage.test.mjs postgres/tests/migration-runner-database.test.mjs",
     "release:package": "node scripts/package-release.mjs",
     "release:test": "node --test release-tests/*.test.mjs",
@@ -77,6 +77,7 @@
   "devDependencies": {
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.21.0",
+    "libpg-query": "16.7.3",
     "playwright": "^1.61.0",
     "vitest": "^4.1.10"
   }

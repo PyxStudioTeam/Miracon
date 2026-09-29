@@ -35,7 +35,7 @@ as $$
           or
           (p_snapshot->'deleted' = 'false'::jsonb
             and jsonb_typeof(p_snapshot->'project') = 'object'
-            and miracon.has_exact_jsonb_keys(p_snapshot->'project' - 'virtual_tour_url', array[
+            and miracon.has_exact_jsonb_keys((p_snapshot->'project') - 'virtual_tour_url', array[
               'id', 'slug', 'title', 'address', 'card_address', 'price', 'short_description',
               'full_description', 'intro_title', 'categories', 'status', 'sort_order', 'cover_url',
               'cover_focal_x', 'cover_focal_y', 'image_variants', 'hero_type', 'hero_variant',
@@ -51,7 +51,7 @@ as $$
               or (jsonb_typeof(p_snapshot->'project'->'virtual_tour_url') = 'string'
                 and length(p_snapshot->'project'->>'virtual_tour_url') <= 2048
                 and (p_snapshot->'project'->>'virtual_tour_url' = ''
-                  or p_snapshot->'project'->>'virtual_tour_url' ~ '^https://[^[:space:]/?#]+([/?#][^[:space:]]*)?$')))
+                  or p_snapshot->'project'->>'virtual_tour_url' ~ '^https://[^[:space:]/?#]+([/?#][^[:space:]]*)?$'))
             )
             and jsonb_typeof(p_snapshot->'project'->'id') = 'string'
             and p_snapshot->'project'->>'id' is not distinct from p_aggregate_id

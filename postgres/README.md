@@ -47,7 +47,7 @@ The database owner can access the schema. Grants for future runtime roles belong
 
 ## Verification
 
-The deterministic contract suite needs no database:
+The deterministic contract suite needs no database. It parses every migration and each embedded SQL-language function body with PostgreSQL's parser; execution and operator resolution still require the guarded database acceptance suite:
 
 ```bash
 npm run postgres:test:contract
