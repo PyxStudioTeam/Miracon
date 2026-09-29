@@ -2257,6 +2257,7 @@ body.js-enabled .about-reveal.visible {
   opacity: 0;
   pointer-events: none;
 }
+.form-consent:has(.form-consent-input:disabled) { cursor: not-allowed; }
 
 .form-consent-box {
   position: relative;

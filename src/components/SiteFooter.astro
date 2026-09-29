@@ -13,7 +13,6 @@ const { locale = getLocale(Astro.originPathname), settings } = Astro.props;
 const siteSettings = settings ?? await getSiteSettings();
 const m = getMessages(locale);
 const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
-const privacyHref = siteSettings.footerPrivacyPdfUrl || localizePath('/privacy-policy', locale);
 const phoneHref = siteSettings.footerPhone.replace(/[^0-9+]/g, '');
 ---
 
@@ -38,7 +37,7 @@ const phoneHref = siteSettings.footerPhone.replace(/[^0-9+]/g, '');
     <div class="footer-bottom">
       <div class="footer-links">
         <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
-        <a href={privacyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>
+        {siteSettings.footerPrivacyPdfUrl && <a href={siteSettings.footerPrivacyPdfUrl} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>}
         <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
       </div>
       <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span>{m['common.switchLanguage']}</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></a>

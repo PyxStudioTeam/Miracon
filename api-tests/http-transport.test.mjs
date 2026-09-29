@@ -126,6 +126,10 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     const currentSettingsResponse = await fetch(`${baseUrl}/api/admin/site-settings`, { headers: authHeaders });
     assert.equal(currentSettingsResponse.status, 200);
     const currentSettings = (await currentSettingsResponse.json()).settings;
+    for (const path of ['/privacy-policy', '/el/privacy-policy']) {
+      const removedPage = await fetch(`${baseUrl}${path}`);
+      assert.equal(removedPage.status, 404);
+    }
 
     // Legal documents must resolve to an uploaded catalog PDF, so external URLs are rejected.
     await assertApiError(fetch(`${baseUrl}/api/admin/site-settings`, {
@@ -143,6 +147,12 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     });
     assert.equal(uploadedTerms.status, 201);
     const termsPdfUrl = (await uploadedTerms.json()).media.relativeUrl;
+    const uploadedPrivacy = await upload(baseUrl, authHeaders, pdfSignature(), {
+      filename: 'privacy-policy.pdf',
+      mimeType: 'application/pdf',
+    });
+    assert.equal(uploadedPrivacy.status, 201);
+    const privacyPdfUrl = (await uploadedPrivacy.json()).media.relativeUrl;
 
     const siteSettings = await fetch(`${baseUrl}/api/admin/site-settings`, {
       method: 'PUT',
@@ -150,6 +160,7 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
       body: JSON.stringify({
         ...currentSettings,
         footerTermsVisible: true, footerTermsPdfUrl: termsPdfUrl,
+        footerPrivacyPdfUrl: privacyPdfUrl,
         homeCopy: { ...currentSettings.homeCopy, el: { ...currentSettings.homeCopy.el, heroTitleLine1: 'Νέα κατοικία' } },
         footerPhone: '+30 210 123 4567',
       }),
@@ -164,6 +175,7 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     assert.doesNotMatch(homeHtml, /PostgreSQL draft project/u);
     assert.match(homeHtml, /postgres-home\.mp4/u);
     assert.ok(homeHtml.includes(termsPdfUrl));
+    assert.equal(homeHtml.split(`href="${privacyPdfUrl}"`).length - 1, 2);
 
     const greekHome = await fetch(`${baseUrl}/el/`);
     assert.equal(greekHome.status, 200);
@@ -172,6 +184,7 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     assert.doesNotMatch(greekHomeHtml, /Πρόχειρο έργο PostgreSQL/u);
     assert.match(greekHomeHtml, /Νέα κατοικία/u);
     assert.match(greekHomeHtml, /tel:\+302101234567/u);
+    assert.equal(greekHomeHtml.split(`href="${privacyPdfUrl}"`).length - 1, 2);
 
     const publicProject = await fetch(`${baseUrl}/projects/postgres-public-project`);
     assert.equal(publicProject.status, 200);

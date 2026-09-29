@@ -390,6 +390,15 @@ test('runs the built standalone public localization fixture', { timeout: 180_000
     browser = await chromium.launch({ headless: true });
     context = await browser.newContext({ serviceWorkers: 'block' });
     await configureContextRouting(context, { baseUrl, externalRequests, unknownExternalRequests });
+    const beforePdf = await context.newPage();
+    try {
+      await beforePdf.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
+      assert.equal(await beforePdf.locator('[data-consultation-form] [name="consent"]').isDisabled(), true);
+      assert.equal(await beforePdf.locator('.footer-links a').filter({ hasText: 'Privacy Policy' }).count(), 0);
+    } finally {
+      await beforePdf.close();
+    }
+    const privacyPdfUrl = await publishPrivacyPdf(context, baseUrl);
     for (const { route, viewport } of casePlan) {
       const caseRecord = await runCase({ context, baseUrl, route, viewport, externalRequests, unknownExternalRequests, artifacts });
       artifacts?.cases.push(caseRecord);
@@ -397,8 +406,19 @@ test('runs the built standalone public localization fixture', { timeout: 180_000
     for (const { route, viewport } of availabilityDetailCasePlan) {
       await runCase({ context, baseUrl, route, viewport, externalRequests, unknownExternalRequests, artifacts: null });
     }
-    await assertPublicContactFlow({ context, baseUrl, database, path: '/', locale: 'en', name: 'Browser English Contact', successText: 'Thank you. Your request has been sent' });
-    await assertPublicContactFlow({ context, baseUrl, database, path: '/el/golden-visa', locale: 'el', name: 'Browser Greek Contact', successText: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε' });
+    await assertPublicContactFlow({ context, baseUrl, database, path: '/', locale: 'en', name: 'Browser English Contact', successText: 'Thank you. Your request has been sent', privacyPdfUrl });
+    await assertPublicContactFlow({ context, baseUrl, database, path: '/el/golden-visa', locale: 'el', name: 'Browser Greek Contact', successText: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε', privacyPdfUrl });
+    for (const path of ['/el/', '/golden-visa', '/projects/browser-coastal-golden', '/el/projects/browser-coastal-golden']) {
+      const page = await context.newPage();
+      try {
+        await page.goto(`${baseUrl}${path}`, { waitUntil: 'domcontentloaded' });
+        assert.equal(await page.locator('[data-consultation-form] .form-consent-text a').getAttribute('href'), privacyPdfUrl);
+        assert.equal(await page.locator('[data-consultation-form] [name="consent"]').isEnabled(), true);
+        assert.equal(await page.locator('.footer-links a[href]').filter({ hasText: path.startsWith('/el/') ? 'Πολιτική Απορρήτου' : 'Privacy Policy' }).getAttribute('href'), privacyPdfUrl);
+      } finally {
+        await page.close();
+      }
+    }
     await transitionFixtureToDraft(database, 'browser-city-seven');
     const previewBaseUrl = baseUrl;
     previewContext = await createAuthenticatedPreviewContext(browser, {
@@ -480,12 +500,47 @@ async function createAuthenticatedPreviewContext(browser, routing) {
   return context;
 }
 
-async function assertPublicContactFlow({ context, baseUrl, database, path, locale, name, successText }) {
+async function publishPrivacyPdf(context, baseUrl) {
+  const login = await context.request.post(`${baseUrl}/api/auth/login`, {
+    data: fixtureAdmin,
+    headers: { origin: baseUrl },
+  });
+  assert.equal(login.status(), 200);
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseUrl}/admin`, { waitUntil: 'domcontentloaded' });
+    await page.locator('button[title="Site settings"]').click();
+    const policy = page.locator('.site-settings-card').filter({ hasText: 'Privacy Policy' });
+    await policy.locator('.site-settings-auto').waitFor();
+    assert.equal(await policy.locator('input[type="checkbox"]').count(), 0);
+    await policy.locator('input[type="file"]').setInputFiles({
+      name: 'privacy-policy.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n', 'binary'),
+    });
+    await page.getByRole('status').filter({ hasText: 'Privacy Policy PDF published and linked' }).waitFor();
+  } finally {
+    await page.close();
+  }
+  const settingsResponse = await context.request.get(`${baseUrl}/api/admin/site-settings`);
+  assert.equal(settingsResponse.status(), 200);
+  const privacyPdfUrl = (await settingsResponse.json()).settings.footerPrivacyPdfUrl;
+  assert.match(privacyPdfUrl, /^\/media\/.+\.pdf$/u);
+  const pdf = await context.request.get(`${baseUrl}${privacyPdfUrl}`);
+  assert.equal(pdf.status(), 200);
+  assert.match(pdf.headers()['content-type'], /application\/pdf/u);
+  return privacyPdfUrl;
+}
+
+async function assertPublicContactFlow({ context, baseUrl, database, path, locale, name, successText, privacyPdfUrl }) {
   const page = await context.newPage();
   try {
     await page.goto(`${baseUrl}${path}`, { waitUntil: 'domcontentloaded' });
     await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
     const form = page.locator('[data-consultation-form]');
+    assert.equal(await form.locator('.form-consent-text a').getAttribute('href'), privacyPdfUrl);
+    assert.equal(await form.locator('[name="consent"]').isEnabled(), true);
+    assert.equal(await page.locator('.footer-links a').filter({ hasText: locale === 'el' ? 'Πολιτική Απορρήτου' : 'Privacy Policy' }).getAttribute('href'), privacyPdfUrl);
     await form.locator('[name="consent"]').evaluate((input) => input.click());
     await form.locator('[name="message"]').fill('Browser acceptance contact message');
     await form.locator('.btn-submit').click();

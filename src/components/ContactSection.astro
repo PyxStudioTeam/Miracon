@@ -1,5 +1,5 @@
 ---
-import { getContactDescriptionLines, getMessages, localizePath, type SiteLocale } from '../lib/i18n';
+import { getContactDescriptionLines, getMessages, type SiteLocale } from '../lib/i18n';
 import { defaultSiteSettings, getSiteSettings } from '../lib/site-settings';
 import type { SiteSettings } from '../lib/site-settings-shared';
 
@@ -12,7 +12,7 @@ const { locale = 'en', settings } = Astro.props;
 const siteSettings = settings ?? await getSiteSettings();
 const m = getMessages(locale);
 const contactCopy = siteSettings.contactCopy[locale];
-const privacyHref = siteSettings.footerPrivacyPdfUrl || localizePath('/privacy-policy', locale);
+const privacyHref = siteSettings.footerPrivacyPdfUrl;
 ---
 
 <section id="contacts" class="contacts-section">
@@ -35,9 +35,11 @@ const privacyHref = siteSettings.footerPrivacyPdfUrl || localizePath('/privacy-p
           <textarea name="message" class="form-input form-textarea" placeholder={m['form.message']} maxlength="3000" required></textarea>
         </label>
         <label class="form-consent">
-          <input type="checkbox" name="consent" class="form-consent-input" required>
+          <input type="checkbox" name="consent" class="form-consent-input" required disabled={!privacyHref}>
           <span class="form-consent-box" aria-hidden="true"></span>
-          <span class="form-consent-text">{m['form.consentBefore']} <a href={privacyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a> {m['form.consentAfter']}</span>
+          <span class="form-consent-text">{privacyHref
+            ? <>{m['form.consentBefore']} <a href={privacyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a> {m['form.consentAfter']}</>
+            : m['form.policyUnavailable']}</span>
         </label>
         <button type="submit" class="btn-submit" disabled>
           <span>{m['form.submit']}</span><span class="btn-submit-arrow"></span>

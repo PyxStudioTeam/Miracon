@@ -569,6 +569,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .site-settings-card > header > div { display: grid; gap: 4px; }
 .site-settings-card > header strong { font-family: Georgia, serif; font-size: 21px; font-weight: 400; }
 .site-settings-card > header small { color: var(--admin-muted); font-size: 10px; }
+.site-settings-auto { padding: 7px 10px; border-radius: 999px; background: #e7f1e9; color: var(--admin-green); font-size: 11px; font-weight: 700; white-space: nowrap; }
 .site-settings-document { display: flex; min-height: 104px; padding: 24px; align-items: center; justify-content: space-between; gap: 20px; }
 .site-settings-document > div:first-child { display: grid; gap: 6px; }
 .site-settings-document strong { font-family: Georgia, serif; font-size: 18px; font-weight: 400; }
@@ -609,6 +610,7 @@ button:disabled { cursor: wait; opacity: .55; }
   .site-settings-list { margin-top: 28px; }
   .site-settings-card > header { grid-template-columns: 42px minmax(0, 1fr); }
   .site-settings-toggle { grid-column: 2; justify-self: start; }
+  .site-settings-auto { grid-column: 2; justify-self: start; }
   .site-settings-document { padding-inline: 16px; align-items: stretch; flex-direction: column; }
   .site-settings-document-actions { align-items: stretch; flex-direction: column; }
   .site-settings-state { padding-inline: 16px; flex-wrap: wrap; }

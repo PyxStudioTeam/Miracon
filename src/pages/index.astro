@@ -33,7 +33,7 @@ const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
 const homeUrl = absoluteLocalizedUrl('/', locale, Astro.url);
 const projectsHref = localizePath('/#projects', locale);
 const goldenVisaHref = localizePath('/golden-visa', locale);
-const privacyPolicyHref = siteSettings.footerPrivacyPdfUrl || localizePath('/privacy-policy', locale);
+const privacyPolicyHref = siteSettings.footerPrivacyPdfUrl;
 const homeStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -334,10 +334,11 @@ const homeStructuredData = {
             </label>
 
             <label class="form-consent">
-              <input type="checkbox" name="consent" class="form-consent-input" required>
+              <input type="checkbox" name="consent" class="form-consent-input" required disabled={!privacyPolicyHref}>
               <span class="form-consent-box" aria-hidden="true"></span>
-              <span class="form-consent-text">{m['form.consentBefore']} <a
-                  href={privacyPolicyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a> {m['form.consentAfter']}</span>
+              <span class="form-consent-text">{privacyPolicyHref
+                ? <>{m['form.consentBefore']} <a href={privacyPolicyHref} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a> {m['form.consentAfter']}</>
+                : m['form.policyUnavailable']}</span>
             </label>
 
             <button type="submit" class="btn-submit" disabled>
