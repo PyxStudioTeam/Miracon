@@ -31,6 +31,8 @@ const pageDescription = isGreek
     siteName={siteSettings.siteName}
   />
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/mobile.css">
+  <link rel="stylesheet" href="/shared-mobile-components.css">
 </head>
 <body class="legal-page">
   <SiteHeader locale={locale} settings={siteSettings} />
@@ -296,6 +298,8 @@ const pageDescription = isGreek
   </main>
 
   <SiteFooter locale={locale} settings={siteSettings} />
+
+  <script is:inline src="/site.js"></script>
 </body>
 </html>
 
@@ -311,9 +315,22 @@ const pageDescription = isGreek
     color: #1a1a1a;
     font-family: Gilroy, 'Plus Jakarta Sans', Arial, sans-serif;
   }
+  :global(body.legal-page > .header) {
+    position: relative;
+    top: auto;
+    flex: none;
+    padding: 22px 0;
+    background: #062e5e;
+  }
+  @media (max-width: 600px) {
+    :global(body.legal-page > .header) {
+      height: auto;
+      padding: 0;
+    }
+  }
   .legal-main {
     flex: 1;
-    padding: clamp(40px, 6vw, 80px) 0 clamp(60px, 8vw, 100px);
+    padding: clamp(32px, 4vw, 48px) 0 clamp(60px, 8vw, 100px);
   }
   .legal-container {
     max-width: 860px;
