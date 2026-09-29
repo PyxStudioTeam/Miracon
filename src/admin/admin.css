@@ -149,6 +149,11 @@ button:disabled { cursor: wait; opacity: .55; }
 
 .admin-main { min-height: 100vh; margin-left: 74px; padding: 76px clamp(34px, 6vw, 100px); }
 .demo-banner + .admin-main { padding-top: 95px; }
+
+.admin-contacts { overflow-wrap: anywhere; }
+.admin-contact-list { display: grid; gap: 12px; }
+.admin-contact-card { min-width: 0; padding: 16px; border: 1px solid var(--admin-line); border-radius: 12px; background: var(--admin-paper); }
+.admin-contact-message { white-space: pre-wrap; }
 .list-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; }
 .list-header h1 { margin: 15px 0 0; font-family: Georgia, serif; font-size: clamp(58px, 6vw, 88px); font-weight: 400; line-height: .9; letter-spacing: -.045em; }
 .list-header h1 sup { margin-left: 9px; color: var(--admin-gold); font: 12px 'DM Mono', monospace; vertical-align: top; letter-spacing: .06em; }
@@ -583,6 +588,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .pages-settings-fields fieldset { display: grid; min-width: 0; gap: 16px; padding: 22px; border: 1px solid var(--admin-line); border-radius: 12px; background: white; }
 .pages-settings-fields fieldset { margin: 0; background: #faf9f6; }
 .pages-settings-fields > section { gap: 24px; }
+.pages-copy-section .editor-locale-toolbar { margin: 0; }
+.pages-copy-fields { display: grid; gap: 16px; }
 .pages-settings-fields > section > h3 { margin: 0; font: 400 24px Georgia, serif; }
 .pages-settings-fields legend { padding: 0 8px; color: var(--admin-navy); font: 600 14px 'Plus Jakarta Sans', sans-serif; }
 .pages-settings-fields label { display: grid; min-width: 0; gap: 7px; color: var(--admin-navy); font-size: 12px; font-weight: 600; }

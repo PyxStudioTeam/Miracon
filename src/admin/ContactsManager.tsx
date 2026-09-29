@@ -53,7 +53,7 @@ export default function ContactsManager({ api }: ContactsManagerProps) {
   };
 
   return (
-    <section className="admin-contacts" aria-label="Contact requests">
+    <main className="admin-main admin-contacts" aria-label="Contact requests">
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <div><span className="eyebrow">Contact requests</span><h2>Submitted enquiries</h2><p>Read-only requests, newest first.</p></div>
         <button type="button" className="primary-button" disabled={busy} onClick={() => void download()}>Export all contacts (CSV)</button>
@@ -63,14 +63,14 @@ export default function ContactsManager({ api }: ContactsManagerProps) {
       {loading ? <p>Loading contacts…</p> : (
         <>
           {contacts.length === 0 ? <p>No requests on this page.</p> : (
-            <div style={{ display: 'grid', gap: 12 }}>
+            <div className="admin-contact-list">
               {contacts.map((contact) => (
-                <article key={contact.id} className="project-row" style={{ display: 'block', padding: 16, overflowWrap: 'anywhere' }}>
+                <article key={contact.id} className="admin-contact-card">
                   <strong>{contact.name}</strong>
                   <p><time dateTime={contact.createdAt}>{new Date(contact.createdAt).toLocaleString()}</time> · {contact.locale.toUpperCase()}</p>
                   <p>Phone: {contact.phone ?? 'Not provided'} · Email: {contact.email ?? 'Not provided'}</p>
                   <p>Source: <a href={contact.sourcePath} target="_blank" rel="noopener noreferrer">{contact.sourcePath}</a></p>
-                  <p style={{ whiteSpace: 'pre-wrap' }}>Full message: {contact.message}</p>
+                  <p className="admin-contact-message">Full message: {contact.message}</p>
                 </article>
               ))}
             </div>
@@ -82,6 +82,6 @@ export default function ContactsManager({ api }: ContactsManagerProps) {
           </nav>
         </>
       )}
-    </section>
+    </main>
   );
 }

@@ -1,13 +1,36 @@
+import { useState } from 'react';
 import type { SiteSettings } from '../lib/site-settings-shared';
 import { goldenVisaCopyKeys, homeCopyKeys } from '../lib/site-settings-shared';
 
 const titleCase = (value: string) => value.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase());
 const locales = ['en', 'el'] as const;
+type Locale = (typeof locales)[number];
+
+function PageCopyHeader({ title, locale, onLocaleChange }: {
+  title: string;
+  locale: Locale;
+  onLocaleChange: (locale: Locale) => void;
+}) {
+  return (
+    <header className="editor-locale-toolbar">
+      <div><strong>{title}</strong><span>Edit this page's text in English or Greek</span></div>
+      <div className="presentation-switch" role="group" aria-label={`${title} content language`}>
+        {locales.map((language) => (
+          <button key={language} type="button" className={locale === language ? 'active' : ''} aria-pressed={locale === language} onClick={() => onLocaleChange(language)}>
+            {language === 'en' ? 'EN' : 'ΕΛ'}
+          </button>
+        ))}
+      </div>
+    </header>
+  );
+}
 
 export default function PagesSettingsFields({ settings, onChange }: {
   settings: SiteSettings;
   onChange: (settings: SiteSettings) => void;
 }) {
+  const [homeLocale, setHomeLocale] = useState<Locale>('en');
+  const [goldenVisaLocale, setGoldenVisaLocale] = useState<Locale>('en');
   return (
     <div className="pages-settings-fields">
       <h3>Brand and contact information</h3>
@@ -35,24 +58,28 @@ export default function PagesSettingsFields({ settings, onChange }: {
         <label>International number (digits with country code)<input type="tel" value={settings.whatsappPhone} onChange={(event) => onChange({ ...settings, whatsappPhone: event.target.value })} /></label>
         <label>Prefilled message (optional)<textarea value={settings.whatsappMessage} onChange={(event) => onChange({ ...settings, whatsappMessage: event.target.value })} /></label>
       </fieldset>
-      {locales.map((locale) => <section key={locale} aria-label={`${locale.toUpperCase()} page content`}>
-        <h3>{locale === 'en' ? 'English' : 'Greek'} page content</h3>
-        <fieldset>
-          <legend>Homepage</legend>
+      <section className="pages-copy-section" aria-label="Homepage content">
+        <PageCopyHeader title="Homepage" locale={homeLocale} onLocaleChange={setHomeLocale} />
+        <div className="pages-copy-fields">
           {homeCopyKeys.map((key) => <label key={key}>{titleCase(key)}
-            <textarea value={settings.homeCopy[locale][key]} onChange={(event) => onChange({ ...settings, homeCopy: {
-              ...settings.homeCopy, [locale]: { ...settings.homeCopy[locale], [key]: event.target.value },
+            <textarea value={settings.homeCopy[homeLocale][key]} onChange={(event) => onChange({ ...settings, homeCopy: {
+              ...settings.homeCopy, [homeLocale]: { ...settings.homeCopy[homeLocale], [key]: event.target.value },
             } })} />
           </label>)}
-        </fieldset>
-        <fieldset>
-          <legend>Golden Visa page</legend>
+        </div>
+      </section>
+      <section className="pages-copy-section" aria-label="Golden Visa page content">
+        <PageCopyHeader title="Golden Visa page" locale={goldenVisaLocale} onLocaleChange={setGoldenVisaLocale} />
+        <div className="pages-copy-fields">
           {goldenVisaCopyKeys.map((key) => <label key={key}>{titleCase(key)}
-            <textarea value={settings.goldenVisaCopy[locale][key]} onChange={(event) => onChange({ ...settings, goldenVisaCopy: {
-              ...settings.goldenVisaCopy, [locale]: { ...settings.goldenVisaCopy[locale], [key]: event.target.value },
+            <textarea value={settings.goldenVisaCopy[goldenVisaLocale][key]} onChange={(event) => onChange({ ...settings, goldenVisaCopy: {
+              ...settings.goldenVisaCopy, [goldenVisaLocale]: { ...settings.goldenVisaCopy[goldenVisaLocale], [key]: event.target.value },
             } })} />
           </label>)}
-        </fieldset>
+        </div>
+      </section>
+      {locales.map((locale) => <section key={locale} aria-label={`${locale.toUpperCase()} page content`}>
+        <h3>{locale === 'en' ? 'English' : 'Greek'} contact form and stages</h3>
         <fieldset>
           <legend>Contact form</legend>
           {(['title', 'description'] as const).map((key) => <label key={key}>{titleCase(key)}
