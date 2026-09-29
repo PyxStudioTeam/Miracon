@@ -173,6 +173,8 @@ The release package contract requires `app.js`, `dist/server/entry.mjs`, package
 
 The existing Render Free preview uses `render.yaml` and deploys from Git, not from `release-output/`. Its start script migrates the database and seeds an empty catalog; it does not provision or rotate administrator credentials. Provision a fresh administrator explicitly with `npm run admin:provision -- --email=... --password-stdin`. Before updating an existing preview, back up PostgreSQL and uploaded media; the configured `MEDIA_ROOT=/tmp/miracon-media` is ephemeral and is not durable storage. Rotate any administrator credentials established by earlier preview startup scripts and revoke their sessions before treating the preview as safe for use.
 
+Render uses Node 22.12.0 with npm 10.9.0. After changing dependencies, regenerate `package-lock.json` with npm 10 and run a clean `npm ci` on Node 22 before deploying a branch directly; a successful install with npm 11 on Node 24 does not verify Render's lockfile.
+
 The homepage retains the original 1280×720, 60 fps `public/img/hero-bg-mobile.mp4`. The client selects exactly one initial video source, waits to preload the next clip until playback starts, and shows the poster and a Play button when autoplay fails or loading stalls. If a mobile video cannot be decoded, it tries the existing desktop 30 fps source without altering the original. Real-device Opera acceptance remains necessary after deployment; browser emulation cannot guarantee a device's decoder or autoplay policy.
 
 ## Content and media operations
