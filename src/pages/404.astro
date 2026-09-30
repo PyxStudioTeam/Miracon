@@ -2,7 +2,7 @@
 import SeoHead from '../components/SeoHead.astro';
 import { getLocale, getMessages, localizePath } from '../lib/i18n';
 import { getSiteSettings } from '../lib/site-settings';
-import { brandCopy } from '../lib/site-settings-shared';
+import { brandCopy, brandThemeStyle } from '../lib/site-settings-shared';
 
 Astro.response.status = 404;
 Astro.response.statusText = 'Not Found';
@@ -12,11 +12,10 @@ const siteSettings = await getSiteSettings();
 ---
 
 <!DOCTYPE html>
-<html lang={locale}>
+<html lang={locale} style={brandThemeStyle(siteSettings)}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
     title={brandCopy(m['notFound.seoTitle'], siteSettings)}
     description={brandCopy(m['notFound.seoDescription'], siteSettings)}
@@ -24,14 +23,20 @@ const siteSettings = await getSiteSettings();
     canonical={false}
     locale={locale}
     siteName={siteSettings.siteName}
+    logoUrl={siteSettings.logoUrl}
+    brandColor={siteSettings.brandColor}
   />
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="not-found-page">
   <header class="not-found-header">
     <a href={localizePath('/', locale)} class="not-found-logo" aria-label={`${siteSettings.siteName} ${m['common.home']}`}>
-      {siteSettings.siteName === 'MIRACON' && <img src="/img/logo_mark.svg" alt="">}
-      <span>{siteSettings.siteName}</span>
+      {siteSettings.logoUrl
+        ? <img src={siteSettings.logoUrl} alt="" class="custom-logo-image">
+        : <>
+            {siteSettings.siteName === 'MIRACON' && <img src="/img/logo_mark.svg" alt="">}
+            <span>{siteSettings.siteName}</span>
+          </>}
     </a>
     <a href={localizePath('/#contacts', locale)} class="not-found-contact">{m['notFound.contact']}</a>
   </header>
@@ -47,8 +52,8 @@ const siteSettings = await getSiteSettings();
         <a href={localizePath('/#projects', locale)} class="not-found-secondary">{m['notFound.explore']}</a>
       </div>
     </div>
-    {siteSettings.siteName === 'MIRACON' && <div class="not-found-mark" aria-hidden="true">
-      <img src="/img/logo_mark.svg" alt="">
+    {(siteSettings.logoUrl || siteSettings.siteName === 'MIRACON') && <div class="not-found-mark" aria-hidden="true">
+      <img src={siteSettings.logoUrl || '/img/logo_mark.svg'} class={siteSettings.logoUrl ? 'custom-logo-image' : undefined} alt="">
     </div>}
   </main>
 
@@ -61,24 +66,26 @@ const siteSettings = await getSiteSettings();
 
 <style>
   :global(html) { background: #f5f2ec; }
-  :global(body.not-found-page) { min-width: 0; min-height: 100svh; margin: 0; display: grid; grid-template-rows: auto 1fr auto; overflow-x: hidden; background: #f5f2ec; color: #003075; font-family: Gilroy, 'Plus Jakarta Sans', Arial, sans-serif; }
-  .not-found-header { width: min(100% - 64px, 1440px); margin: 0 auto; padding: 30px 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0, 48, 117, .18); }
-  .not-found-logo { display: inline-flex; align-items: center; gap: 10px; color: #003075; text-decoration: none; font-family: Georgia, serif; font-size: 20px; }
+  :global(body.not-found-page) { min-width: 0; min-height: 100svh; margin: 0; display: grid; grid-template-rows: auto 1fr auto; overflow-x: hidden; background: #f5f2ec; color: var(--brand-color); font-family: Gilroy, 'Plus Jakarta Sans', Arial, sans-serif; }
+  .not-found-header { width: min(100% - 64px, 1440px); margin: 0 auto; padding: 30px 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(var(--brand-rgb), .18); }
+  .not-found-logo { display: inline-flex; align-items: center; gap: 10px; color: var(--brand-color); text-decoration: none; font-family: Georgia, serif; font-size: 20px; }
   .not-found-logo img { width: 34px; height: 34px; object-fit: contain; filter: invert(16%) sepia(69%) saturate(2109%) hue-rotate(198deg) brightness(79%) contrast(105%); }
-  .not-found-contact { padding: 13px 24px; border: 1px solid #003075; border-radius: 999px; color: #003075; text-decoration: none; font-size: 15px; }
+  .not-found-logo .custom-logo-image { width: min(220px, 48vw); height: 54px; filter: none; }
+  .not-found-contact { padding: 13px 24px; border: 1px solid var(--brand-color); border-radius: 999px; color: var(--brand-color); text-decoration: none; font-size: 15px; }
   .not-found-main { width: min(100% - 64px, 1440px); margin: 0 auto; padding: clamp(56px, 8vw, 120px) 0; display: grid; grid-template-columns: minmax(0, 760px) 1fr; align-items: center; gap: clamp(48px, 8vw, 140px); }
   .not-found-copy { position: relative; z-index: 1; }
   .not-found-code { margin: 0 0 -18px; color: #cb994b; font-size: clamp(88px, 11vw, 170px); font-weight: 300; line-height: .85; letter-spacing: -.07em; }
   .not-found-kicker { margin: 40px 0 16px; color: #cb994b; font-size: 14px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
   .not-found-copy h1 { max-width: 720px; margin: 0; font-size: clamp(42px, 5.5vw, 82px); font-weight: 300; line-height: .96; letter-spacing: -.04em; }
-  .not-found-text { max-width: 600px; margin: 28px 0 0; color: rgba(0, 48, 117, .72); font-size: clamp(17px, 1.4vw, 21px); line-height: 1.45; }
+  .not-found-text { max-width: 600px; margin: 28px 0 0; color: rgba(var(--brand-rgb), .72); font-size: clamp(17px, 1.4vw, 21px); line-height: 1.45; }
   .not-found-actions { margin-top: 36px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
   .not-found-primary, .not-found-secondary { min-height: 52px; padding: 0 28px; display: inline-flex; align-items: center; justify-content: center; gap: 28px; border-radius: 999px; text-decoration: none; font-size: 16px; }
-  .not-found-primary { background: #003075; color: #fff; }
-  .not-found-secondary { border: 1px solid rgba(0, 48, 117, .35); color: #003075; }
-  .not-found-mark { justify-self: end; width: min(30vw, 390px); aspect-ratio: 1; display: grid; place-items: center; border: 1px solid rgba(0, 48, 117, .14); border-radius: 50%; }
+  .not-found-primary { background: var(--brand-color); color: #fff; }
+  .not-found-secondary { border: 1px solid rgba(var(--brand-rgb), .35); color: var(--brand-color); }
+  .not-found-mark { justify-self: end; width: min(30vw, 390px); aspect-ratio: 1; display: grid; place-items: center; border: 1px solid rgba(var(--brand-rgb), .14); border-radius: 50%; }
   .not-found-mark img { width: 54%; height: 54%; object-fit: contain; opacity: .13; filter: invert(16%) sepia(69%) saturate(2109%) hue-rotate(198deg) brightness(79%) contrast(105%); }
-  .not-found-footer { width: min(100% - 64px, 1440px); margin: 0 auto; padding: 26px 0 32px; display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid rgba(0, 48, 117, .18); color: rgba(0, 48, 117, .68); font-size: 14px; }
+  .not-found-mark .custom-logo-image { width: 72%; height: 72%; opacity: .18; filter: none; }
+  .not-found-footer { width: min(100% - 64px, 1440px); margin: 0 auto; padding: 26px 0 32px; display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid rgba(var(--brand-rgb), .18); color: rgba(var(--brand-rgb), .68); font-size: 14px; }
   .not-found-footer a { color: inherit; text-decoration: none; }
 
   @media (max-width: 720px) {

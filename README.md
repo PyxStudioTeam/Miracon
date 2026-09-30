@@ -14,7 +14,7 @@ Supabase, its media worker, and Vercel are not active runtime dependencies. Thei
 
 ## Local development
 
-Use Node `>=22.12.0`, a local PostgreSQL database, and an absolute writable media directory.
+Use Node `>=22.19.0`, a local PostgreSQL database, and an absolute writable media directory.
 
 ```bash
 npm install
@@ -158,9 +158,17 @@ npm run release:verify
 
 It runs `astro check`, a standalone build, deterministic application tests, schema contracts, migration tooling tests, and release package tests. Database acceptance is separate and requires the guarded disposable database workflow above.
 
+Check the full locked dependency tree against current security advisories before deployment:
+
+```bash
+npm audit --audit-level=low
+```
+
+Unlike `release:verify`, this check needs the npm advisory registry and can report new issues after a previously clean build.
+
 Exact staging prerequisites:
 
-1. Use Node `>=22.12.0` and install the lockfile with `npm ci`.
+1. Use Node `>=22.19.0` and install the lockfile with `npm ci`.
 2. Run `npm run release:verify` without database-test variables.
 3. Run `npm run test:db` against a disposable database, never the staging database.
 4. Create the release with `npm run release:package -- release-output`; inspect `release-manifest.json`.
@@ -173,7 +181,7 @@ The release package contract requires `app.js`, `dist/server/entry.mjs`, package
 
 The existing Render Free preview uses `render.yaml` and deploys from Git, not from `release-output/`. Its start script migrates the database and seeds an empty catalog; it does not provision or rotate administrator credentials. Provision a fresh administrator explicitly with `npm run admin:provision -- --email=... --password-stdin`. Before updating an existing preview, back up PostgreSQL and uploaded media; the configured `MEDIA_ROOT=/tmp/miracon-media` is ephemeral and is not durable storage. Rotate any administrator credentials established by earlier preview startup scripts and revoke their sessions before treating the preview as safe for use.
 
-Render uses Node 22.12.0 with npm 10.9.0. After changing dependencies, regenerate `package-lock.json` with npm 10 and run a clean `npm ci` on Node 22 before deploying a branch directly; a successful install with npm 11 on Node 24 does not verify Render's lockfile.
+Render uses Node 22.22.2 with npm 10. After changing dependencies, regenerate `package-lock.json` with npm 10 and run a clean `npm ci` on Node 22 in Linux CI or Render before deploying a branch directly; Windows native dependencies such as `argon2` may require the Visual Studio C++ toolchain.
 
 The homepage retains the original 1280×720, 60 fps `public/img/hero-bg-mobile.mp4`. The client selects exactly one initial video source, waits to preload the next clip until playback starts, and shows the poster and a Play button when autoplay fails or loading stalls. If a mobile video cannot be decoded, it tries the existing desktop 30 fps source without altering the original. Real-device Opera acceptance remains necessary after deployment; browser emulation cannot guarantee a device's decoder or autoplay policy.
 
@@ -184,12 +192,13 @@ The homepage retains the original 1280×720, 60 fps `public/img/hero-bg-mobile.m
 - Project, gallery, and homepage ordering are stored explicitly in PostgreSQL.
 - Uploads are written beneath `MEDIA_ROOT`; the database stores same-origin URLs and relative paths.
 - Preview responses remain private and non-indexable.
-- In `/admin`, **Pages** edits the English/Greek homepage, Golden Visa copy, contact-section text, five shared stages, site/company name, footer phone/email/address, and visible social links. Each locale has its own copy; both carousel loops and both pages read the same five stage records. Owner changes publish through the existing revision flow; editor changes remain proposals until approved.
-- Homepage and Golden Visa copy use separate EN/ΕΛ switches in **Pages**. Switching languages preserves unsaved edits in the other language until the settings are saved.
-- Site/company names and the brand mentions in public default copy/metadata update through Pages. Original SVG logo/favicons, the DNS origin, and the legally approved privacy-policy entity/contact text are separate assets/content and must be reviewed independently during a rebrand; the Pages editor warns about this.
-- Privacy Policy is PDF-only: `/privacy-policy` and `/el/privacy-policy` return 404. Upload one bilingual Privacy Policy PDF under `/admin` → **Site settings**; for the owner, upload automatically publishes it and links the same PDF in both languages' footers and beneath every consultation-form consent checkbox without an extra Save. Editor uploads become proposals; links update after owner approval. Without a published PDF, the footer link is omitted and consent/submission stay disabled. Public pages use a five-minute CDN cache with stale-while-revalidate, so cached visitors may see the old link briefly.
+- `/admin` groups navigation by purpose: **Content** (Projects, Homepage hero, Page text), **Inbox** (Enquiries, owner-only Review changes), and **Site** (Brand & contacts, Legal PDFs, owner-only Team). The mobile sections menu shows the same groups; a project's own editor has Content, Features, Media, Floor plans, and SEO & URL steps.
+- **Page text** edits the English/Greek homepage, Golden Visa and contact-section copy and the five shared stages. EN/ΕΛ switches preserve unsaved text in the other language until settings are saved.
+- **Brand & contacts** edits the site/company names, footer phone/email/address and social links. Upload an SVG or PNG logo (up to 20 MB), select a primary website color, then **Save settings**; **Use original logo** and **Restore original blue** revert those choices before saving. The logo updates public header/footer branding, favicon and site metadata; the selected color updates the primary public palette, not the gold accent. The original source logo remains in `public/`. Owner saves publish through the site-settings revision flow; editor saves create proposals for owner approval. Apply database migration `0015_site_branding.sql` before using these controls in an existing environment.
+- Rebranding also requires separate review of the DNS origin, legally approved Privacy Policy entity/contact wording and artwork embedded in static images or videos; editing the brand settings does not rewrite those assets.
+- Privacy Policy is PDF-only: `/privacy-policy` and `/el/privacy-policy` return 404. Upload one bilingual PDF under `/admin` → **Site** → **Legal PDFs**; for the owner, upload publishes it automatically and links the same PDF in both languages' footers and beneath every consultation-form consent checkbox without an extra Save. Editor uploads become proposals; links update after owner approval. Without a published PDF, the footer link is omitted and consent/submission stay disabled. Public pages use a five-minute CDN cache with stale-while-revalidate, so cached visitors may see the old link or brand briefly.
 - Contact forms request an opaque one-time challenge only when a valid form is submitted; checking consent never starts a timer, and there is no browser-side retry cooldown. PostgreSQL enforces same-client token use, a 15-minute expiry, 20 challenge issuances and 5 accepted submissions per client per hour, a 15-minute duplicate window, and the honeypot. A failed or ambiguous submission is never resent without another explicit click.
-- **Applications** is a read-only, paginated list of stored submissions with full message and source page. CSV export includes all stored submissions, UTF-8/Excel encoding, and spreadsheet-formula protection. Telephone, email, name, message, and consent are required for new submissions; historical partial submissions remain readable.
+- **Enquiries** is a read-only, paginated list of stored submissions with full message and source page. CSV export includes all stored submissions, UTF-8/Excel encoding, and spreadsheet-formula protection. Telephone, email, name, message, and consent are required for new submissions; historical partial submissions remain readable.
 - A project accepts an optional HTTPS virtual-tour URL. Its public EN/EL button opens in a new tab only when populated. Unpublished project URLs redirect to the localized `#projects` listing; a published project with `remaining_units=0` stays visible with a sold-out label.
 - Publishing a release does not remove pre-existing files from the hosting document root. Use the [production release runbook](docs/production-release-runbook.md) for explicit backup verification, legacy `.env`/`.git` removal, unauthenticated admin API checks, and live 404 acceptance.
 

@@ -104,6 +104,20 @@ describe('revision contracts', () => {
     expect(parsed.every((result) => result.success)).toBe(true);
   });
 
+  it('restores the original brand from old revisions and rejects unsafe new branding', () => {
+    const previous = settingsSnapshot();
+    const legacy = siteSettingsSnapshotSchema.parse(previous);
+    const id = '4c4e0a24-0e6a-4f37-91f0-813768e0a7da';
+    const branded = { ...previous, settings: {
+      ...previous.settings, logo_url: `/media/uploads/${id}/${id}.png`, brand_color: '#a13355',
+    } };
+    expect(legacy.settings.logo_url).toBe('');
+    expect(legacy.settings.brand_color).toBe('#003075');
+    expect(siteSettingsSnapshotSchema.safeParse(branded).success).toBe(true);
+    expect(siteSettingsSnapshotSchema.safeParse({ ...branded, settings: { ...branded.settings, logo_url: 'https://example.com/logo.svg' } }).success).toBe(false);
+    expect(siteSettingsSnapshotSchema.safeParse({ ...branded, settings: { ...branded.settings, brand_color: 'red; background: url(https://example.com)' } }).success).toBe(false);
+  });
+
   it('reads historical project revisions without a tour link and rejects unsafe tour protocols', () => {
     const previous = projectSnapshot();
     const { virtual_tour_url: _absent, ...historicalProject } = previous.project!;

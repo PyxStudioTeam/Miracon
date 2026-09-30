@@ -41,6 +41,8 @@ export function buildSiteSettingsRevisionTransport(
       footer_cookie_pdf_url: input.settings.footerCookiePdfUrl,
       site_name: input.settings.siteName,
       company_name: input.settings.companyName,
+      logo_url: input.settings.logoUrl,
+      brand_color: input.settings.brandColor,
       home_copy: input.settings.homeCopy,
       golden_visa_copy: input.settings.goldenVisaCopy,
       contact_copy: input.settings.contactCopy,

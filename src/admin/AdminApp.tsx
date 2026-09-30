@@ -27,9 +27,7 @@ import {
   GripVertical,
   History,
   ImagePlus,
-  Inbox,
   KeyRound,
-  LayoutGrid,
   LoaderCircle,
   LogOut,
   Plus,
@@ -39,12 +37,12 @@ import {
   Smartphone,
   Trash2,
   Upload,
-  Users,
   UserX,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { AdminApi, type AdminUser, type PendingProposal, type RevisionHistoryItem, type SessionState } from './admin-api';
+import AdminNavigation, { type AdminNavView } from './AdminNavigation';
 import ContactsManager from './ContactsManager';
 import PagesSettingsFields from './PagesSettingsFields';
 import { isValidRemainingUnits, parseRemainingUnitsInput } from './remaining-units';
@@ -69,7 +67,6 @@ import {
 } from '../lib/site-settings-shared';
 
 type AdminSection = 'content' | 'specs' | 'media' | 'plans' | 'seo';
-type AdminView = 'projects' | 'home-hero' | 'pages' | 'contacts' | 'site-settings' | 'proposals' | 'users';
 type Toast = { tone: 'success' | 'error'; message: string } | null;
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -256,37 +253,37 @@ function pruneTranslations(project: Project): Project {
   };
 }
 
-function BrandMark() {
-  return <div className="admin-brand-mark"><img src="/img/logo_mark.svg" alt="" /></div>;
+function BrandMark({ logoUrl = '' }: { logoUrl?: string }) {
+  return <div className="admin-brand-mark"><img src={logoUrl || '/img/logo_mark.svg'} alt="" /></div>;
 }
 
-function BrandLockup({ siteName = 'MIRACON' }: { siteName?: string }) {
+function BrandLockup({ siteName = 'MIRACON', logoUrl = '' }: { siteName?: string; logoUrl?: string }) {
   return (
     <div className="admin-brand-lockup">
-      {siteName === 'MIRACON' && <BrandMark />}
+      {(logoUrl || siteName === 'MIRACON') && <BrandMark logoUrl={logoUrl} />}
       <div><strong>{siteName}</strong><span>DESK</span></div>
     </div>
   );
 }
 
-function LoadingScreen() {
+function LoadingScreen({ logoUrl = '' }: { logoUrl?: string }) {
   return (
     <div className="admin-loading">
-      <BrandMark />
+      <BrandMark logoUrl={logoUrl} />
       <LoaderCircle className="spin" size={24} />
       <span>Loading administration desk...</span>
     </div>
   );
 }
 
-function LoginScreen({ onLogin, error, loading, siteName }: { onLogin: (email: string, password: string) => Promise<void>; error: string; loading: boolean; siteName: string }) {
+function LoginScreen({ onLogin, error, loading, siteName, logoUrl }: { onLogin: (email: string, password: string) => Promise<void>; error: string; loading: boolean; siteName: string; logoUrl: string }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   return (
     <div className="admin-login">
       <div className="login-visual">
-        <BrandLockup siteName={siteName} />
+        <BrandLockup siteName={siteName} logoUrl={logoUrl} />
         <div>
           <span className="login-index">01 / ADMINISTRATION</span>
           <h2>A Place<br /><em>of Your Own</em></h2>
@@ -792,7 +789,7 @@ function SiteSettingsManager({
   onToast: (toast: Toast) => void;
   role: 'owner' | 'editor';
   currentRevisionId?: string | null;
-  mode: 'pages' | 'site-settings';
+  mode: 'pages' | 'branding' | 'legal';
 }) {
   const [settings, setSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
   const [savedSettings, setSavedSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
@@ -800,6 +797,7 @@ function SiteSettingsManager({
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState<LegalUrlKey | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     setSettings({ ...initialSettings });
@@ -886,6 +884,30 @@ function SiteSettingsManager({
     }
   }
 
+  async function uploadLogo(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.type !== 'image/svg+xml' && file.type !== 'image/png') {
+      onToast({ tone: 'error', message: 'Choose an SVG or PNG logo' });
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      onToast({ tone: 'error', message: 'Logo must be smaller than 20 MB' });
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const media = await api.uploadMedia(file);
+      setSettings((current) => ({ ...current, logoUrl: media.relativeUrl }));
+      onToast({ tone: 'success', message: 'Logo uploaded. Save settings to publish it.' });
+    } catch (error) {
+      onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload logo' });
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
   async function saveSettings() {
     if (hasInvalidDocument) {
       onToast({ tone: 'error', message: 'Upload a PDF before enabling a legal document link' });
@@ -905,13 +927,13 @@ function SiteSettingsManager({
     <main className="admin-main site-settings-manager">
       <header className="list-header">
         <div>
-          <span className="eyebrow">Website / {mode === 'pages' ? 'Pages & contacts' : 'Legal documents'}</span>
-          <h1>{mode === 'pages' ? 'Pages' : 'Site settings'}</h1>
-          <p>{mode === 'pages' ? 'Edit English and Greek page text, stages, footer contacts and social links' : 'Upload legal PDFs. The Privacy Policy is linked automatically after upload (after owner approval for editors).'}</p>
+          <span className="eyebrow">Website / {mode === 'pages' ? 'Page content' : mode === 'branding' ? 'Identity & contacts' : 'Documents'}</span>
+          <h1>{mode === 'pages' ? 'Page content' : mode === 'branding' ? 'Brand & contacts' : 'Legal PDFs'}</h1>
+          <p>{mode === 'pages' ? 'Edit visitor-facing text in English and Greek' : mode === 'branding' ? 'Change the logo and primary color, company details, footer contacts and social links' : 'Upload legal PDFs. The Privacy Policy is linked automatically after upload (after owner approval for editors).'}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="secondary-button" onClick={() => setHistoryOpen(true)} title="View revision history"><History size={17} />History</button>
-          <button className="primary-button" onClick={saveSettings} disabled={saving || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument}>
+          <button className="primary-button" onClick={saveSettings} disabled={saving || uploadingLogo || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument}>
             {saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
             {role === 'owner' ? 'Save settings' : 'Submit proposal'}
           </button>
@@ -919,8 +941,34 @@ function SiteSettingsManager({
       </header>
 
       <div className="site-settings-list">
-        {mode === 'pages' && <PagesSettingsFields settings={settings} onChange={setSettings} />}
-        {mode === 'site-settings' && documents.map((document) => (
+        {mode === 'branding' && <section className="site-settings-card brand-settings-card">
+          <header>
+            <span className="site-settings-icon"><ImagePlus size={22} /></span>
+            <div><strong>Logo &amp; primary color</strong><small>Shown on the public website after saving or owner approval</small></div>
+          </header>
+          <div className="brand-settings-fields">
+            <div className="brand-logo-preview"><img src={settings.logoUrl || '/img/logo_mark.svg'} alt={`${settings.siteName} logo preview`} /></div>
+            <div className="brand-logo-controls">
+              <strong>Website logo</strong>
+              <small>Upload an SVG or PNG image (up to 20 MB). The original logo remains available.</small>
+              <div className="brand-logo-actions">
+                <label className="secondary-button">
+                  <input type="file" accept="image/svg+xml,image/png,.svg,.png" disabled={saving || uploadingLogo} onChange={uploadLogo} />
+                  {uploadingLogo ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
+                  {settings.logoUrl ? 'Replace logo' : 'Upload logo'}
+                </label>
+                {settings.logoUrl && <button type="button" className="secondary-button" disabled={saving || uploadingLogo} onClick={() => setSettings((current) => ({ ...current, logoUrl: '' }))}>Use original logo</button>}
+              </div>
+              <label className="brand-color-picker">Primary website color
+                <span><input type="color" value={settings.brandColor} disabled={saving || uploadingLogo} onChange={(event) => setSettings((current) => ({ ...current, brandColor: event.target.value }))} /><output>{settings.brandColor}</output></span>
+                <small>Choose a dark shade so white text on buttons remains readable.</small>
+              </label>
+              {settings.brandColor !== defaultSiteSettings.brandColor && <button type="button" className="brand-color-reset" disabled={saving || uploadingLogo} onClick={() => setSettings((current) => ({ ...current, brandColor: defaultSiteSettings.brandColor }))}>Restore original blue</button>}
+            </div>
+          </div>
+        </section>}
+        {(mode === 'pages' || mode === 'branding') && <PagesSettingsFields settings={settings} onChange={setSettings} mode={mode} />}
+        {mode === 'legal' && documents.map((document) => (
           <section className="site-settings-card" key={document.urlKey}>
             <header>
               <span className="site-settings-icon"><FileText size={22} /></span>
@@ -1790,6 +1838,7 @@ function ProjectEditor({
   api,
   role,
   siteName,
+  logoUrl,
 }: {
   initialProject: Project;
   onBack: () => void;
@@ -1798,6 +1847,7 @@ function ProjectEditor({
   api: AdminApi;
   role: 'owner' | 'editor';
   siteName: string;
+  logoUrl: string;
 }) {
   const [project, setProject] = useState<Project>(() => ({ ...initialProject }));
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialProject));
@@ -2050,8 +2100,12 @@ function ProjectEditor({
     update('categories', project.categories.includes(category) ? project.categories.filter((item) => item !== category) : [...project.categories, category]);
   }
 
-  const sections: { id: AdminSection; label: string }[] = [
-    { id: 'content', label: 'Content' }, { id: 'specs', label: 'Features' }, { id: 'media', label: 'Media' }, { id: 'plans', label: 'Floor plans' }, { id: 'seo', label: 'SEO & URL' },
+  const sections: { id: AdminSection; label: string; description: string }[] = [
+    { id: 'content', label: 'Content', description: 'Name, address & pricing' },
+    { id: 'specs', label: 'Features', description: 'Amenities & benefits' },
+    { id: 'media', label: 'Media', description: 'Photos, cover & videos' },
+    { id: 'plans', label: 'Floor plans', description: 'Layouts & plan images' },
+    { id: 'seo', label: 'SEO & URL', description: 'Search preview & link' },
   ];
 
   return (
@@ -2059,7 +2113,7 @@ function ProjectEditor({
       <header className="editor-topbar">
         <button className="icon-text-button" onClick={requestBack}><ArrowLeft size={17} />Projects</button>
         <div className="editor-context">
-          <BrandMark />
+          <BrandMark logoUrl={logoUrl} />
           <div className="editor-title">
             <span className={`status-dot ${project.status}`}></span>
             <strong>{project.title}</strong>
@@ -2087,7 +2141,7 @@ function ProjectEditor({
         <aside className="editor-nav">
           <span className="eyebrow">Project editor</span>
           <div className="editor-readiness"><div><span>Content readiness</span><strong>{readiness}%</strong></div><i><b style={{ width: `${readiness}%` }}></b></i><small>{missingRequirements.length ? `${missingRequirements.length} required items left` : 'Ready to publish'}</small></div>
-          {sections.map((item, index) => <button key={item.id} className={section === item.id ? 'active' : ''} onClick={() => setSection(item.id)}><i>{String(index + 1).padStart(2, '0')}</i>{item.label}<ChevronRight size={15} /></button>)}
+          {sections.map((item, index) => <button key={item.id} type="button" className={section === item.id ? 'active' : ''} aria-current={section === item.id ? 'step' : undefined} onClick={() => setSection(item.id)}><i>{String(index + 1).padStart(2, '0')}</i><span className="editor-nav-copy"><strong>{item.label}</strong><small>{item.description}</small></span><ChevronRight size={15} /></button>)}
           {role === 'owner' && <button className="delete-project" onClick={() => setConfirmDelete(true)}><Trash2 size={16} />Delete project</button>}
         </aside>
 
@@ -2379,7 +2433,7 @@ function ProjectEditor({
   );
 }
 
-export default function AdminApp({ siteName = 'MIRACON' }: { siteName?: string }) {
+export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteName?: string; logoUrl?: string }) {
   const [ready, setReady] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>({ authenticated: false });
   const [loginError, setLoginError] = useState('');
@@ -2390,7 +2444,7 @@ export default function AdminApp({ siteName = 'MIRACON' }: { siteName?: string }
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({ ...defaultSiteSettings });
   const [siteSettingsRevisionId, setSiteSettingsRevisionId] = useState<string | null>(null);
   const [pendingProposalsCount, setPendingProposalsCount] = useState(0);
-  const [view, setView] = useState<AdminView>('projects');
+  const [view, setView] = useState<AdminNavView>('projects');
   const [selected, setSelected] = useState<Project | null>(null);
   const [globalToast, setGlobalToast] = useState<Toast>(null);
 
@@ -2538,8 +2592,8 @@ export default function AdminApp({ siteName = 'MIRACON' }: { siteName?: string }
     setSelected(null);
   }
 
-  if (!ready) return <LoadingScreen />;
-  if (!sessionState.authenticated) return <LoginScreen onLogin={login} error={loginError} loading={loginLoading} siteName={siteName} />;
+  if (!ready) return <LoadingScreen logoUrl={logoUrl} />;
+  if (!sessionState.authenticated) return <LoginScreen onLogin={login} error={loginError} loading={loginLoading} siteName={siteName} logoUrl={logoUrl} />;
 
   const userRole = sessionState.role ?? 'editor';
   const isOwner = userRole === 'owner';
@@ -2548,46 +2602,8 @@ export default function AdminApp({ siteName = 'MIRACON' }: { siteName?: string }
     <div className="admin-app">
       {!selected && (
         <aside className="admin-rail">
-          <BrandLockup siteName={siteSettings.siteName} />
-          <nav>
-            <button className={view === 'projects' ? 'active' : ''} title="Projects" onClick={() => setView('projects')}>
-              <LayoutGrid size={19} />
-              <span>Projects</span>
-            </button>
-            <button className={view === 'home-hero' ? 'active' : ''} title="Homepage hero" onClick={() => setView('home-hero')}>
-              <Film size={19} />
-              <span>Home hero</span>
-            </button>
-            <button className={view === 'pages' ? 'active' : ''} title="Pages" onClick={() => setView('pages')}>
-              <FileText size={19} />
-              <span>Pages</span>
-            </button>
-            <button className={view === 'contacts' ? 'active' : ''} title="Applications" onClick={() => setView('contacts')}>
-              <Inbox size={19} />
-              <span>Applications</span>
-            </button>
-            <button className={view === 'site-settings' ? 'active' : ''} title="Site settings" onClick={() => setView('site-settings')}>
-              <FileText size={19} />
-              <span>Site settings</span>
-            </button>
-            {isOwner && (
-              <>
-                <button className={view === 'proposals' ? 'active' : ''} title="Approvals" onClick={() => setView('proposals')}>
-                  <Inbox size={19} />
-                  <span>Proposals</span>
-                  {pendingProposalsCount > 0 && <span className="nav-counter-badge">{pendingProposalsCount}</span>}
-                </button>
-                <button className={view === 'users' ? 'active' : ''} title="Users" onClick={() => setView('users')}>
-                  <Users size={19} />
-                  <span>Users</span>
-                </button>
-              </>
-            )}
-            <a href="/" target="_blank" rel="noreferrer">
-              <ExternalLink size={19} />
-              <span>View website</span>
-            </a>
-          </nav>
+          <BrandLockup siteName={siteSettings.siteName} logoUrl={siteSettings.logoUrl} />
+          <AdminNavigation view={view} onChange={setView} isOwner={isOwner} pendingProposalsCount={pendingProposalsCount} />
           <div>
             <div className="rail-user-section">
               <span className="rail-user-email" title={sessionState.email ?? ''}>{sessionState.email ?? 'Administrator'}</span>
@@ -2608,6 +2624,7 @@ export default function AdminApp({ siteName = 'MIRACON' }: { siteName?: string }
           api={api}
           role={userRole}
           siteName={siteSettings.siteName}
+          logoUrl={siteSettings.logoUrl}
         />
       ) : view === 'home-hero' ? (
         <HomeHeroManager
@@ -2624,7 +2641,7 @@ export default function AdminApp({ siteName = 'MIRACON' }: { siteName?: string }
           role={userRole}
           currentRevisionId={homeHeroRevisionId}
         />
-      ) : (view === 'site-settings' || view === 'pages') ? (
+      ) : (view === 'pages' || view === 'branding' || view === 'legal') ? (
         <SiteSettingsManager
           initialSettings={siteSettings}
           api={api}

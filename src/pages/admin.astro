@@ -2,7 +2,7 @@
 import AdminApp from '../admin/AdminApp';
 import '../admin/admin.css';
 import { getSiteSettings } from '../lib/site-settings';
-const { siteName } = await getSiteSettings();
+const { siteName, logoUrl } = await getSiteSettings();
 ---
 
 <!DOCTYPE html>
@@ -10,7 +10,7 @@ const { siteName } = await getSiteSettings();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type={logoUrl.endsWith('.png') ? 'image/png' : 'image/svg+xml'} href={logoUrl || '/favicon.svg'}>
   <meta name="robots" content="noindex,nofollow">
   <title>{siteName} Project Desk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +18,6 @@ const { siteName } = await getSiteSettings();
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="admin-body">
-  <AdminApp client:load siteName={siteName} />
+  <AdminApp client:load siteName={siteName} logoUrl={logoUrl} />
 </body>
 </html>

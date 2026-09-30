@@ -12,7 +12,7 @@
 
 ## Commands
 
-Root requires Node `>=22.12.0`:
+Root requires Node `>=22.19.0`:
 
 ```bash
 npm install
@@ -38,6 +38,8 @@ npm run test:db
 The URL database name must contain a distinct `test`, `testing`, `ci`, `disposable`, or `tmp` segment. Never use development, staging, or production data. Individual guarded commands are listed in the root README.
 
 No project ESLint/Prettier/Jest is configured. Verification is `npm run release:verify`; database-backed acceptance is separately `npm run test:db` with safe disposable configuration.
+
+Run `npm audit --audit-level=low` separately before deployment; it requires network access to the advisory registry and is not part of the deterministic release gate.
 
 ## Runtime environment
 

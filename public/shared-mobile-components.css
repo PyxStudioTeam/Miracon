@@ -232,7 +232,7 @@
     width: auto;
     min-height: 0;
     margin: 0 0 8px;
-    color: #003075;
+    color: var(--brand-color);
     font-size: 22px;
     font-weight: 500;
     line-height: 21.343px;
@@ -249,7 +249,7 @@
     gap: 5px;
     height: auto;
     margin: 0 0 14px;
-    color: #003075;
+    color: var(--brand-color);
     font-size: 14px;
     font-weight: 400;
     line-height: 16.8px;
@@ -260,7 +260,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #003075;
+    background: var(--brand-color);
   }
 
   .project-description {
@@ -271,7 +271,7 @@
     max-height: none;
     margin: 0;
     overflow: visible;
-    color: #003075;
+    color: var(--brand-color);
     font-size: 14px;
     font-weight: 400;
     line-height: 15.893px;
@@ -295,7 +295,7 @@
     width: auto;
     height: auto;
     margin: 0;
-    color: #003075;
+    color: var(--brand-color);
     font-size: 22px;
     font-weight: 500;
     line-height: 21.343px;

@@ -25,16 +25,18 @@ function PageCopyHeader({ title, locale, onLocaleChange }: {
   );
 }
 
-export default function PagesSettingsFields({ settings, onChange }: {
+export default function PagesSettingsFields({ settings, onChange, mode }: {
   settings: SiteSettings;
   onChange: (settings: SiteSettings) => void;
+  mode: 'pages' | 'branding';
 }) {
   const [homeLocale, setHomeLocale] = useState<Locale>('en');
   const [goldenVisaLocale, setGoldenVisaLocale] = useState<Locale>('en');
   return (
     <div className="pages-settings-fields">
-      <h3>Brand and contact information</h3>
-      <p>Text and metadata update here. The logo artwork, favicon, DNS, and reviewed privacy-policy legal entity/contact text are separate: replace or review those before changing the brand.</p>
+      {mode === 'branding' ? <>
+      <h3>Company and contact details</h3>
+      <p>Site identity, footer contacts and social links are managed here. The logo and primary color are above.</p>
       <label>Site name<input type="text" value={settings.siteName} onChange={(event) => onChange({ ...settings, siteName: event.target.value })} /></label>
       <label>Company name<input type="text" value={settings.companyName} onChange={(event) => onChange({ ...settings, companyName: event.target.value })} /></label>
       <label>Phone (international)<input type="tel" value={settings.footerPhone} onChange={(event) => onChange({ ...settings, footerPhone: event.target.value })} /></label>
@@ -58,6 +60,7 @@ export default function PagesSettingsFields({ settings, onChange }: {
         <label>International number (digits with country code)<input type="tel" value={settings.whatsappPhone} onChange={(event) => onChange({ ...settings, whatsappPhone: event.target.value })} /></label>
         <label>Prefilled message (optional)<textarea value={settings.whatsappMessage} onChange={(event) => onChange({ ...settings, whatsappMessage: event.target.value })} /></label>
       </fieldset>
+      </> : <>
       <section className="pages-copy-section" aria-label="Homepage content">
         <PageCopyHeader title="Homepage" locale={homeLocale} onLocaleChange={setHomeLocale} />
         <div className="pages-copy-fields">
@@ -109,6 +112,7 @@ export default function PagesSettingsFields({ settings, onChange }: {
           </div>)}
         </fieldset>
       </section>)}
+      </>}
     </div>
   );
 }

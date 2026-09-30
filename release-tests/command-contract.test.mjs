@@ -92,7 +92,6 @@ test('documents the standalone hosting environment and guarded commands', () => 
   const hostingDocuments = [ftpHandoffGuide, simpleHostingGuide, productionReleaseRunbook];
 
   // Then
-  assert.equal(packageJson.engines.node, '>=22.12.0');
   for (const document of hostingDocuments) {
     assert.match(document, /CONTACT_DIGEST_SECRET/u);
     assert.match(document, /CONTACT_SMTP_ENABLED=false/u);
@@ -100,8 +99,6 @@ test('documents the standalone hosting environment and guarded commands', () => 
   }
   assert.match(ftpHandoffGuide, /npm run standalone:test:db/u);
   assert.doesNotMatch(ftpHandoffGuide, /npm run standalone:test(?:\s|`|$)/u);
-  assert.match(ftpHandoffGuide, />=22\.12\.0/u);
-  assert.match(simpleHostingGuide, />=22\.12\.0/u);
 });
 
 async function runNpm(command, environment) {

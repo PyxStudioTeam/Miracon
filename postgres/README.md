@@ -8,7 +8,7 @@ Apply `migrations/*.sql` in filename order. The final schema lives in the `mirac
 
 - draft and published projects, stable text IDs and slugs, nullable non-negative remaining-unit availability, optional HTTPS virtual-tour URLs, explicit ordering, publication/update timestamps, presentation fields, JSON content, translation overlays, and hero/walkthrough playlists;
 - ordered project images with project-delete cascade and ordered homepage videos whose optional project reference becomes null when a project is deleted;
-- the singleton site settings row for legal documents, localized page/stages/contact copy, brand identity, footer contacts, and configurable social links;
+- the singleton site settings row for legal documents, localized page/stages/contact copy, site/company names, constrained uploaded SVG/PNG logo URL and six-digit primary brand color, footer contacts, and configurable social links;
 - owner/editor administrator rows, with `id=1` reserved as the sole owner and sequence-backed editor identifiers beginning at `2`, while retaining the `smallint` key and all session/media references, plus Argon2id password hashes, hashed session and CSRF tokens, expiry/revocation, and hashed login-throttle keys;
 - local media metadata using a same-domain `/media/...` URL and a relative filesystem path;
 - constrained complete-snapshot revisions and heads for project-plus-images, the homepage playlist, and singleton Site settings, with revision-media references and append-only complete-snapshot audit events;
@@ -27,6 +27,8 @@ Project `remaining_units` is either `NULL` for unknown availability or a non-neg
 Migrations `0010_contact_intake.sql` through `0013_contact_details.sql` add guarded contact intake, bilingual site copy/branding/social fields, optional HTTPS project virtual-tour links, and required email/phone for new contacts. Legacy immutable revision snapshots keep their historical shapes for rollback; new snapshots include the new columns. The contact-details constraint uses `NOT VALID` so historical partial submissions remain readable without weakening checks on newly inserted rows.
 
 Migration `0014_contact_challenge_immediate.sql` removes the challenge dwell column without deleting issued challenges, preserving the `expires_at > created_at` invariant. Contacts can be submitted immediately after requesting a single-use challenge; serialized PostgreSQL limits (20 challenges and 5 accepted submissions per client per hour), duplicate detection, expiry, and honeypot remain server-enforced.
+
+Migration `0015_site_branding.sql` adds defaulted `logo_url` and `brand_color` columns. It constrains logo paths to generated local upload URLs and colors to `#RRGGBB`, extends revision snapshot validation and exact materialization, and preserves historical snapshots; rolling back an old revision restores the original logo and blue rather than retaining later branding. Apply it before publishing branding changes through `/admin`.
 
 ## Apply migrations
 

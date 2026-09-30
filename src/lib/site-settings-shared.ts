@@ -33,6 +33,8 @@ export type SiteSettings = {
   footerCookieVisible: boolean;
   footerCookiePdfUrl: string;
   siteName: string;
+  logoUrl: string;
+  brandColor: string;
   companyName: string;
   homeCopy: Localized<HomeCopy>;
   goldenVisaCopy: Localized<GoldenVisaCopy>;
@@ -67,6 +69,8 @@ export const defaultSiteSettings: SiteSettings = {
   footerCookiePdfUrl: '',
   siteName: 'MIRACON',
   companyName: 'MIRACON Constructions',
+  logoUrl: '',
+  brandColor: '#003075',
   homeCopy: localize((locale) => copyFromMessages(locale, 'home', homeCopyKeys)),
   goldenVisaCopy: localize((locale) => copyFromMessages(locale, 'gv', goldenVisaCopyKeys)),
   contactCopy: localize((locale) => ({ title: getMessages(locale)['form.title'], description: getContactDescriptionLines(locale).join(' ') })),
@@ -98,6 +102,23 @@ export function brandCopy(value: string, settings: Pick<SiteSettings, 'siteName'
     .replaceAll('MIRACON Constructions', settings.companyName)
     .replaceAll('Miracon Constructions', settings.companyName)
     .replaceAll('MIRACON', settings.siteName);
+}
+
+// Uploaded media uses a generated UUID in both path segments, never an
+// arbitrary URL or a path whose query/fragment could change its meaning.
+export function isValidLogoUrl(value: string): boolean {
+  return /^\/media\/uploads\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/\1\.(?:svg|png)$/i.test(value);
+}
+
+export function isValidBrandColor(value: string): boolean {
+  return /^#[0-9a-fA-F]{6}$/.test(value);
+}
+// Only a six-digit hexadecimal color reaches an inline CSS declaration. Keep
+// the original palette exactly when no custom color has been selected.
+export function brandThemeStyle(settings: Pick<SiteSettings, 'brandColor'>): string | undefined {
+  if (!isValidBrandColor(settings.brandColor) || settings.brandColor.toLowerCase() === '#003075') return undefined;
+  const rgb = [1, 3, 5].map((index) => parseInt(settings.brandColor.slice(index, index + 2), 16)).join(', ');
+  return `--brand-color: ${settings.brandColor}; --brand-rgb: ${rgb}; --brand-blue: ${settings.brandColor}; --brand-muted-rgb: ${rgb}`;
 }
 
 export function isValidTermsPdfUrl(value: string): boolean {

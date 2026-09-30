@@ -36,7 +36,7 @@
 
    Откройте **Setup Node.js App**, нажмите **Create Application** и укажите:
 
-   - **Node.js version:** любая предлагаемая cPanel версия `>=22.12.0`; `22.23.0`
+   - **Node.js version:** любая предлагаемая cPanel версия `>=22.19.0`; `22.23.0`
      подходит, если она доступна
    - **Application mode:** `Production`
    - **Application root:** `public_html/miracon-node-release`

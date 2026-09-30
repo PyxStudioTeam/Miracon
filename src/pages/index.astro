@@ -10,7 +10,7 @@ import { getContactDescriptionLines, getLocale, getMessages, localizePath } from
 import { getPublishedProjects, localizeProject } from '../lib/projects';
 import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
 import { defaultSiteSettings, getSiteSettings } from '../lib/site-settings';
-import { brandCopy } from '../lib/site-settings-shared';
+import { brandCopy, brandThemeStyle } from '../lib/site-settings-shared';
 
 const locale = getLocale(Astro.originPathname);
 const m = getMessages(locale);
@@ -48,11 +48,10 @@ const homeStructuredData = {
       '@type': 'Organization',
       '@id': `${homeUrl}#organization`,
       name: siteSettings.companyName,
-      ...(siteSettings.siteName === 'MIRACON' ? { logo: {
+      ...(siteSettings.logoUrl || siteSettings.siteName === 'MIRACON' ? { logo: {
         '@type': 'ImageObject',
-        url: absoluteSiteUrl('/favicon.svg', Astro.url),
-        width: 512,
-        height: 512,
+        url: absoluteSiteUrl(siteSettings.logoUrl || '/favicon.svg', Astro.url),
+        ...(siteSettings.logoUrl ? {} : { width: 512, height: 512 }),
       } } : {}),
       image: absoluteSiteUrl('/img/figma_hero.png', Astro.url),
       telephone: siteSettings.footerPhone,
@@ -66,13 +65,12 @@ const homeStructuredData = {
 };
 ---
 <!DOCTYPE html>
-<html lang={locale}>
+<html lang={locale} style={brandThemeStyle(siteSettings)}>
 
 <head>
   <meta charset="UTF-8">
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
     title={brandCopy(m['home.seoTitle'], siteSettings)}
     description={brandCopy(m['home.seoDescription'], siteSettings)}
@@ -81,6 +79,8 @@ const homeStructuredData = {
     imageAlt={brandCopy(m['home.seoImageAlt'], siteSettings)}
     jsonLd={homeStructuredData}
     siteName={siteSettings.siteName}
+    logoUrl={siteSettings.logoUrl}
+    brandColor={siteSettings.brandColor}
     locale={locale}
   />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -144,7 +144,8 @@ const homeStructuredData = {
           <h2 class="about-heading about-reveal" aria-label={`${m['home.about']} ${siteSettings.siteName}`}>
             <span class="about-title-word" aria-hidden="true">{m['home.about']}</span>
             <span class="about-brand" aria-hidden="true">
-              {siteSettings.siteName === 'MIRACON' ? <>
+              {siteSettings.logoUrl ? <img src={siteSettings.logoUrl} alt="" class="about-brand-custom-logo">
+                : siteSettings.siteName === 'MIRACON' ? <>
                 <span class="about-brand-letter about-brand-letter-m"></span>
                 <span class="about-brand-letter about-brand-letter-i"></span>
                 <span class="about-brand-letter about-brand-letter-r"></span>

@@ -23,13 +23,17 @@ const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComp
 
 <header class="header notranslate" translate="no">
   <div class="header-container">
-    <a href={homeHref} class="logo" aria-label={`${siteSettings.siteName} — ${m['common.home']}`}>
-      {siteSettings.siteName === 'MIRACON' && <img src="/img/logo_mark.svg" alt="" class="logo-img">}
-      {siteSettings.siteName === 'MIRACON'
-        ? <div class="logo-letters" aria-hidden="true">
-            {['M', 'I', 'R', 'A', 'C', 'O', 'N'].map((letter) => <img src={`/img/logo_letters/${letter}.svg`} alt="" class="logo-letter">)}
-          </div>
-        : <span class="site-name-wordmark">{siteSettings.siteName}</span>}
+    <a href={homeHref} class:list={['logo', { 'logo--custom': siteSettings.logoUrl }]} aria-label={`${siteSettings.siteName} — ${m['common.home']}`}>
+      {siteSettings.logoUrl
+        ? <img src={siteSettings.logoUrl} alt="" class="custom-logo-image">
+        : siteSettings.siteName === 'MIRACON'
+          ? <>
+              <img src="/img/logo_mark.svg" alt="" class="logo-img">
+              <div class="logo-letters" aria-hidden="true">
+                {['M', 'I', 'R', 'A', 'C', 'O', 'N'].map((letter) => <img src={`/img/logo_letters/${letter}.svg`} alt="" class="logo-letter">)}
+              </div>
+            </>
+          : <span class="site-name-wordmark">{siteSettings.siteName}</span>}
     </a>
 
     <nav class="nav-menu glass-gradient" aria-label={m['common.mainNavigation']}>

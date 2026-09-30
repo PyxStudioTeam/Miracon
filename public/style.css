@@ -31,17 +31,20 @@
 }
 
 :root {
+  --brand-color: #003075;
+  --brand-rgb: 0, 48, 117;
+  --mobile-blue: var(--brand-color);
   --frame-width: 1720px;
   --page-bg: #F7F4EE;
   --white: #ffffff;
-  --blue: #003c7b;
-  --blue-dark: #00306a;
+  --blue: var(--brand-blue, #003c7b);
+  --blue-dark: var(--brand-blue, #00306a);
   --blue-soft: #8ea6c4;
   --gold: #b9853d;
-  --text: #00306a;
-  --muted: rgba(0, 48, 106, 0.78);
+  --text: var(--brand-blue, #00306a);
+  --muted: rgba(var(--brand-muted-rgb, 0, 48, 106), 0.78);
   --glass: rgba(144, 144, 144, 0.1);
-  --shadow-card: 0 10px 30px rgba(0, 48, 106, 0.08);
+  --shadow-card: 0 10px 30px rgba(var(--brand-muted-rgb, 0, 48, 106), 0.08);
   --font-family: 'Gilroy', 'Plus Jakarta Sans', Arial, sans-serif;
   --transition: all 0.25s ease;
 }
@@ -216,6 +219,34 @@ main>section+section {
   object-fit: contain;
 }
 
+.header .logo.logo--custom,
+.footer .logo.logo--custom {
+  transform: none;
+  flex: 0 1 auto;
+  max-width: min(230px, 42vw);
+}
+
+.logo--custom .custom-logo-image {
+  display: block;
+  width: auto;
+  max-width: min(230px, 42vw);
+  height: auto;
+  max-height: 55px;
+  object-fit: contain;
+}
+
+@media (max-width: 760px) {
+  .header .logo.logo--custom .custom-logo-image {
+    max-width: min(160px, 42vw);
+    max-height: 42px;
+  }
+
+  .footer .logo.logo--custom .custom-logo-image {
+    max-width: min(150px, 38vw);
+    max-height: 34px;
+  }
+}
+
 .logo-letters {
   display: flex;
   align-items: flex-end;
@@ -367,7 +398,7 @@ main>section+section {
 .lang-selector:hover,
 .lang-selector:focus-visible {
   background-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 8px 24px rgba(0, 48, 117, 0.2), inset 0 0 18px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(var(--brand-rgb), 0.2), inset 0 0 18px rgba(255, 255, 255, 0.08);
   transform: translateY(-2px);
 }
 
@@ -415,7 +446,7 @@ main>section+section {
   width: 194px;
   height: 51px;
   border-radius: 25px;
-  background: rgba(0, 48, 117, 1);
+  background: rgba(var(--brand-rgb), 1);
   color: var(--white);
   font-size: 24px;
   font-weight: 400;
@@ -503,7 +534,7 @@ html[lang='el'] .contact-btn {
   padding-right: 3px;
   overflow: hidden;
   border-radius: 25px;
-  color: #003075;
+  color: var(--brand-color);
   font-size: 24px;
   font-weight: 400;
   line-height: 29px;
@@ -556,7 +587,7 @@ html[lang='el'] .contact-btn {
   width: 0;
   height: 29px;
   overflow: hidden;
-  color: #003075;
+  color: var(--brand-color);
   white-space: nowrap;
   opacity: 0;
   text-align: center;
@@ -599,7 +630,7 @@ html[lang='el'] .contact-btn {
   width: 45px;
   height: 45px;
   border-radius: 50%;
-  background: #003075;
+  background: var(--brand-color);
 }
 
 .contact-dropdown-circle img {
@@ -818,7 +849,7 @@ html[lang='el'] .contact-btn {
 
 .btn-hero {
   --btn-hero-arrow-travel: 230.71px;
-  background: #003075;
+  background: var(--brand-color);
   color: #f7f4ee;
   overflow: hidden;
   transition: var(--transition);
@@ -1015,10 +1046,10 @@ html[lang='el'] .contact-btn {
   min-width: 109px;
   padding: 0 37px;
   overflow: hidden;
-  border: 1px solid rgba(0, 48, 106, 0.22);
+  border: 1px solid rgba(var(--brand-muted-rgb, 0, 48, 106), 0.22);
   border-radius: 39px;
   background: var(--page-bg);
-  color: #003075;
+  color: var(--brand-color);
   font-size: 32px;
   line-height: 1;
   isolation: isolate;
@@ -1034,7 +1065,7 @@ html[lang='el'] .contact-btn {
   width: 140%;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #003075;
+  background: var(--brand-color);
   transform: translate(-50%, -50%) scale(0);
   transition: transform 0.42s cubic-bezier(0.65, 0, 0.35, 1);
 }
@@ -1044,7 +1075,7 @@ html[lang='el'] .contact-btn {
   z-index: 1;
   display: block;
   min-height: 1em;
-  color: #003075;
+  color: var(--brand-color);
   line-height: 1;
   white-space: nowrap;
   transition: color 0.42s cubic-bezier(0.65, 0, 0.35, 1);
@@ -1342,6 +1373,14 @@ body.js-enabled .project-card.visible {
   margin-top: 1.29px;
 }
 
+.about-brand .about-brand-custom-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
+
 .about-brand-letter {
   position: absolute;
   bottom: 0;
@@ -1440,7 +1479,7 @@ body.js-enabled .project-card.visible {
   width: 511px;
   height: 31px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 32px;
   font-weight: 400;
@@ -1456,7 +1495,7 @@ body.js-enabled .project-card.visible {
   width: 827px;
   height: 306px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 24px;
   font-weight: 400;
@@ -1601,7 +1640,7 @@ body.js-enabled .about-reveal.visible {
   width: calc(100% - 183px);
   height: 49px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 40px;
   font-weight: 500;
@@ -1618,7 +1657,7 @@ body.js-enabled .about-reveal.visible {
   width: 306px;
   height: 72px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 20px;
   font-weight: 400;
@@ -1738,7 +1777,7 @@ body.js-enabled .about-reveal.visible {
   height: 53px;
   transform: translateX(-50%);
   border-radius: 39px;
-  color: #003075;
+  color: var(--brand-color);
   background: #f7f4ee;
   font-family: 'Gilroy', sans-serif;
   font-size: 24px;
@@ -1844,7 +1883,7 @@ body.js-enabled .about-reveal.visible {
   margin-bottom: 82px;
   font-size: 32px;
   line-height: 1.12;
-  color: #003075;
+  color: var(--brand-color);
   opacity: 0.8;
 }
 
@@ -1889,7 +1928,7 @@ body.js-enabled .about-reveal.visible {
   width: 718px;
   height: 45px;
   margin: 0 0 13px;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 40px;
   font-weight: 500;
@@ -1907,7 +1946,7 @@ body.js-enabled .about-reveal.visible {
 .slide-text {
   width: 718px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 32px;
   font-weight: 400;
@@ -1931,7 +1970,7 @@ body.js-enabled .about-reveal.visible {
 
 .slider-counter {
   justify-self: center;
-  color: rgba(0, 48, 117, 0.4);
+  color: rgba(var(--brand-rgb), 0.4);
   font-size: 24px;
   line-height: 95.98%;
 }
@@ -2011,7 +2050,7 @@ body.js-enabled .about-reveal.visible {
   width: 424px;
   height: 46px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-size: 24px;
   font-weight: 500;
   line-height: 95.98%;
@@ -2063,7 +2102,7 @@ body.js-enabled .about-reveal.visible {
   align-items: center;
   width: 84px;
   height: 70px;
-  color: #003075;
+  color: var(--brand-color);
   font-size: 72.775px;
   font-weight: 500;
   line-height: 95.98%;
@@ -2080,7 +2119,7 @@ body.js-enabled .about-reveal.visible {
   width: 295px;
   height: 39px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 40px;
   font-weight: 500;
@@ -2095,7 +2134,7 @@ body.js-enabled .about-reveal.visible {
   width: 247px;
   height: 46px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 20px;
   font-weight: 400;
@@ -2155,7 +2194,7 @@ body.js-enabled .about-reveal.visible {
   width: 513px;
   height: 46px;
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 24px;
   font-weight: 500;
@@ -2203,11 +2242,11 @@ body.js-enabled .about-reveal.visible {
   width: 100%;
   height: 68px;
   padding: 0 25px;
-  border: 1px solid rgba(0, 48, 117, 0.4);
+  border: 1px solid rgba(var(--brand-rgb), 0.4);
   border-radius: 40px;
   outline: 0;
   background: rgba(247, 244, 238, 0.4);
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 24px;
   font-weight: 500;
@@ -2216,7 +2255,7 @@ body.js-enabled .about-reveal.visible {
 }
 
 .form-input::placeholder {
-  color: rgba(0, 48, 117, 0.4);
+  color: rgba(var(--brand-rgb), 0.4);
 }
 
 .form-input:focus {
@@ -2264,7 +2303,7 @@ body.js-enabled .about-reveal.visible {
   flex: 0 0 36px;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(0, 48, 117, 0.4);
+  border: 1px solid rgba(var(--brand-rgb), 0.4);
   border-radius: 12px;
   background: rgba(247, 244, 238, 0.4);
 }
@@ -2276,8 +2315,8 @@ body.js-enabled .about-reveal.visible {
   left: 12px;
   width: 10px;
   height: 18px;
-  border-right: 3px solid #003075;
-  border-bottom: 3px solid #003075;
+  border-right: 3px solid var(--brand-color);
+  border-bottom: 3px solid var(--brand-color);
   opacity: 0;
   transform: rotate(45deg);
   transition: opacity 0.2s ease;
@@ -2288,7 +2327,7 @@ body.js-enabled .about-reveal.visible {
 }
 
 .form-consent-input:focus-visible+.form-consent-box {
-  outline: 2px solid rgba(0, 48, 117, 0.5);
+  outline: 2px solid rgba(var(--brand-rgb), 0.5);
   outline-offset: 4px;
 }
 
@@ -2302,7 +2341,7 @@ body.js-enabled .about-reveal.visible {
 }
 
 .form-consent-text a {
-  color: #003075;
+  color: var(--brand-color);
 }
 
 .form-captcha {
@@ -2322,7 +2361,7 @@ body.js-enabled .about-reveal.visible {
   padding: 0 0 0 42px;
   margin: 0;
   border-radius: 40px;
-  background: #003075;
+  background: var(--brand-color);
   color: #f7f4ee;
   font-family: 'Gilroy', sans-serif;
   font-size: 30.9091px;
@@ -2382,7 +2421,7 @@ body.js-enabled .about-reveal.visible {
 }
 
 .btn-submit:disabled:hover {
-  background: #003075;
+  background: var(--brand-color);
 }
 
 .btn-submit:hover .btn-submit-arrow,
@@ -2410,7 +2449,7 @@ body.js-enabled .about-reveal.visible {
   display: block;
   width: min(100%, 560px);
   margin: 0;
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 18px;
   font-weight: 500;
@@ -2486,7 +2525,7 @@ body.js-enabled .about-reveal.visible {
   height: 100%;
   border-radius: 50%;
   background: #fff;
-  color: #003075;
+  color: var(--brand-color);
   font: 700 18px/1 'Plus Jakarta Sans', sans-serif;
 }
 
@@ -2523,7 +2562,7 @@ body.js-enabled .about-reveal.visible {
   max-width: 100%;
   font: 700 clamp(22px, 3.2vw, 48px)/1 'Plus Jakarta Sans', sans-serif;
   overflow-wrap: anywhere;
-  color: #003075;
+  color: var(--brand-color);
 }
 
 @media (min-width: 601px) and (max-width: 1919px) {
@@ -2603,7 +2642,7 @@ body.js-enabled .about-reveal.visible {
   padding: 0 70px 0 14px;
   border-radius: 32px;
   background: var(--white);
-  color: #003075;
+  color: var(--brand-color);
   font-family: 'Gilroy', sans-serif;
   font-size: 25.5369px;
   font-weight: 400;
@@ -2622,7 +2661,7 @@ body.js-enabled .about-reveal.visible {
   width: 59px;
   height: 58px;
   border-radius: 50%;
-  background: #003075;
+  background: var(--brand-color);
 }
 
 .lang-refresh {

@@ -4,6 +4,7 @@ import { formatMessage, getMessages, type SiteLocale } from '../lib/i18n';
 import { getImageVariantSet, getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
 import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
 import { getSiteSettings } from '../lib/site-settings';
+import { brandThemeStyle } from '../lib/site-settings-shared';
 import ContactSection from './ContactSection.astro';
 import OptimizedImage from './OptimizedImage.astro';
 import SeoHead from './SeoHead.astro';
@@ -118,15 +119,16 @@ const projectStructuredData = {
 ---
 
 <!DOCTYPE html>
-<html lang={locale}>
+<html lang={locale} style={brandThemeStyle(siteSettings)}>
 <head>
   <meta charset="UTF-8">
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
     title={preview ? `${m['project.previewPrefix']} ${seoTitle}` : seoTitle}
     siteName={siteSettings.siteName}
+    logoUrl={siteSettings.logoUrl}
+    brandColor={siteSettings.brandColor}
     description={project.seoDescription}
     path={publicPath}
     image={project.coverUrl}

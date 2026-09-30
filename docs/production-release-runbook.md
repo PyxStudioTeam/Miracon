@@ -4,7 +4,8 @@ This checklist prepares and validates a MIRACON standalone release. It does not 
 
 ## 1. Repository release gate
 
-- [ ] Use Node 22.12.0 or newer and run `npm ci` from the lockfile.
+- [ ] Use Node 22.19.0 or newer and run `npm ci` from the lockfile.
+- [ ] Run `npm audit --audit-level=low` and resolve reported advisories before deploying.
 - [ ] Run `npm run release:verify` without production secrets or database-test variables.
 - [ ] Run `npm run test:db` only with `DATABASE_TEST_ALLOW_RESET=1` and a dedicated disposable `DATABASE_TEST_URL` whose database name contains a safe test marker.
 - [ ] Run `npm run release:package -- release-output` and inspect `release-output/release-manifest.json`.

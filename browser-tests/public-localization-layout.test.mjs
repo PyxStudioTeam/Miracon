@@ -509,7 +509,7 @@ async function publishPrivacyPdf(context, baseUrl) {
   const page = await context.newPage();
   try {
     await page.goto(`${baseUrl}/admin`, { waitUntil: 'domcontentloaded' });
-    await page.locator('button[title="Site settings"]').click();
+    await page.locator('[data-admin-view="legal"]').click();
     const policy = page.locator('.site-settings-card').filter({ hasText: 'Privacy Policy' });
     await policy.locator('.site-settings-auto').waitFor();
     assert.equal(await policy.locator('input[type="checkbox"]').count(), 0);

@@ -14,6 +14,8 @@ interface Props {
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
   locale?: SiteLocale;
   siteName?: string;
+  logoUrl?: string;
+  brandColor?: string;
 }
 
 const {
@@ -28,6 +30,8 @@ const {
   jsonLd,
   locale = getLocale(Astro.originPathname),
   siteName = 'MIRACON',
+  logoUrl = '',
+  brandColor = '#003075',
 } = Astro.props;
 
 const m = getMessages(locale);
@@ -45,6 +49,8 @@ const structuredData = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []
 ---
 
 <style is:inline>html, body { background: #F7F4EE; }</style>
+<link rel="icon" type={logoUrl.endsWith('.png') ? 'image/png' : 'image/svg+xml'} href={logoUrl || '/favicon.svg'}>
+<meta name="theme-color" content={brandColor}>
 <title>{cleanTitle}</title>
 <meta name="description" content={cleanDescription}>
 <meta name="robots" content={robotsContent}>

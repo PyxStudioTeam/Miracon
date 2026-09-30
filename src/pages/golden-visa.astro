@@ -9,7 +9,7 @@ import { getContactDescriptionLines, getLocale, getMessages, localizePath } from
 import { getPublishedProjects, localizeProject } from '../lib/projects';
 import { absoluteLocalizedUrl } from '../lib/seo';
 import { defaultSiteSettings, getSiteSettings } from '../lib/site-settings';
-import { brandCopy } from '../lib/site-settings-shared';
+import { brandCopy, brandThemeStyle } from '../lib/site-settings-shared';
 
 const locale = getLocale(Astro.originPathname);
 const m = getMessages(locale);
@@ -47,13 +47,12 @@ const goldenVisaStructuredData = {
 ---
 
 <!DOCTYPE html>
-<html lang={locale}>
+<html lang={locale} style={brandThemeStyle(siteSettings)}>
 
 <head>
   <meta charset="UTF-8">
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <SeoHead
     title={brandCopy(m['gv.seoTitle'], siteSettings)}
     description={brandCopy(m['gv.seoDescription'], siteSettings)}
@@ -63,6 +62,8 @@ const goldenVisaStructuredData = {
     jsonLd={goldenVisaStructuredData}
     siteName={siteSettings.siteName}
     locale={locale}
+    logoUrl={siteSettings.logoUrl}
+    brandColor={siteSettings.brandColor}
   />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

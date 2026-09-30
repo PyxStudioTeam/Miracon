@@ -1,4 +1,4 @@
-import { defaultSiteSettings, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from './site-settings-shared';
+import { defaultSiteSettings, isValidBrandColor, isValidLogoUrl, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from './site-settings-shared';
 import type { SiteSettings } from './site-settings-shared';
 
 export { defaultSiteSettings, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from './site-settings-shared';
@@ -18,6 +18,8 @@ export function mapSiteSettings(row: Record<string, unknown> | null | undefined)
     footerCookieVisible: Boolean(row?.footer_cookie_visible) && isValidTermsPdfUrl(footerCookiePdfUrl),
     footerCookiePdfUrl: isValidTermsPdfUrl(footerCookiePdfUrl) ? footerCookiePdfUrl : '',
     siteName: String(row?.site_name ?? defaultSiteSettings.siteName),
+    logoUrl: isValidLogoUrl(String(row?.logo_url ?? '')) ? String(row?.logo_url) : defaultSiteSettings.logoUrl,
+    brandColor: isValidBrandColor(String(row?.brand_color ?? '')) ? String(row?.brand_color) : defaultSiteSettings.brandColor,
     companyName: String(row?.company_name ?? defaultSiteSettings.companyName),
     homeCopy: (row?.home_copy ?? defaultSiteSettings.homeCopy) as SiteSettings['homeCopy'],
     goldenVisaCopy: (row?.golden_visa_copy ?? defaultSiteSettings.goldenVisaCopy) as SiteSettings['goldenVisaCopy'],

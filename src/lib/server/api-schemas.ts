@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { homeCopyKeys, goldenVisaCopyKeys, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from '../site-settings-shared';
+import { homeCopyKeys, goldenVisaCopyKeys, isValidBrandColor, isValidLogoUrl, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from '../site-settings-shared';
 
 const nullableUrl = z.string().max(2_048).nullable();
 const optionalNullableUrl = nullableUrl.optional();
@@ -151,6 +151,8 @@ export const siteSettingsSchema = z.object({
   footerCookiePdfUrl: siteDocumentUrl,
   siteName: copyText.trim().min(1),
   companyName: copyText.trim().min(1),
+  logoUrl: z.string().max(2_048).refine((value) => value === '' || isValidLogoUrl(value), 'Choose an uploaded SVG or PNG'),
+  brandColor: z.string().refine(isValidBrandColor, 'Use a #RRGGBB color'),
   homeCopy: localized(copyFields(homeCopyKeys)),
   goldenVisaCopy: localized(copyFields(goldenVisaCopyKeys)),
   contactCopy: localized(z.object({ title: copyText, description: copyText })),

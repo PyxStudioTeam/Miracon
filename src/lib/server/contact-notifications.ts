@@ -1,5 +1,4 @@
-import nodemailer from 'nodemailer';
-import SMTPTransport from 'nodemailer/lib/smtp-transport';
+import nodemailer, { type SMTPTransportOptions } from 'nodemailer';
 import type { ContactId, ContactSubmissionInput } from './contact-contracts';
 import { getContactSmtpConfig } from './contact-config';
 import type { ContactSmtpConfig } from './contact-config';
@@ -72,7 +71,7 @@ export async function notifyAcceptedContact(
 }
 
 function createSmtpTransport(config: Extract<ContactSmtpConfig, { readonly kind: 'enabled' }>): ContactMailTransport {
-  const options: SMTPTransport.Options = {
+  const options: SMTPTransportOptions = {
     host: config.host,
     port: config.port,
     secure: config.secure,
@@ -85,7 +84,7 @@ function createSmtpTransport(config: Extract<ContactSmtpConfig, { readonly kind:
     greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
     socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
   };
-  const transporter = nodemailer.createTransport(new SMTPTransport(options));
+  const transporter = nodemailer.createTransport(options);
   return {
     send: async (message) => {
       const info = await transporter.sendMail(message);

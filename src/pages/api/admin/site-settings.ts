@@ -82,6 +82,19 @@ export async function PUT({ request }: ApiContext): Promise<Response> {
     resolvedMediaIds = mediaResult.rows.map((row) => String(row.id));
   }
 
+  if (input.value.logoUrl) {
+    const logo = await database.query<{ readonly id: string; readonly relative_url: string; readonly mime_type: string }>(
+      'select id, relative_url, mime_type from miracon.media_files where relative_url = $1',
+      [input.value.logoUrl],
+    );
+    const media = logo.rows[0];
+    const expectedMime = input.value.logoUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
+    if (!media || logo.rows.length !== 1 || media.mime_type !== expectedMime) {
+      return jsonError(400, 'invalid_media', 'Logo must reference an existing uploaded SVG or PNG file');
+    }
+    resolvedMediaIds.push(String(media.id));
+  }
+
   const mediaFileIds = [...new Set([...(input.value.mediaFileIds ?? []), ...resolvedMediaIds])];
 
   const { expectedRevisionId: _expectedRevisionId, mediaFileIds: _mediaFileIds, ...settings } = input.value;

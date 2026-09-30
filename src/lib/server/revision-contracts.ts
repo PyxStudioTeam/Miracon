@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidBrandColor, isValidLogoUrl } from '../site-settings-shared';
 
 export type JsonPrimitive = boolean | null | number | string;
 export type JsonValue = JsonPrimitive | { readonly [key: string]: JsonValue } | readonly JsonValue[];
@@ -55,6 +56,8 @@ export const canonicalSiteSettingsRowSchema = z.object({
   id: z.literal(1), footer_terms_visible: z.boolean(), footer_terms_pdf_url: z.string(), footer_privacy_visible: z.boolean(), footer_privacy_pdf_url: z.string(),
   footer_cookie_visible: z.boolean(), footer_cookie_pdf_url: z.string(),
   site_name: z.string().nullable().default(null), company_name: z.string().nullable().default(null),
+  logo_url: z.string().refine((value) => value === '' || isValidLogoUrl(value)).default(''),
+  brand_color: z.string().refine(isValidBrandColor).default('#003075'),
   home_copy: z.unknown().nullable().default(null), golden_visa_copy: z.unknown().nullable().default(null),
   contact_copy: z.unknown().nullable().default(null), stages_copy: z.unknown().nullable().default(null),
   footer_phone: z.string().nullable().default(null), footer_email: z.string().nullable().default(null),
