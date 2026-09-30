@@ -29,6 +29,8 @@ Migrations `0010_contact_intake.sql` through `0013_contact_details.sql` add guar
 Migration `0014_contact_challenge_immediate.sql` removes the challenge dwell column without deleting issued challenges, preserving the `expires_at > created_at` invariant. Contacts can be submitted immediately after requesting a single-use challenge; serialized PostgreSQL limits (20 challenges and 5 accepted submissions per client per hour), duplicate detection, expiry, and honeypot remain server-enforced.
 
 Migration `0015_site_branding.sql` adds defaulted `logo_url` and `brand_color` columns. It constrains logo paths to generated local upload URLs and colors to `#RRGGBB`, extends revision snapshot validation and exact materialization, and preserves historical snapshots; rolling back an old revision restores the original logo and blue rather than retaining later branding. Apply it before publishing branding changes through `/admin`.
+Migrations `0016_kriopigi_virtual_tour.sql` through `0018_qualify_project_card_copy.sql` populate the Kriopigi hosted 360° URL and replace obsolete default Golden Visa and Monastiriou card copy. Each update is guarded by the original value so administrator-edited URLs and text remain untouched; new catalogs also carry the revised defaults in their seeds.
+
 
 ## Apply migrations
 

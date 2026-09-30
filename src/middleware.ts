@@ -40,7 +40,7 @@ export const onRequest = defineMiddleware(async ({ url }, next) => {
     "img-src 'self' data: blob:",
     "media-src 'self' blob:",
     `connect-src 'self'${developmentConnections}`,
-    "frame-src 'self' https://www.google.com",
+    "frame-src 'self' https://www.google.com https://storage.net-fs.com",
     "worker-src 'self' blob:",
     ...(import.meta.env.PROD ? ['upgrade-insecure-requests'] : []),
   ].join('; ');

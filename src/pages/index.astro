@@ -23,6 +23,12 @@ const [sourceProjects, homeHeroVideos, siteSettings] = await Promise.all([
 const projects = sourceProjects.map((project) => localizeProject(project, locale));
 const homeCopy = siteSettings.homeCopy[locale];
 const contactCopy = siteSettings.contactCopy[locale];
+const aboutBenefits = [
+  { className: 'about-card-direct', icon: 'img/about_carousel/Group 2136141923.svg', title: homeCopy.benefitDirectTitle, text: homeCopy.benefitDirectText },
+  { className: 'about-card-legal', icon: 'img/about_carousel/Group 2136141905.svg', title: homeCopy.benefitLegalTitle, text: homeCopy.benefitLegalText },
+  { className: 'about-card-personal', icon: 'img/about_carousel/Group 2136141924.svg', title: homeCopy.benefitPersonalTitle, text: homeCopy.benefitPersonalText },
+  { className: 'about-card-locations', icon: 'img/about_carousel/Group 2136141925.svg', title: homeCopy.benefitLocationTitle, text: homeCopy.benefitLocationText },
+];
 Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
 const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
   id: video.id,
@@ -101,7 +107,6 @@ const homeStructuredData = {
         <div class="hero-media" data-home-hero-playlist={serializedHomeHeroVideos}>
           <video class="hero-video is-active" muted loop={homeHeroVideos.length === 1} playsinline preload="none" poster="/img/figma_hero.png"></video>
           <video class="hero-video" muted playsinline preload="none" poster="/img/figma_hero.png" aria-hidden="true"></video>
-          <button class="hero-video-play" type="button" aria-label={m['project.playVideo']} hidden>{m['project.playVideo']}</button>
         </div>
         <div class="container hero-content notranslate" translate="no">
           <p class="hero-subtitle">{homeCopy.heroLocation}</p>
@@ -167,51 +172,17 @@ const homeStructuredData = {
 
       <div class="about-carousel" aria-label={brandCopy(m['home.benefitsLabel'], siteSettings)}>
         <div class="about-carousel-track">
-          <div class="about-carousel-set">
-            <article class="about-card about-card-direct">
-              <img src="img/about_carousel/Group 2136141923.svg" alt="" class="about-card-icon">
-              <h3>{homeCopy.benefitDirectTitle}</h3>
-              <p>{homeCopy.benefitDirectText}</p>
-            </article>
-            <article class="about-card about-card-legal">
-              <img src="img/about_carousel/Group 2136141905.svg" alt="" class="about-card-icon">
-              <h3>{homeCopy.benefitLegalTitle}</h3>
-              <p>{homeCopy.benefitLegalText}</p>
-            </article>
-            <article class="about-card about-card-personal">
-              <img src="img/about_carousel/Group 2136141924.svg" alt="" class="about-card-icon">
-              <h3>{homeCopy.benefitPersonalTitle}</h3>
-              <p>{homeCopy.benefitPersonalText}</p>
-            </article>
-            <article class="about-card about-card-locations">
-              <img src="img/about_carousel/Group 2136141925.svg" alt="" class="about-card-icon">
-              <h3>{homeCopy.benefitLocationTitle}</h3>
-              <p>{homeCopy.benefitLocationText}</p>
-            </article>
-          </div>
-
-          <div class="about-carousel-set" aria-hidden="true">
-            <article class="about-card about-card-direct">
-              <img src="img/about_carousel/Group 2136141923.svg" alt="" class="about-card-icon">
-              <h3>{homeCopy.benefitDirectTitle}</h3>
-              <p>{homeCopy.benefitDirectText}</p>
-            </article>
-            <article class="about-card about-card-legal">
-              <img src="img/about_carousel/Group 2136141905.svg" alt="" class="about-card-icon">
-              <h3>{homeCopy.benefitLegalTitle}</h3>
-              <p>{homeCopy.benefitLegalText}</p>
-            </article>
-            <article class="about-card about-card-personal">
-              <img src="img/about_carousel/Group 2136141924.svg" alt="" class="about-card-icon">
-              <h3>{homeCopy.benefitPersonalTitle}</h3>
-              <p>{homeCopy.benefitPersonalText}</p>
-            </article>
-            <article class="about-card about-card-locations">
-              <img src="img/about_carousel/Group 2136141925.svg" alt="" class="about-card-icon">
-              <h3>{homeCopy.benefitLocationTitle}</h3>
-              <p>{homeCopy.benefitLocationText}</p>
-            </article>
-          </div>
+          {[false, true].map((duplicate) => (
+            <div class="about-carousel-set" aria-hidden={duplicate ? 'true' : undefined}>
+              {aboutBenefits.map((benefit) => (
+                <article class={`about-card ${benefit.className}`}>
+                  <img src={benefit.icon} alt="" class="about-card-icon">
+                  <h3>{benefit.title}</h3>
+                  <p>{benefit.text}</p>
+                </article>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     </section>

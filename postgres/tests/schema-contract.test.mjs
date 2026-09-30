@@ -59,9 +59,10 @@ test('defines digest-only contact intake with bounded retention and challenge st
 test('keeps the standalone migrations independent of Supabase and worker infrastructure', async () => {
   // Given
   const { sql } = await loadMigrations();
+  const strippedSql = sql.replace(/'(?:''|[^'])*'/gu, "''");
 
   // When
-  const forbiddenDependency = /\b(?:auth|storage)\.|auth\.uid\(|create\s+extension|media_processing_jobs|media_variants|service_role|row\s+level\s+security/iu.exec(sql);
+  const forbiddenDependency = /\b(?:auth|storage)\.|auth\.uid\(|create\s+extension|media_processing_jobs|media_variants|service_role|row\s+level\s+security/iu.exec(strippedSql);
 
   // Then
   assert.equal(forbiddenDependency, null);

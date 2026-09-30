@@ -36,8 +36,6 @@ const benefitIconClass = (iconUrl: string) => {
 const gallerySource = project.gallery.length > 0
   ? project.gallery
   : [{ id: `${project.id}-gallery-cover`, url: project.coverUrl, alt: project.title, role: 'gallery' as const, sortOrder: 0 }, ...project.cardImages.filter((image) => image.url !== project.coverUrl)];
-const gallery = [...gallerySource];
-while (gallery.length > 0 && gallery.length < 4) gallery.push(gallery[gallery.length % gallerySource.length]);
 const galleryClasses = ['project-gallery-image--far-left', 'project-gallery-image--left', 'project-gallery-image--main', 'project-gallery-image--right-small'];
 const gallerySizes = [
   '(max-width: 1180px) 1px, 1091px',
@@ -45,7 +43,7 @@ const gallerySizes = [
   '(max-width: 760px) 100vw, (max-width: 1180px) calc(100vw - 48px), 1402px',
   '(max-width: 1180px) 1px, 577px',
 ];
-const galleryMedia = gallery.map((image) => {
+const galleryMedia = gallerySource.map((image) => {
   const sources = getOptimizedImageSources(image.url, getImageVariantSet(project.imageVariants, image.url));
   const src = sources.webp ?? sources.avif ?? getLocalAvifSource(image.url) ?? image.url;
   return {
@@ -55,6 +53,8 @@ const galleryMedia = gallery.map((image) => {
     fallbackSrc: src !== image.url ? image.url : undefined,
   };
 });
+const gallerySlotIndices = galleryMedia.length >= 4 ? [0, 1, 2, 3] : galleryMedia.length === 3 ? [1, 2, 3] : galleryMedia.length === 2 ? [2, 3] : [2];
+const galleryImageIndices = galleryMedia.length === 3 ? [2, 0, 1] : gallerySlotIndices.map((_, index) => index);
 const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(project.mapQuery || project.address)}&output=embed`;
 const mapHref = project.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(project.mapQuery || project.address)}`;
 const primaryCategory = project.categories[0] ?? 'coastal';
@@ -78,6 +78,9 @@ const heroVideoPlaylist = resolveVideoPlaylist(project.heroVideos);
 const walkthroughVideoPlaylist = resolveVideoPlaylist(project.walkthroughVideos);
 const optimizedHeroPosterUrl = heroVideoPlaylist[0]?.posterUrl || project.heroPosterUrl || project.coverUrl;
 const showWalkthroughVideo = project.walkthroughVideoEnabled && walkthroughVideoPlaylist.length > 0;
+const embeddedTourUrl = project.virtualTourUrl && URL.canParse(project.virtualTourUrl) && new URL(project.virtualTourUrl).origin === 'https://storage.net-fs.com'
+  ? project.virtualTourUrl
+  : '';
 const walkthroughVideoTitle = project.walkthroughVideoTitle.trim() || m['project.walkthrough'];
 const showHeroVideo = project.heroType === 'video' && heroVideoPlaylist.length > 0;
 const heroVariant = showHeroVideo ? 'immersive' : project.heroVariant;
@@ -243,24 +246,25 @@ const projectStructuredData = {
       </section>
     )}
 
-    {gallery.length > 0 && (
+    {gallerySource.length > 0 && (
       <section id="project-gallery" class="project-gallery-strip" aria-label={formatMessage(m['project.gallery'], { title: project.title })}>
         <div class="project-gallery-track">
-          {galleryMedia.slice(0, 4).map(({ image, src, srcset, fallbackSrc }, index) => (
-            <img
+          {gallerySlotIndices.map((slot, index) => {
+            const { image, src, srcset, fallbackSrc } = galleryMedia[galleryImageIndices[index]];
+            return <img
               src={src}
               srcset={srcset ?? undefined}
-              sizes={gallerySizes[index]}
+              sizes={gallerySizes[slot]}
               alt={image.alt}
               loading="lazy"
               decoding="async"
-              class={`project-gallery-image ${galleryClasses[index]}`}
+              class={`project-gallery-image ${galleryClasses[slot]}`}
               data-fallback-src={fallbackSrc}
               data-focal-x={image.focalX ?? 50}
               data-focal-y={image.focalY ?? 50}
               style={`object-position: ${image.focalX ?? 50}% ${image.focalY ?? 50}%;`}
-            >
-          ))}
+            />;
+          })}
           {galleryMedia.slice(4).map(({ image, src, srcset, fallbackSrc }) => (
             <span
               class="project-gallery-source"
@@ -288,18 +292,21 @@ const projectStructuredData = {
       </section>
     )}
 
-    {showWalkthroughVideo && (
+    {(showWalkthroughVideo || embeddedTourUrl) && (
       <section class="project-walkthrough" aria-labelledby="project-walkthrough-title">
         <div class="container project-walkthrough-inner">
           <h2 id="project-walkthrough-title" class="project-section-title">{walkthroughVideoTitle}</h2>
-          <div class="project-walkthrough-video project-video-deck" data-project-video-deck="walkthrough" data-has-mobile={String(walkthroughVideoPlaylist.some((video) => Boolean(video.mobileUrl)))} data-video-playlist={JSON.stringify(walkthroughVideoPlaylist)}>
-            <video class="project-video-slot is-active" poster={walkthroughVideoPlaylist[0].posterUrl || undefined} autoplay muted loop={walkthroughVideoPlaylist.length === 1} playsinline preload="metadata">
-              {walkthroughVideoPlaylist[0].mobileUrl && <source media="(max-width: 760px)" src={walkthroughVideoPlaylist[0].mobileUrl} type="video/mp4">}
-              <source src={walkthroughVideoPlaylist[0].desktopUrl} type="video/mp4">
-            </video>
-            <video class="project-video-slot" muted playsinline preload="none"></video>
-            <button class="project-video-reduced-play" type="button" aria-label={m['project.playWalkthrough']}>{m['project.playVideo']}</button>
-          </div>
+          {showWalkthroughVideo && (
+            <div class="project-walkthrough-video project-video-deck" data-project-video-deck="walkthrough" data-has-mobile={String(walkthroughVideoPlaylist.some((video) => Boolean(video.mobileUrl)))} data-video-playlist={JSON.stringify(walkthroughVideoPlaylist)}>
+              <video class="project-video-slot is-active" poster={walkthroughVideoPlaylist[0].posterUrl || undefined} autoplay muted loop={walkthroughVideoPlaylist.length === 1} playsinline preload="metadata">
+                {walkthroughVideoPlaylist[0].mobileUrl && <source media="(max-width: 760px)" src={walkthroughVideoPlaylist[0].mobileUrl} type="video/mp4">}
+                <source src={walkthroughVideoPlaylist[0].desktopUrl} type="video/mp4">
+              </video>
+              <video class="project-video-slot" muted playsinline preload="none"></video>
+              <button class="project-video-reduced-play" type="button" aria-label={m['project.playWalkthrough']}>{m['project.playVideo']}</button>
+            </div>
+          )}
+          {embeddedTourUrl && <iframe class="project-walkthrough-video project-virtual-tour-frame" src={embeddedTourUrl} title={m['project.virtualTour']} loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen" allowfullscreen></iframe>}
         </div>
       </section>
     )}
@@ -317,7 +324,7 @@ const projectStructuredData = {
           <p class="project-section-subtitle">{m['project.floorPlansText']}</p>
           <div class="project-plan-tabs" aria-label={m['project.floorPlanTypes']}>
             {project.floorPlanGroups.map((group, index) => (
-              <button class:list={['project-plan-tab', { active: index === 0 }]} type="button" data-plan-filter={group.id}><span data-label={group.title}>{group.title}</span></button>
+              <button class:list={['project-plan-tab', { active: index === 0 }]} type="button" data-plan-filter={group.id} aria-label={group.title}><span data-label={group.title}>{group.title}</span></button>
             ))}
           </div>
           <div class="project-plan-list">

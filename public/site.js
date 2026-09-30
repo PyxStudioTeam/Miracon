@@ -60,16 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (playlist.length) {
       const mobileMedia = window.matchMedia('(max-width: 600px), (pointer: coarse)');
-      const playButton = homeHeroPlaylist.querySelector('.hero-video-play');
       const prefersStillImage = window.matchMedia('(prefers-reduced-motion: reduce)').matches
         || navigator.connection?.saveData === true;
-      let playbackTimeout;
-      const showPlayButton = () => {
-        if (playButton) playButton.hidden = false;
-      };
-      const hidePlayButton = () => {
-        if (playButton) playButton.hidden = true;
-      };
       let currentIndex = 0;
       let activeSlotIndex = 0;
       let switching = false;
@@ -111,27 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
         video.load();
       }
       function attemptPlay(video) {
-        window.clearTimeout(playbackTimeout);
-        playbackTimeout = window.setTimeout(() => {
-          if (video.classList.contains('is-active') && video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) showPlayButton();
-        }, 7_000);
         video.classList.remove('is-failed');
         video.muted = true;
         video.playsInline = true;
         try {
-          return Promise.resolve(video.play()).then(() => {
-            if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
-              window.clearTimeout(playbackTimeout);
-              hidePlayButton();
-            }
-          }, (error) => {
-            window.clearTimeout(playbackTimeout);
-            showPlayButton();
-            throw error;
-          });
+          return Promise.resolve(video.play());
         } catch (error) {
-          window.clearTimeout(playbackTimeout);
-          showPlayButton();
           return Promise.reject(error);
         }
       }
@@ -190,8 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
             advancePlaylist();
           } else {
             outgoingVideo.loop = true;
-            if (prefersStillImage) showPlayButton();
-            else attemptPlay(outgoingVideo).catch(() => {});
+            if (!prefersStillImage) attemptPlay(outgoingVideo).catch(() => {});
           }
         });
       }
@@ -204,8 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSlot(activeVideo, playlist[currentIndex], 'auto');
         activeVideo.classList.add('is-active');
         activeVideo.muted = true;
-        if (prefersStillImage) showPlayButton();
-        else attemptPlay(activeVideo).catch(() => {});
+        if (!prefersStillImage) attemptPlay(activeVideo).catch(() => {});
       }
 
       homeHeroVideoSlots.forEach((video) => {
@@ -217,17 +192,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
           video.classList.add('is-failed');
-          if (video.classList.contains('is-active')) showPlayButton();
         });
-        for (const event of ['waiting', 'stalled']) {
-          video.addEventListener(event, () => {
-            if (video.classList.contains('is-active')) showPlayButton();
-          });
-        }
         video.addEventListener('playing', () => {
           if (!video.classList.contains('is-active')) return;
-          window.clearTimeout(playbackTimeout);
-          hidePlayButton();
           primeNextSlot();
         });
         video.addEventListener('ended', () => {
@@ -239,17 +206,10 @@ document.addEventListener('DOMContentLoaded', () => {
       initialVideo.autoplay = false;
       initialVideo.loop = playlist.length === 1;
       initialVideo.muted = true;
-      if (prefersStillImage) {
-        showPlayButton();
-      } else {
+      if (!prefersStillImage) {
         loadSlot(initialVideo, playlist[0], 'auto');
         attemptPlay(initialVideo).catch(() => {});
       }
-      playButton?.addEventListener('click', () => {
-        const activeVideo = homeHeroVideoSlots[activeSlotIndex];
-        loadSlot(activeVideo, playlist[currentIndex], 'auto');
-        attemptPlay(activeVideo).catch(() => {});
-      });
       if (mobileMedia.addEventListener) mobileMedia.addEventListener('change', reloadForViewport);
       else mobileMedia.addListener(reloadForViewport);
       document.addEventListener('visibilitychange', () => {
@@ -977,10 +937,10 @@ document.addEventListener('DOMContentLoaded', () => {
     { element: document.querySelector('.project-gallery-image--left'), offset: -1 },
     { element: document.querySelector('.project-gallery-image--main'), offset: 0 },
     { element: document.querySelector('.project-gallery-image--right-small'), offset: 1 }
-  ];
-  const galleryImages = gallerySlots.map(slot => slot.element).filter(Boolean);
+  ].filter(slot => slot.element);
+  const galleryImages = gallerySlots.map(slot => slot.element);
 
-  if (galleryImages.length === gallerySlots.length) {
+  if (gallerySlots.some(slot => slot.offset === 0)) {
     const gallerySlides = [];
     const gallerySlideKeys = new Set();
     const gallerySourceImages = Array.from(document.querySelectorAll(

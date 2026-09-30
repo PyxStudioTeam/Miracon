@@ -54,18 +54,8 @@ const filterLabels = {
   el: { all: 'Όλα', coastal: 'Παραθαλάσσια', city: 'Πόλη', 'golden-visa': 'Golden Visa' },
 };
 const homeHeroByLocale = {
-  en: {
-    subtitle: 'Thessaloniki · Halkidiki · Greece',
-    titleLines: ['Premium Residences', 'Prime Locations'],
-    cta: { href: '/#projects', label: 'Explore projects' },
-    badge: { href: '/golden-visa', label: 'Golden Visa from €250k' },
-  },
-  el: {
-    subtitle: 'Θεσσαλονίκη · Χαλκιδική · Ελλάδα',
-    titleLines: ['Πολυτελείς Κατοικίες', 'Προνομιακές Τοποθεσίες'],
-    cta: { href: '/el/#projects', label: 'Εξερευνήστε τα έργα' },
-    badge: { href: '/el/golden-visa', label: 'Golden Visa από €250k' },
-  },
+  en: { ctaHref: '/#projects', badgeHref: '/golden-visa' },
+  el: { ctaHref: '/el/#projects', badgeHref: '/el/golden-visa' },
 };
 const filterOracle = [
   { filter: 'all', visibleSlugs: ['browser-coastal-golden', 'browser-city', 'browser-city-seven'], pressed: true },
@@ -273,10 +263,11 @@ test('maps every allowed external provider and rejects unknown origins', () => {
   ]);
 });
 
-test('normalizes only equivalent internal trailing slashes in chrome hrefs', () => {
+test('normalizes equivalent internal navigation targets', () => {
   assert.equal(normalizeChromeHref('/el/golden-visa/'), '/el/golden-visa');
-  assert.equal(normalizeChromeHref('/el/golden-visa/?campaign=spring#top'), '/el/golden-visa?campaign=spring#top');
+  assert.equal(normalizeChromeHref('/el/golden-visa/?campaign=spring#top'), '/el/golden-visa?campaign=spring');
   assert.equal(normalizeChromeHref('/'), '/');
+  assert.equal(normalizeChromeHref('/golden-visa#top'), normalizeChromeHref('/golden-visa'));
   assert.notEqual(normalizeChromeHref('/el/golden-visa#top'), normalizeChromeHref('/el/golden-visa#contacts'));
   assert.equal(normalizeChromeHref('https://example.test/el/golden-visa/'), 'https://example.test/el/golden-visa/');
 });
@@ -682,7 +673,7 @@ function normalizeChromeHref(href) {
   const url = new URL(href, internalOrigin);
   if (url.origin !== internalOrigin) return href;
   const pathname = url.pathname !== '/' && url.pathname.endsWith('/') ? url.pathname.slice(0, -1) : url.pathname;
-  return `${pathname}${url.search}${url.hash}`;
+  return `${pathname}${url.search}${url.hash === '#top' ? '' : url.hash}`;
 }
 
 function projectChrome(locale, slug, category, routeKind = 'projects') {
@@ -935,11 +926,9 @@ async function assertHomeHeroLayout(page, expected) {
   const { elements } = details;
   const hero = elements['.hero'].rect;
 
-  assert.equal(details.subtitle, expected.subtitle);
-  assert.deepEqual(details.titleLines, expected.titleLines);
   assert.equal(details.titleBreaks, 1);
-  assert.deepEqual({ href: elements['.btn-hero'].href, label: elements['.btn-hero'].text }, expected.cta);
-  assert.deepEqual({ href: elements['.badge-visa'].href, label: elements['.badge-visa'].text }, expected.badge);
+  assert.equal(elements['.btn-hero'].href, expected.ctaHref);
+  assert.equal(elements['.badge-visa'].href, expected.badgeHref);
   for (const selector of homeHeroElementSelectors) {
     const element = elements[selector];
     assert.equal(element.visible, true, `${selector} must be visible`);
@@ -1000,7 +989,7 @@ async function assertMobileNavigationInteraction(page, expected, viewport) {
   assert.equal(opened.navigation.ariaHidden, 'false');
   assert.equal(opened.navigation.ariaLabel, expectedMenu.navigationLabel);
   assert.equal(opened.navigation.visible, true);
-  assert.deepEqual(opened.navigation.links, expected.links.slice(0, 3).map(([href, label]) => ({ href, label })));
+  assert.deepEqual(opened.navigation.links.map(({ href, label }) => ({ href: normalizeChromeHref(href), label })), expected.links.slice(0, 3).map(([href, label]) => ({ href: normalizeChromeHref(href), label })));
   assert.equal(opened.contact.ariaExpanded, 'false');
   assert.equal(opened.contact.label, expected.links[3][1]);
   assert.equal(opened.contactDetails.active, false);

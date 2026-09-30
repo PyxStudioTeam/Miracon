@@ -24,6 +24,13 @@ const goldenVisaUrl = absoluteLocalizedUrl('/golden-visa', locale, Astro.url);
 const projectsHref = localizePath('/#projects', locale);
 const contactsHref = localizePath('/golden-visa#contacts', locale);
 const privacyPolicyHref = siteSettings.footerPrivacyPdfUrl;
+const visaConditions = [
+  { title: m['gv.residency'], text: m['gv.residencyText'] },
+  { title: m['gv.investment'], text: m['gv.investmentText'] },
+  { title: m['gv.fiveYears'], text: m['gv.durationText'] },
+  { title: m['gv.family'], text: m['gv.familyText'] },
+  { title: m['gv.schengen'], text: m['gv.schengenText'] },
+];
 const goldenVisaStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -113,7 +120,7 @@ const goldenVisaStructuredData = {
               <img src="img/golden-visa/warning-mark.svg" alt="" class="gv-warning-mark">
             </span>
             <p>{copy.thresholdNote}&nbsp;
-              <strong>€400,000</strong></p>
+              <strong>€400,000–€800,000</strong></p>
           </div>
         </div>
       </div>
@@ -132,15 +139,15 @@ const goldenVisaStructuredData = {
 
           <div class="gv-family-cards">
             <article class="gv-family-card">
-              <img src="img/golden-visa/icon-children.svg" alt="" aria-hidden="true">
+              <img src="img/golden-visa/icon-spouse.svg" alt="" aria-hidden="true">
               <h3>{m['gv.spouse']}</h3>
             </article>
             <article class="gv-family-card">
-              <img src="img/golden-visa/icon-parents.svg" alt="" aria-hidden="true">
+              <img src="img/golden-visa/icon-children.svg" alt="" aria-hidden="true">
               <h3>{m['gv.children']}</h3>
             </article>
             <article class="gv-family-card">
-              <img src="img/golden-visa/icon-spouse.svg" alt="" aria-hidden="true">
+              <img src="img/golden-visa/icon-parents.svg" alt="" aria-hidden="true">
               <h3>{m['gv.parents']}</h3>
             </article>
             <article class="gv-family-card">
@@ -162,51 +169,16 @@ const goldenVisaStructuredData = {
 
     <section class="gv-metrics" aria-label={m['gv.metricsLabel']}>
       <div class="gv-metrics-track">
-        <div class="gv-metrics-set">
-          <article class="gv-metric-card">
-            <h3>{m['gv.countries']}</h3>
-            <p>{m['gv.countriesText']}</p>
-          </article>
-          <article class="gv-metric-card">
-            <h3>€250 000</h3>
-            <p>{m['gv.minimumInvestment']}</p>
-          </article>
-          <article class="gv-metric-card">
-            <h3>{m['gv.fiveYears']}</h3>
-            <p>{m['gv.durationText']}</p>
-          </article>
-          <article class="gv-metric-card">
-            <h3>100%</h3>
-            <p>{m['gv.guaranteeText']}</p>
-          </article>
-          <article class="gv-metric-card">
-            <h3>~€20 000</h3>
-            <p>{m['gv.chargesText']}</p>
-          </article>
-        </div>
-
-        <div class="gv-metrics-set" aria-hidden="true">
-          <article class="gv-metric-card">
-            <h3>{m['gv.countries']}</h3>
-            <p>{m['gv.countriesText']}</p>
-          </article>
-          <article class="gv-metric-card">
-            <h3>€250 000</h3>
-            <p>{m['gv.minimumInvestment']}</p>
-          </article>
-          <article class="gv-metric-card">
-            <h3>{m['gv.fiveYears']}</h3>
-            <p>{m['gv.durationText']}</p>
-          </article>
-          <article class="gv-metric-card">
-            <h3>100%</h3>
-            <p>{m['gv.guaranteeText']}</p>
-          </article>
-          <article class="gv-metric-card">
-            <h3>~€20 000</h3>
-            <p>{m['gv.chargesText']}</p>
-          </article>
-        </div>
+        {[false, true].map((duplicate) => (
+          <div class="gv-metrics-set" aria-hidden={duplicate ? 'true' : undefined}>
+            {visaConditions.map(({ title, text }) => (
+              <article class="gv-metric-card">
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
+        ))}
       </div>
     </section>
 

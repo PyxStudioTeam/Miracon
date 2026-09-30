@@ -686,26 +686,6 @@ html[lang='el'] .contact-btn {
   background: #173c51 url('/img/figma_hero.png') center / cover no-repeat;
 }
 
-.hero-video-play {
-  position: absolute;
-  z-index: 2;
-  top: 42%;
-  left: 50%;
-  min-width: 148px;
-  min-height: 48px;
-  padding: 10px 20px;
-  border: 1px solid rgba(255, 255, 255, .85);
-  border-radius: 24px;
-  background: rgba(0, 31, 67, .78);
-  color: white;
-  cursor: pointer;
-  font: inherit;
-  transform: translate(-50%, -50%);
-}
-
-.hero-video-play[hidden] { display: none; }
-.hero-video-play:focus-visible { outline: 3px solid white; outline-offset: 4px; }
-
 .hero-video {
   position: absolute;
   inset: 0;
@@ -1909,16 +1889,11 @@ body.js-enabled .about-reveal.visible {
   position: absolute;
   inset: 0;
   padding: 44px 59px 118px;
-  opacity: 0;
   visibility: hidden;
-  transform: translateX(40px);
-  transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.55s ease;
 }
 
 .slide.active {
-  opacity: 1;
   visibility: visible;
-  transform: translateX(0);
 }
 
 .slide-title {
@@ -2530,9 +2505,7 @@ body.js-enabled .about-reveal.visible {
 }
 
 .footer-contact-details {
-  position: absolute;
-  top: 149px;
-  left: 0;
+  position: static;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 22px;
@@ -2566,11 +2539,12 @@ body.js-enabled .about-reveal.visible {
 }
 
 @media (min-width: 601px) and (max-width: 1919px) {
-  .footer-contact-details { position: static; align-self: center; }
+  .footer-contact-details { align-self: center; }
   .footer-top { flex-wrap: wrap; gap: 18px; }
 }
 
 @media (max-width: 600px) {
+  .project-page .footer .footer-top .site-social-links,
   .golden-visa-page .footer .footer-top .site-social-links {
     position: static;
     display: flex;
@@ -2581,22 +2555,26 @@ body.js-enabled .about-reveal.visible {
     width: 100%;
   }
 
+  .project-page .footer .footer-top .site-social-links a,
   .golden-visa-page .footer .footer-top .site-social-links a {
     width: 44px;
     height: 44px;
   }
 
+  .project-page .footer .footer-top .site-social-links img,
   .golden-visa-page .footer .footer-top .site-social-links img {
     width: 24px;
     height: 24px;
   }
 
+  .project-page .footer .footer-top,
   .golden-visa-page .footer .footer-top {
     display: flex;
     flex-wrap: wrap;
     height: auto;
     gap: 10px;
   }
+  .project-page .footer .footer-top .footer-contact-details,
   .golden-visa-page .footer .footer-top .footer-contact-details {
     position: static;
     order: 3;

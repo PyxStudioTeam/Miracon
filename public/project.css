@@ -984,6 +984,11 @@ body.js-enabled .project-page .project-amenity-card.visible:focus-within {
   box-shadow: 0 30px 80px rgba(var(--brand-rgb), .14);
 }
 
+.project-virtual-tour-frame {
+  display: block;
+  border: 0;
+}
+
 .project-floor-plans {
   overflow: hidden;
 }
@@ -2557,6 +2562,11 @@ body.js-enabled .project-page .project-brochure-link {
 
   .project-walkthrough-video[data-has-mobile="true"] {
     aspect-ratio: 4 / 5;
+  }
+
+  .project-virtual-tour-frame {
+    aspect-ratio: auto;
+    min-height: min(70svh, 640px);
   }
 
   .project-plan-tab,
