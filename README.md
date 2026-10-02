@@ -185,7 +185,7 @@ Render uses Node 22.22.2 with npm 10. After changing dependencies, regenerate `p
 
 For an existing Render service, verify the effective `NODE_VERSION` in its build log: a dashboard override can differ from `render.yaml`. If it reports `22.12.0`, set `NODE_VERSION=22.22.2` in the Render service environment before redeploying; Node 22.12.0 is below this project's `>=22.19.0` requirement. Commit an npm 10-generated lockfile after dependency changes rather than running `npm install` only during deployment.
 
-The homepage retains the original 1280×720, 60 fps `public/img/hero-bg-mobile.mp4`. The client selects exactly one initial video source, waits to preload the next clip until playback starts, and shows the poster and a Play button when autoplay fails or loading stalls. If a mobile video cannot be decoded, it tries the existing desktop 30 fps source without altering the original. Real-device Opera acceptance remains necessary after deployment; browser emulation cannot guarantee a device's decoder or autoplay policy.
+The homepage retains the original 1280×720, 60 fps `public/img/hero-bg-mobile.mp4`. The first muted video and its mobile/desktop sources are present in the initial HTML so the browser can autoplay it before client initialization; the client does not reload that initial source. The next clip preloads only after playback starts. If the mobile video cannot be decoded, the existing desktop 30 fps source is tried without altering the original. A browser that prohibits all autoplay shows the poster rather than a manual play control; real-device Opera acceptance remains necessary after deployment because Chromium emulation cannot guarantee Opera's decoder or autoplay policy.
 
 ## Content and media operations
 

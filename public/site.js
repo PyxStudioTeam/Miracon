@@ -74,10 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
           : item.desktopUrl;
       }
 
-      function needsDesktopFallback(video, item) {
+      function needsDesktopFallback(video, item, error) {
         return mobileMedia.matches && item.mobileUrl && item.mobileUrl !== item.desktopUrl
           && !desktopFallbacks.has(item.id) && video.dataset.playlistSrc === item.mobileUrl
-          && (video.error?.code === 3 || video.error?.code === 4);
+          && (video.error?.code === 3 || video.error?.code === 4 || error?.name === 'NotSupportedError');
       }
       function findNextIndex() {
         for (let offset = 1; offset < playlist.length; offset += 1) {
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextUrl = videoUrl(item);
         if (!nextUrl) return;
         video.classList.remove('is-failed');
-        video.autoplay = false;
+        video.autoplay = !prefersStillImage && video.classList.contains('is-active');
         video.preload = preload;
         if (video.dataset.playlistSrc === nextUrl) {
           if (video.error) video.load();
@@ -101,6 +101,16 @@ document.addEventListener('DOMContentLoaded', () => {
         video.src = nextUrl;
         video.dataset.playlistSrc = nextUrl;
         video.load();
+      }
+      function resumeActiveVideo(video) {
+        const item = playlist[currentIndex];
+        attemptPlay(video).catch((error) => {
+          if (!video.paused) return;
+          if (!needsDesktopFallback(video, item, error)) return;
+          desktopFallbacks.add(item.id);
+          loadSlot(video, item, 'auto');
+          attemptPlay(video).catch(() => {});
+        });
       }
       function attemptPlay(video) {
         video.classList.remove('is-failed');
@@ -143,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         attemptPlay(incomingVideo).catch((error) => {
           const item = playlist[nextIndex];
-          if (!needsDesktopFallback(incomingVideo, item)) throw error;
+          if (!needsDesktopFallback(incomingVideo, item, error)) throw error;
           desktopFallbacks.add(item.id);
           loadSlot(incomingVideo, item, 'auto');
           return attemptPlay(incomingVideo);
@@ -180,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSlot(activeVideo, playlist[currentIndex], 'auto');
         activeVideo.classList.add('is-active');
         activeVideo.muted = true;
-        if (!prefersStillImage) attemptPlay(activeVideo).catch(() => {});
+        if (!prefersStillImage) resumeActiveVideo(activeVideo);
       }
 
       homeHeroVideoSlots.forEach((video) => {
@@ -188,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (video.classList.contains('is-active') && needsDesktopFallback(video, playlist[currentIndex])) {
             desktopFallbacks.add(playlist[currentIndex].id);
             loadSlot(video, playlist[currentIndex], 'auto');
-            attemptPlay(video).catch(() => {});
+            if (!prefersStillImage) resumeActiveVideo(video);
             return;
           }
           video.classList.add('is-failed');
@@ -203,19 +213,20 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const initialVideo = homeHeroVideoSlots[activeSlotIndex];
-      initialVideo.autoplay = false;
       initialVideo.loop = playlist.length === 1;
       initialVideo.muted = true;
+      initialVideo.dataset.playlistSrc = videoUrl(playlist[0]);
+      if (!prefersStillImage && !initialVideo.paused && initialVideo.currentTime > 0) primeNextSlot();
       if (!prefersStillImage) {
-        loadSlot(initialVideo, playlist[0], 'auto');
-        attemptPlay(initialVideo).catch(() => {});
+        initialVideo.preload = 'auto';
+        resumeActiveVideo(initialVideo);
       }
       if (mobileMedia.addEventListener) mobileMedia.addEventListener('change', reloadForViewport);
       else mobileMedia.addListener(reloadForViewport);
       document.addEventListener('visibilitychange', () => {
         const activeVideo = homeHeroVideoSlots[activeSlotIndex];
         if (!document.hidden && !prefersStillImage && activeVideo.paused && !activeVideo.error) {
-          attemptPlay(activeVideo).catch(() => {});
+          resumeActiveVideo(activeVideo);
         }
       });
     }

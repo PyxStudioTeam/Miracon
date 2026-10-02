@@ -105,7 +105,18 @@ const homeStructuredData = {
     <section class="hero-pin" aria-label={brandCopy(m['home.heroLabel'], siteSettings)}>
       <div class="hero">
         <div class="hero-media" data-home-hero-playlist={serializedHomeHeroVideos}>
-          <video class="hero-video is-active" muted loop={homeHeroVideos.length === 1} playsinline preload="none" poster="/img/figma_hero.png"></video>
+          <video class="hero-video is-active" autoplay muted loop={homeHeroVideos.length === 1} playsinline preload="metadata" poster="/img/figma_hero.png">
+            {homeHeroVideos[0].mobileUrl && <source media="(max-width: 600px), (pointer: coarse)" src={homeHeroVideos[0].mobileUrl} type="video/mp4">}
+            <source src={homeHeroVideos[0].desktopUrl} type="video/mp4">
+          </video>
+          <script is:inline>
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData === true) {
+              const video = document.currentScript.previousElementSibling;
+              video.autoplay = false;
+              video.pause();
+              video.preload = 'none';
+            }
+          </script>
           <video class="hero-video" muted playsinline preload="none" poster="/img/figma_hero.png" aria-hidden="true"></video>
         </div>
         <div class="container hero-content notranslate" translate="no">

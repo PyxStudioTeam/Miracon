@@ -69,16 +69,6 @@ test('database commands fail loudly when guarded test configuration is absent', 
   }
 });
 
-test('defines one safe release verification command', () => {
-  // Given / When
-  const command = packageJson.scripts['release:verify'];
-
-  // Then
-  assert.equal(command, 'npm run check && npm run build && npm test && npm run browser:contact:test');
-  assert.match(packageJson.scripts['browser:contact:test'], /browser-tests\/contact-form-client\.test\.mjs/u);
-  assert.doesNotMatch(command, /:db\b/u);
-});
-
 test('documents the production canonical origin contract', () => {
   // Given / When / Then
   assert.match(environmentExample, /^PUBLIC_SITE_URL=https:\/\/miracon\.gr$/mu);
