@@ -183,6 +183,8 @@ The existing Render Free preview uses `render.yaml` and deploys from Git, not fr
 
 Render uses Node 22.22.2 with npm 10. After changing dependencies, regenerate `package-lock.json` with npm 10 and run a clean `npm ci` on Node 22 in Linux CI or Render before deploying a branch directly; Windows native dependencies such as `argon2` may require the Visual Studio C++ toolchain.
 
+For an existing Render service, verify the effective `NODE_VERSION` in its build log: a dashboard override can differ from `render.yaml`. If it reports `22.12.0`, set `NODE_VERSION=22.22.2` in the Render service environment before redeploying; Node 22.12.0 is below this project's `>=22.19.0` requirement. Commit an npm 10-generated lockfile after dependency changes rather than running `npm install` only during deployment.
+
 The homepage retains the original 1280×720, 60 fps `public/img/hero-bg-mobile.mp4`. The client selects exactly one initial video source, waits to preload the next clip until playback starts, and shows the poster and a Play button when autoplay fails or loading stalls. If a mobile video cannot be decoded, it tries the existing desktop 30 fps source without altering the original. Real-device Opera acceptance remains necessary after deployment; browser emulation cannot guarantee a device's decoder or autoplay policy.
 
 ## Content and media operations
