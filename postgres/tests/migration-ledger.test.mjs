@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readdir } from 'node:fs/promises';
 import test from 'node:test';
 import { validateMigrationLedger } from '../../scripts/postgres-migrate.mjs';
 
@@ -58,4 +59,16 @@ test('rejects a newly introduced migration before an applied migration', () => {
 
   // When / Then
   assert.throws(() => validateMigrationLedger(migrations, ledger), { name: 'MigrationOrderError' });
+});
+
+test('appends the mail outbox after a deployed localized-legal migration', async () => {
+  const filenames = (await readdir(new URL('../migrations/', import.meta.url)))
+    .filter((filename) => filename.endsWith('.sql'))
+    .sort();
+  const onDisk = filenames.map((filename) => ({ filename, checksum: filename }));
+  const deployedLedger = onDisk.filter(({ filename }) =>
+    filename < '0020_contact_mail_outbox.sql' || filename === '0021_localized_legal_documents.sql');
+
+  assert.equal(deployedLedger.at(-1)?.filename, '0021_localized_legal_documents.sql');
+  assert.equal(validateMigrationLedger(onDisk, deployedLedger)[0]?.filename, '0022_contact_mail_outbox.sql');
 });

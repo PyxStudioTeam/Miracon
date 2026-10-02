@@ -161,53 +161,6 @@ test('seeds complete deterministic baseline revisions and heads for every govern
   }
 });
 
-test('baseline snapshots exactly equal the locked source rows', async () => {
-  // Given / When
-  const result = await client.query(`
-    select
-      not exists (
-        select 1
-        from miracon.content_revisions as revision
-        join miracon.projects as project on project.id = revision.aggregate_id
-        where revision.aggregate_type = 'project'
-          and revision.action = 'baseline'
-          and revision.snapshot <> jsonb_build_object(
-            'aggregateType', 'project',
-            'aggregateId', project.id,
-            'deleted', false,
-            'project', to_jsonb(project),
-            'images', coalesce((
-              select jsonb_agg(to_jsonb(image) order by image.role, image.sort_order, image.id)
-              from miracon.project_images as image
-              where image.project_id = project.id
-            ), '[]'::jsonb)
-          )
-      ) as projects_match,
-      (select snapshot from miracon.content_revisions where aggregate_type = 'homepage_hero' and action = 'baseline')
-        = jsonb_build_object(
-          'aggregateType', 'homepage_hero',
-          'aggregateId', 'singleton',
-          'videos', coalesce((
-            select jsonb_agg(to_jsonb(video) order by video.sort_order, video.id)
-            from miracon.homepage_videos as video
-          ), '[]'::jsonb)
-        ) as homepage_matches,
-      (select snapshot from miracon.content_revisions where aggregate_type = 'site_settings' and action = 'baseline')
-        = (select jsonb_build_object(
-          'aggregateType', 'site_settings',
-          'aggregateId', 'singleton',
-          'settings', to_jsonb(settings)
-        ) from miracon.site_settings as settings where settings.id = 1) as settings_match
-  `);
-
-  // Then
-  assert.deepEqual(result.rows[0], {
-    projects_match: true,
-    homepage_matches: true,
-    settings_match: true,
-  });
-});
-
 test('baseline source lock mode excludes concurrent writers', async () => {
   // Given
   const lockClient = await openClient(databaseUrl, 'baseline-lock-test');

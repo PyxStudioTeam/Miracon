@@ -69,7 +69,7 @@
    `CONTACT_SMTP_FROM`, `CONTACT_SMTP_TO`; для автоответа дополнительно
    `CONTACT_AUTOREPLY_ENABLED=true` после теста EN/EL на своём ящике.
    Для SMTP допустим только порт 465 с TLS или 587 с обязательным STARTTLS.
-   Миграция `0020_contact_mail_outbox.sql` и защищённый минутный Cron
+   Миграция `0022_contact_mail_outbox.sql` и защищённый минутный Cron
    `node scripts/contact-mail-drain.mjs --apply` обязательны для доставки
    почты; Cron должен получать отдельное безопасное окружение. Подробности
    в `README.md` и `docs/production-release-runbook.md`.
