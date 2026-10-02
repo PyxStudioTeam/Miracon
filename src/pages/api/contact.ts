@@ -3,18 +3,7 @@ import { json, jsonError, trustedClientAddress } from '../../lib/server/api';
 import type { ApiContext } from '../../lib/server/api';
 import { contactSubmissionSchema } from '../../lib/server/contact-contracts';
 import type { ContactSubmissionInput } from '../../lib/server/contact-contracts';
-import {
-  ContactSmtpConfigurationError,
-  getContactDigestSecret,
-} from '../../lib/server/contact-config';
-import {
-  ContactNotificationError,
-  notifyAcceptedContact,
-} from '../../lib/server/contact-notifications';
-import type {
-  AcceptedContactNotification,
-  ContactNotificationFailureCategory,
-} from '../../lib/server/contact-notifications';
+import { getContactDigestSecret } from '../../lib/server/contact-config';
 import { PostgresContactRepository } from '../../lib/server/contact-repository';
 import { submitContact } from '../../lib/server/contact-service';
 import type { SubmitContactResult } from '../../lib/server/contact-service';
@@ -26,27 +15,18 @@ type ContactSubmitRequest = {
   readonly submission: ContactSubmissionInput;
   readonly clientAddress: string;
   readonly now: Date;
-};
-
-type ContactNotificationLog = {
-  readonly event: 'contact_notification_failed';
-  readonly contactId: AcceptedContactNotification['id'];
-  readonly category: ContactNotificationFailureCategory | 'configuration_invalid' | 'unexpected';
+  readonly enqueueAcknowledgement: boolean;
 };
 
 type ContactRouteDependencies = {
   readonly submit: (request: ContactSubmitRequest) => Promise<SubmitContactResult>;
-  readonly notify: (contact: AcceptedContactNotification) => Promise<void>;
-  readonly logNotificationFailure: (event: ContactNotificationLog) => void;
 };
 
 const contactRouteDependencies: ContactRouteDependencies = {
-  submit: ({ submission, clientAddress, now }) => submitContact(
+  submit: ({ submission, clientAddress, now, enqueueAcknowledgement }) => submitContact(
     new PostgresContactRepository(getDatabasePool()),
-    { submission, clientAddress, digestSecret: getContactDigestSecret(), now },
+    { submission, clientAddress, digestSecret: getContactDigestSecret(), now, enqueueAcknowledgement },
   ),
-  notify: notifyAcceptedContact,
-  logNotificationFailure: (event) => console.warn(JSON.stringify(event)),
 };
 
 export function createContactPost(
@@ -70,27 +50,10 @@ export function createContactPost(
       submission: input.value,
       clientAddress: trustedClientAddress(clientAddress),
       now,
+      enqueueAcknowledgement: process.env.CONTACT_AUTOREPLY_ENABLED === 'true',
     });
     switch (result.kind) {
       case 'accepted':
-        try {
-          await dependencies.notify({
-            id: result.id,
-            name: input.value.name,
-            email: input.value.email,
-            phone: input.value.phone,
-            message: input.value.message,
-            locale: input.value.locale,
-            sourcePath: input.value.sourcePath,
-            acceptedAt: now,
-          });
-        } catch (error) {
-          dependencies.logNotificationFailure({
-            event: 'contact_notification_failed',
-            contactId: result.id,
-            category: notificationFailureCategory(error),
-          });
-        }
         return json({ id: result.id }, { status: 201 });
       case 'invalid_challenge':
         return jsonError(400, 'invalid_challenge', 'Contact challenge is invalid or expired');
@@ -155,10 +118,3 @@ function assertNever(_value: never): never {
   throw new TypeError('Unexpected contact submission result');
 }
 
-function notificationFailureCategory(
-  error: unknown,
-): ContactNotificationLog['category'] {
-  if (error instanceof ContactSmtpConfigurationError) return 'configuration_invalid';
-  if (error instanceof ContactNotificationError) return error.category;
-  return 'unexpected';
-}

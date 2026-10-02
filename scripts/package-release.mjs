@@ -16,6 +16,8 @@ const requiredInputs = [
   'scripts/postgres-migrate.mjs',
   'scripts/provision-admin.mjs',
   'scripts/contact-retention-purge.mjs',
+  'scripts/contact-mail-delivery.mjs',
+  'scripts/contact-mail-drain.mjs',
   'scripts/supabase-import.mjs',
   'scripts/verify-media-state.mjs',
   'scripts/migration/import-artifacts.mjs',

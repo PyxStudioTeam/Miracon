@@ -27,10 +27,12 @@
    их данные в строку `DATABASE_URL` ниже. Данные MySQL для базы `miracong_site`
    использовать нельзя. Сначала нужна PostgreSQL база в cPanel.
 
-2. **Загрузите архив релиза по FTP.**
+2. **Разместите релиз вне публичного каталога через cPanel File Manager/Terminal или SFTP с доступом к домашнему каталогу.**
 
-   Загрузите содержимое релиза в `/public_html/miracon-node-release/`. Некоторые
-   FTP аккаунты показывают тот же каталог как `/miracon-node-release/`.
+   Загрузите содержимое в `/home/<CPANEL_USERNAME>/miracon-node-release/`.
+   FTP-аккаунт, ограниченный `public_html`, не может безопасно выполнить этот
+   этап: запросите доступ оператора; не заменяйте защищённое размещение загрузкой
+   в публичный каталог.
 
 3. **Создайте Node.js приложение в cPanel.**
 
@@ -39,7 +41,7 @@
    - **Node.js version:** любая предлагаемая cPanel версия `>=22.19.0`; `22.23.0`
      подходит, если она доступна
    - **Application mode:** `Production`
-   - **Application root:** `public_html/miracon-node-release`
+   - **Application root:** `miracon-node-release` вне `public_html` (полный путь `/home/<CPANEL_USERNAME>/miracon-node-release`)
    - **Application URL:** `miracon.gr` или `https://miracon.gr`, смотря какой формат требует поле
    - **Startup file:** `app.js`
 
@@ -56,13 +58,21 @@
    CONTACT_SMTP_ENABLED=false
    ```
 
-   `CONTACT_DIGEST_SECRET` должен храниться только в серверной среде приложения,
-   не в архиве или `public_html`. SMTP-уведомления необязательны и по умолчанию
-   отключены. Если они отдельно согласованы, добавьте полный серверный набор
-   `CONTACT_SMTP_ENABLED=true`, `CONTACT_SMTP_HOST`, `CONTACT_SMTP_PORT`,
-   `CONTACT_SMTP_USER`, `CONTACT_SMTP_PASSWORD`, `CONTACT_SMTP_FROM` и
-   `CONTACT_SMTP_TO`. Для SMTP допустим только порт 465 с implicit TLS или 587 с
-   обязательным STARTTLS; не используйте префикс `PUBLIC_`.
+   `CONTACT_DIGEST_SECRET` и SMTP-пароль храните только в защищённой серверной
+   конфигурации вне релиза и `public_html`; для публичной `.htaccess` задайте текущие
+   значения в защищённом окружении, проверьте приоритет переменных, удалите
+   лишь публичные строки с секретами (сохраняя Passenger), проверьте форму,
+   затем смените оба секрета в защищённом окружении и проверьте ещё раз.
+   Уведомления SMTP отключены по умолчанию. При их включении задайте полный
+   серверный набор `CONTACT_SMTP_ENABLED=true`, `CONTACT_SMTP_HOST`,
+   `CONTACT_SMTP_PORT`, `CONTACT_SMTP_USER`, `CONTACT_SMTP_PASSWORD`,
+   `CONTACT_SMTP_FROM`, `CONTACT_SMTP_TO`; для автоответа дополнительно
+   `CONTACT_AUTOREPLY_ENABLED=true` после теста EN/EL на своём ящике.
+   Для SMTP допустим только порт 465 с TLS или 587 с обязательным STARTTLS.
+   Миграция `0020_contact_mail_outbox.sql` и защищённый минутный Cron
+   `node scripts/contact-mail-drain.mjs --apply` обязательны для доставки
+   почты; Cron должен получать отдельное безопасное окружение. Подробности
+   в `README.md` и `docs/production-release-runbook.md`.
 
 5. **Установите зависимости, примените таблицы и создайте администратора.**
 
@@ -73,7 +83,7 @@
 
    ```bash
    <КОМАНДА_ENTER_TO_VIRTUAL_ENVIRONMENT_ИЗ_CPANEL>
-   cd /home/<CPANEL_USERNAME>/public_html/miracon-node-release
+   cd /home/<CPANEL_USERNAME>/miracon-node-release
    npm ci --omit=dev
    npm run postgres:migrate
    printf '%s' '<ADMIN_PASSWORD>' | node scripts/provision-admin.mjs --email=<ADMIN_EMAIL> --password-stdin

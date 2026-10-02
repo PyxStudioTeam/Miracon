@@ -611,7 +611,7 @@
     padding: 0;
     border-radius: 8px;
     color: var(--mobile-cream);
-    background: rgba(0, 80, 250, .53);
+    background: rgba(var(--brand-muted-rgb, 0, 80, 250), .53);
     font-size: 12.145px;
     line-height: 14.574px;
     backdrop-filter: blur(2.43px);
@@ -1567,7 +1567,6 @@
 
   .footer {
     padding: 0;
-    background: #03275b;
   }
 
   .footer-container {

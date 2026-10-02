@@ -19,6 +19,7 @@ type ContactRequestContext = {
 
 type ContactSubmissionRequest = ContactRequestContext & {
   readonly submission: ContactSubmissionInput;
+  readonly enqueueAcknowledgement?: boolean;
 };
 
 export type IssuedContactChallenge =
@@ -65,6 +66,7 @@ export async function submitContact(
     clientDigest: contactDigest(request.digestSecret, 'client', request.clientAddress),
     duplicateDigest: contactDigest(request.digestSecret, 'duplicate', duplicateSource),
     isSpam: request.submission.website.trim().length > 0,
+    enqueueAcknowledgement: request.enqueueAcknowledgement ?? false,
     createdAt: request.now,
   });
 }

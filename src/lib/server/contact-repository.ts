@@ -18,6 +18,7 @@ export type ContactSubmissionRecord = Omit<ContactSubmissionInput, 'challenge' |
   readonly clientDigest: Buffer;
   readonly duplicateDigest: Buffer;
   readonly isSpam: boolean;
+  readonly enqueueAcknowledgement?: boolean;
   readonly createdAt: Date;
 };
 
@@ -173,9 +174,15 @@ export class PostgresContactRepository implements ContactIntakeRepository {
     );
     await client.query(
       `select pg_advisory_xact_lock(hashtextextended(lock_key, 0))
-       from unnest(array[encode($1::bytea, 'hex'), encode($2::bytea, 'hex')]) as locks(lock_key)
+       from unnest(array[
+         encode($1::bytea, 'hex'),
+         encode($2::bytea, 'hex'),
+         case when $3::boolean and nullif(btrim($4::text), '') is not null
+           then 'contact-ack/v1:' || lower(btrim($4::text)) end
+       ]) as locks(lock_key)
+       where lock_key is not null
        order by lock_key`,
-      [record.clientDigest, record.duplicateDigest],
+      [record.clientDigest, record.duplicateDigest, record.enqueueAcknowledgement === true, record.email],
     );
     const challenge = await client.query(
       `update miracon.contact_challenges
@@ -211,6 +218,28 @@ export class PostgresContactRepository implements ContactIntakeRepository {
       [record.id, record.name, record.email, record.phone, record.message,
         record.createdAt, record.locale, record.sourcePath, record.clientDigest, record.duplicateDigest],
     );
+    await client.query(
+      `insert into miracon.contact_mail_jobs (contact_id, kind, next_attempt_at, created_at)
+       values ($1, 'team', $2, $2)`,
+      [record.id, record.createdAt],
+    );
+    if (record.enqueueAcknowledgement && record.email?.trim()) {
+      const acknowledgementCutoff = new Date(record.createdAt.getTime() - 24 * 60 * 60 * 1_000);
+      await client.query(
+        `insert into miracon.contact_mail_jobs (contact_id, kind, next_attempt_at, created_at)
+         select $1, 'ack', $2, $2
+         where not exists (
+           select 1
+           from miracon.contact_mail_jobs as jobs
+           join miracon.contact_submissions as submissions on submissions.id = jobs.contact_id
+           where jobs.kind = 'ack'
+             and submissions.email is not null
+             and lower(btrim(submissions.email)) = lower(btrim($3::text))
+             and jobs.created_at > $4
+         )`,
+        [record.id, record.createdAt, record.email, acknowledgementCutoff],
+      );
+    }
     return { kind: 'accepted', id: record.id };
   }
 }

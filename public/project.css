@@ -2628,14 +2628,14 @@ body.js-enabled .project-page .project-brochure-link {
   font-size: 16px;
   font-weight: 600;
   text-decoration: none;
-  box-shadow: 0 4px 16px rgba(0, 48, 117, 0.2);
+  box-shadow: 0 4px 16px rgba(var(--brand-rgb), 0.2);
   transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 .project-virtual-tour a:hover {
-  background: #164c91;
+  background: var(--brand-blue, #164c91);
   color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 48, 117, 0.3);
+  box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.3);
 }
 .project-virtual-tour a:focus-visible {
   outline: 3px solid var(--brand-color, #003075);

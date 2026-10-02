@@ -4,8 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { migrate } from '../scripts/postgres-migrate.mjs';
 import { provisionSingletonAdmin } from '../scripts/provision-admin.mjs';
 import { POST as issueChallenge } from '../src/pages/api/contact/challenge';
-import { POST as submitContact, createContactPost } from '../src/pages/api/contact';
-import { ContactNotificationError } from '../src/lib/server/contact-notifications';
+import { POST as submitContact } from '../src/pages/api/contact';
 import { GET as listContacts } from '../src/pages/api/admin/contacts/index';
 import { GET as exportContacts } from '../src/pages/api/admin/contacts/export';
 import { DELETE as deleteContact, GET as getContact } from '../src/pages/api/admin/contacts/[id]';
@@ -33,7 +32,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('truncate miracon.contact_submissions, miracon.contact_challenges; delete from miracon.admin_sessions');
+  await pool.query('truncate miracon.contact_mail_jobs, miracon.contact_submissions, miracon.contact_challenges; delete from miracon.admin_sessions');
 });
 
 afterAll(async () => {
@@ -76,24 +75,26 @@ describe('contact API', () => {
     expect(JSON.stringify(stored.rows)).not.toContain(clientAddress);
   });
 
-  it('keeps the accepted row and 201 response when notification delivery fails', async () => {
-    // Given
-    const challenge = await newChallenge();
-    const handler = createContactPost({
-      notify: async () => {
-        throw new ContactNotificationError('transport_failed');
-      },
-      logNotificationFailure: () => undefined,
-    });
+  it('atomically schedules both emails for an opted-in accepted submission', async () => {
+    const previousOptIn = process.env.CONTACT_AUTOREPLY_ENABLED;
+    process.env.CONTACT_AUTOREPLY_ENABLED = 'true';
+    try {
+      const challenge = await newChallenge();
+      const response = await submitContact(contactRequest(challenge));
+      expect(response.status).toBe(201);
+      const { id } = await response.json() as { readonly id: string };
 
-    // When
-    const response = await handler(contactRequest(challenge));
-    const stored = await pool.query('select id from miracon.contact_submissions');
-
-    // Then
-    expect(response.status).toBe(201);
-    expect(stored.rows).toHaveLength(1);
-    expect(stored.rows[0]).toEqual(await response.json());
+      const jobs = await pool.query<{ readonly contact_id: string; readonly kind: string; readonly state: string }>(
+        'select contact_id, kind, state from miracon.contact_mail_jobs order by kind',
+      );
+      expect(jobs.rows).toEqual([
+        { contact_id: id, kind: 'ack', state: 'queued' },
+        { contact_id: id, kind: 'team', state: 'queued' },
+      ]);
+    } finally {
+      if (previousOptIn === undefined) delete process.env.CONTACT_AUTOREPLY_ENABLED;
+      else process.env.CONTACT_AUTOREPLY_ENABLED = previousOptIn;
+    }
   });
 
   it('rejects cross-origin, honeypot, duplicate, and hourly-limit submissions', async () => {

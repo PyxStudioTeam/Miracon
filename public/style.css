@@ -1292,7 +1292,7 @@ body.js-enabled .project-card.visible {
   color: var(--white);
   font-size: 18px;
   line-height: 1;
-  background-color: rgba(0, 80, 250, 0.53);
+  background-color: rgba(var(--brand-muted-rgb, 0, 80, 250), 0.53);
 }
 
 .tag:first-child:nth-last-child(2),
@@ -2440,7 +2440,7 @@ body.js-enabled .about-reveal.visible {
 .footer {
   height: 338px;
   padding: 0;
-  background: #03275b;
+  background: var(--brand-blue, #03275b);
   color: var(--white);
 }
 
@@ -2667,7 +2667,7 @@ body.js-enabled .about-reveal.visible {
   position: absolute;
   top: 3px;
   right: 3px;
-  width: 59px;
+  width: 58px;
   height: 58px;
   border-radius: 50%;
   background: var(--brand-color);
@@ -5068,15 +5068,15 @@ body.js-enabled .about-reveal.visible {
   }
 
   .footer .lang-dropdown-btn::before {
-    top: 9px;
-    right: 9px;
-    width: 46px;
-    height: 46px;
+    top: min(9px, .46875vw);
+    right: min(9px, .46875vw);
+    width: min(46px, 2.3958vw);
+    height: min(46px, 2.3958vw);
   }
 
   .footer .lang-refresh img {
-    width: 24px;
-    height: 24px;
+    width: min(24px, 1.25vw);
+    height: min(24px, 1.25vw);
   }
 }
 

@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -17,7 +17,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await pool.query('truncate miracon.contact_submissions, miracon.contact_challenges');
+  await pool.query('truncate miracon.contact_mail_jobs, miracon.contact_submissions, miracon.contact_challenges');
 });
 
 afterAll(async () => {
@@ -221,13 +221,16 @@ describe('contact repository concurrency', () => {
 
     // When
     const results = await Promise.all([
-      submission({ repository, challengeToken: firstChallenge, clientAddress, message: 'Fifth candidate', now: atSecond(48) }),
-      submission({ repository, challengeToken: secondChallenge, clientAddress, message: 'Sixth candidate', now: atSecond(48) }),
+      submission({ repository, challengeToken: firstChallenge, clientAddress, message: 'Fifth candidate', enqueueAcknowledgement: true, now: atSecond(48) }),
+      submission({ repository, challengeToken: secondChallenge, clientAddress, message: 'Sixth candidate', enqueueAcknowledgement: true, now: atSecond(48) }),
     ]);
 
     // Then
     expect(results.map((result) => result.kind).sort()).toEqual(['accepted', 'rate_limited']);
     await expect(submissionCount()).resolves.toBe(5);
+    const jobs = await mailJobs();
+    expect(jobs.filter((job) => job.kind === 'team')).toHaveLength(5);
+    expect(jobs.filter((job) => job.kind === 'ack')).toHaveLength(1);
   });
 
   it('serializes per-client challenge issuance at twenty per hour without a cooldown', async () => {
@@ -271,6 +274,142 @@ describe('contact repository concurrency', () => {
     expect(results.filter((result) => result.kind === 'issued')).toHaveLength(1);
     expect(results.filter((result) => result.kind === 'rate_limited')).toHaveLength(1);
   });
+  it('persists one team job per acceptance and one ack for concurrent clients sharing a case-insensitive email', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const firstAddress = '203.0.113.41';
+    const secondAddress = '203.0.113.42';
+    const [firstToken, secondToken] = await Promise.all([
+      challenge(repository, firstAddress, atSecond(0)),
+      challenge(repository, secondAddress, atSecond(0)),
+    ]);
+
+    const results = await Promise.all([
+      submission({
+        repository, challengeToken: firstToken, clientAddress: firstAddress, message: 'First enquiry',
+        email: 'Ada@Example.Test', enqueueAcknowledgement: true, now: atSecond(0),
+      }),
+      submission({
+        repository, challengeToken: secondToken, clientAddress: secondAddress, message: 'Another enquiry',
+        email: 'ada@example.test', enqueueAcknowledgement: true, now: atSecond(0),
+      }),
+    ]);
+
+    expect(results.map((result) => result.kind)).toEqual(['accepted', 'accepted']);
+    const jobs = await mailJobs();
+    expect(jobs.filter((job) => job.kind === 'team')).toHaveLength(2);
+    expect(jobs.filter((job) => job.kind === 'ack')).toHaveLength(1);
+    for (const result of results) {
+      if (result.kind !== 'accepted') throw new Error('Expected acceptance');
+      expect(jobs.filter((job) => job.contact_id === result.id && job.kind === 'team')).toHaveLength(1);
+    }
+    expect(jobs.every((job) => job.state === 'queued' && job.attempts === 0)).toBe(true);
+  });
+
+  it('uses a rolling 24-hour ack window while still enqueuing every accepted team notification', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const times = [0, 24 * 60 * 60 - 1, 24 * 60 * 60];
+    for (const [index, time] of times.entries()) {
+      const clientAddress = `203.0.113.${43 + index}`;
+      const challengeToken = await challenge(repository, clientAddress, atSecond(time));
+      const result = await submission({
+        repository, challengeToken, clientAddress, message: `Question ${index}`,
+        enqueueAcknowledgement: true, now: atSecond(time),
+      });
+      expect(result.kind).toBe('accepted');
+    }
+
+    const jobs = await mailJobs();
+    expect(jobs.filter((job) => job.kind === 'team')).toHaveLength(3);
+    expect(jobs.filter((job) => job.kind === 'ack').map((job) => job.created_at)).toEqual([
+      atSecond(0), atSecond(24 * 60 * 60),
+    ]);
+  });
+
+  it('does not enqueue rejected, duplicate, spam, or non-opted-in acknowledgement jobs', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const firstAddress = '203.0.113.46';
+    const duplicateAddress = '203.0.113.47';
+    const firstToken = await challenge(repository, firstAddress, atSecond(0));
+    const duplicateToken = await challenge(repository, duplicateAddress, atSecond(0));
+    const spamToken = await challenge(repository, '203.0.113.48', atSecond(0));
+    const accepted = await submission({
+      repository, challengeToken: firstToken, clientAddress: firstAddress, message: 'Shared content', now: atSecond(0),
+    });
+    expect(accepted.kind).toBe('accepted');
+    const rejected = await submission({
+      repository, challengeToken: firstToken, clientAddress: firstAddress, message: 'Replay',
+      enqueueAcknowledgement: true, now: atSecond(0),
+    });
+    const duplicate = await submission({
+      repository, challengeToken: duplicateToken, clientAddress: duplicateAddress, message: 'Shared content',
+      enqueueAcknowledgement: true, now: atSecond(0),
+    });
+    const spam = await submission({
+      repository, challengeToken: spamToken, clientAddress: '203.0.113.48', message: 'Other content',
+      website: 'spam trap', enqueueAcknowledgement: true, now: atSecond(0),
+    });
+
+    expect([rejected.kind, duplicate.kind, spam.kind]).toEqual(['invalid_challenge', 'duplicate', 'spam']);
+    if (accepted.kind !== 'accepted') throw new Error('Expected acceptance');
+    expect(await mailJobs()).toEqual([{
+      contact_id: accepted.id, kind: 'team', state: 'queued', attempts: 0, created_at: atSecond(0),
+    }]);
+  });
+
+  it('rolls back the submission and challenge consumption if its job cannot be enqueued', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const clientAddress = '203.0.113.49';
+    const challengeToken = await challenge(repository, clientAddress, atSecond(0));
+    await pool.query(`alter table miracon.contact_mail_jobs
+      add constraint reject_ack_job_for_atomicity check (kind <> 'ack')`);
+    try {
+      await expect(submission({
+        repository, challengeToken, clientAddress, message: 'Must be atomic',
+        enqueueAcknowledgement: true, now: atSecond(0),
+      })).rejects.toMatchObject({ code: '23514' });
+      await expect(submissionCount()).resolves.toBe(0);
+      expect(await mailJobs()).toEqual([]);
+    } finally {
+      await pool.query('alter table miracon.contact_mail_jobs drop constraint reject_ack_job_for_atomicity');
+    }
+
+    const retry = await submission({
+      repository, challengeToken, clientAddress, message: 'Must be atomic',
+      enqueueAcknowledgement: true, now: atSecond(0),
+    });
+    expect(retry.kind).toBe('accepted');
+    expect((await mailJobs()).map((job) => job.kind)).toEqual(['ack', 'team']);
+  });
+
+  it('cascades queued and sent jobs on contact deletion and tolerates legacy null-email contacts', async () => {
+    const repository = new PostgresContactRepository(pool);
+    const legacyId = randomUUID();
+    await pool.query(
+      `insert into miracon.contact_submissions
+         (id, name, email, phone, message, consented_at, locale, source_path,
+          client_digest, duplicate_digest, created_at)
+       values ($1, 'Legacy', null, '+302100000000', 'Historical', $2, 'en', '/contact-test', $3, $4, $2)`,
+      [legacyId, atSecond(-1), Buffer.alloc(32, 12), Buffer.alloc(32, 13)],
+    );
+    const clientAddress = '203.0.113.50';
+    const challengeToken = await challenge(repository, clientAddress, atSecond(0));
+    const result = await submission({
+      repository, challengeToken, clientAddress, message: 'Please reply',
+      enqueueAcknowledgement: true, now: atSecond(0),
+    });
+    expect(result.kind).toBe('accepted');
+    if (result.kind !== 'accepted') throw new Error('Expected acceptance');
+    expect((await mailJobs()).map((job) => job.kind)).toEqual(['ack', 'team']);
+    await pool.query(
+      `update miracon.contact_mail_jobs set state = 'sent', sent_at = $2
+       where contact_id = $1 and kind = 'team'`,
+      [result.id, atSecond(0)],
+    );
+
+    await pool.query('delete from miracon.contact_submissions where id = $1', [result.id]);
+    expect(await mailJobs()).toEqual([]);
+    await expect(submissionCount()).resolves.toBe(1);
+  });
 });
 
 async function challenge(
@@ -288,6 +427,9 @@ type SubmissionFixture = {
   readonly challengeToken: ContactChallengeToken;
   readonly clientAddress: string;
   readonly message: string;
+  readonly email?: string;
+  readonly website?: string;
+  readonly enqueueAcknowledgement?: boolean;
   readonly now: Date;
 };
 
@@ -297,15 +439,16 @@ function submission(fixture: SubmissionFixture) {
     clientAddress,
     digestSecret,
     now,
+    enqueueAcknowledgement: fixture.enqueueAcknowledgement,
     submission: {
       name: 'Ada Lovelace',
       phone: '+30 210 000 0000',
-      email: 'ada@example.test',
+      email: fixture.email ?? 'ada@example.test',
       message,
       consent: true,
       locale: 'en',
       sourcePath: '/contact-test',
-      website: '',
+      website: fixture.website ?? '',
       challenge: challengeToken,
     },
   });
@@ -318,6 +461,22 @@ function atSecond(second: number): Date {
 async function submissionCount(): Promise<number> {
   const result = await pool.query<{ readonly count: number }>('select count(*)::integer as count from miracon.contact_submissions');
   return result.rows[0]?.count ?? 0;
+}
+
+type MailJobRow = {
+  readonly contact_id: string;
+  readonly kind: 'ack' | 'team';
+  readonly state: 'queued' | 'leased' | 'sent' | 'dead';
+  readonly attempts: number;
+  readonly created_at: Date;
+};
+
+async function mailJobs(): Promise<readonly MailJobRow[]> {
+  const result = await pool.query<MailJobRow>(
+    `select contact_id::text, kind, state, attempts, created_at
+     from miracon.contact_mail_jobs order by created_at, contact_id, kind`,
+  );
+  return result.rows;
 }
 
 function requireSafeDatabaseUrl(): string {

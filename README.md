@@ -34,9 +34,9 @@ CONTACT_DIGEST_SECRET=
 
 The example intentionally does not contain a real contact digest secret. Production must inject one through protected server configuration; the contact API fails closed when it is absent or shorter than 32 characters.
 
-### Optional contact SMTP notification
+### Contact mail outbox and optional customer acknowledgement
 
-SMTP notification is disabled by default. To enable it, set all seven variables in protected server configuration outside the release directory and `public_html`:
+Accepted submissions and internal notification jobs are committed in the **same PostgreSQL transaction**. HTTP `201` means the contact and its mail job were saved, not that a mailbox received the message. SMTP delivery is disabled by default; enable it only with all seven variables in protected server configuration **outside both the release and `public_html`**:
 
 ```dotenv
 CONTACT_SMTP_ENABLED=true
@@ -48,9 +48,11 @@ CONTACT_SMTP_FROM=website@example.com
 CONTACT_SMTP_TO=team@example.com
 ```
 
-Only port `465` with implicit TLS or port `587` with required STARTTLS is accepted. Certificate verification remains enabled. Each durably accepted contact triggers one bounded plain-text delivery attempt to the single internal `CONTACT_SMTP_TO` recipient, with no pooling or retry. The message includes the accepted contact ID, submitted name, optional email and phone, full message, locale, source path, and acceptance timestamp; it excludes the raw client address and abuse digests. A validated submitted email is used only as `Reply-To`.
+Only port `465` with verified implicit TLS or port `587` with required STARTTLS is accepted. The mail drain sends the internal plain-text notification to the single `CONTACT_SMTP_TO` address and uses the visitor's validated email as `Reply-To`. Enable customer acknowledgements separately with `CONTACT_AUTOREPLY_ENABLED=true`; absent or other values keep them off. Each accepted, consented enquiry with a valid email can queue at most one acknowledgement per case-insensitive recipient per rolling 24 hours, even across different visitors' IPs. English and Greek acknowledgements are plain text and never repeat the submitted message, phone or personal details.
 
-Disabled, incomplete, invalid, timed-out, rejected, or otherwise failed SMTP never changes a successful contact response or removes its PostgreSQL row. The API still returns `201`; operators receive a structured warning containing only the contact ID and a safe failure category. This repository does not provision a provider account, DNS records, or SMTP credentials.
+The worker uses a PostgreSQL outbox, exclusive expiring leases and bounded SMTP timeouts. Failed sends retry with exponential backoff (one minute to one hour, at most ten attempts); customer acknowledgements expire after 24 hours and internal notifications after seven days. An SMTP acceptance followed by a worker crash can cause a duplicate message: delivery is **at least once**, not exactly once. `npm run contact:mail:drain` reports due jobs without sending; `npm run contact:mail:drain -- --apply` requires a complete enabled SMTP configuration and actually sends. Configure the minute-by-minute Cron job below before enabling this release. Monitor queued, dead and lease-lost jobs; worker logs contain only contact IDs, mail kind and safe failure categories, never message bodies or credentials.
+
+Disabled, incomplete, invalid or failed SMTP never changes a successfully accepted contact. The application does not provision a mail account, DNS records or SMTP credentials. Never put SMTP passwords or `CONTACT_DIGEST_SECRET` in `.htaccess`, `public_html`, source files or the deploy archive. For existing public `.htaccess` secrets: first provision protected cPanel/Passenger settings with the **current** values, then remove only the public secret directives while retaining Passenger routing, restart and verify the form and worker, and **then** rotate both credentials in the protected settings and verify again. The operator must confirm variable precedence; do not rotate or remove the live values blindly.
 
 Production requires `PUBLIC_SITE_URL=https://miracon.gr`; no other production origin is accepted. The value is read by the standalone runtime and must be an HTTPS origin without a path, query, or fragment. Invalid or missing production configuration fails closed before a request renders. HTTP localhost and loopback origins are accepted only in development or test mode outside a production build.
 
@@ -172,10 +174,10 @@ Exact staging prerequisites:
 2. Run `npm run release:verify` without database-test variables.
 3. Run `npm run test:db` against a disposable database, never the staging database.
 4. Create the release with `npm run release:package -- release-output`; inspect `release-manifest.json`.
-5. On staging, provide server-only `DATABASE_URL`, an absolute writable non-symlinked `MEDIA_ROOT`, the canonical HTTPS `PUBLIC_SITE_URL`, and an independently generated server-only `CONTACT_DIGEST_SECRET` of at least 32 characters. Optionally inject the complete server-only `CONTACT_SMTP_*` set outside the release; leave `CONTACT_SMTP_ENABLED=false` otherwise.
-6. Run `npm run postgres:migrate` against staging, then provision the administrator if it does not exist.
-7. Start the packaged application through `app.js` or `npm start` and confirm `/api/health` reports HTTP 200 with database and media checks true.
-8. Verify English and Greek public routes, administrator login and preview, one write/read media flow, and static asset delivery before acceptance.
+5. On staging, provide server-only `DATABASE_URL`, an absolute writable non-symlinked `MEDIA_ROOT`, the canonical HTTPS `PUBLIC_SITE_URL`, and an independently generated server-only `CONTACT_DIGEST_SECRET` of at least 32 characters. Optionally inject the complete server-only `CONTACT_SMTP_*` set outside the release; leave `CONTACT_SMTP_ENABLED=false` and `CONTACT_AUTOREPLY_ENABLED=false` otherwise.
+6. Run `npm run postgres:migrate` against staging, then provision the administrator if it does not exist. The new contact queue table must exist before the website handles requests.
+7. Start the packaged application through `app.js` or `npm start` and confirm `/api/health` reports HTTP 200 with database and media checks true. Schedule `scripts/contact-mail-drain.mjs --apply` under Cron before promising email delivery.
+8. Verify English and Greek public routes, administrator login and preview, one write/read media flow, static assets and controlled mail delivery before acceptance.
 
 The release package contract requires `app.js`, `dist/server/entry.mjs`, package manifests, the production release runbook, ordered PostgreSQL migrations, the migration runner, administrator provisioner, and retained import/verification tools. It excludes secrets, tests, logs, local agent/browser/editor state, QA/deploy output, temporary files, and workstation-only export tools.
 
@@ -251,6 +253,8 @@ Protect the wrapper and secret with `chmod 700` and `chmod 600` respectively. Th
 ```
 
 The placeholders and Node path must be replaced with values confirmed in cPanel. This repository does not configure or verify that scheduler.
+
+Mail requires a **second Cron job every minute**; the website does not run an in-process mail scheduler. First migrate the database and run `npm run contact:mail:drain` without `--apply` to inspect due jobs. Configure the job from the active release directory using the host's Node 22 binary, a separate `flock` lock and account-private logs/alerts. Inject `DATABASE_URL` and `CONTACT_SMTP_*` through a protected cPanel environment or a `0600` file **outside `public_html` and the release**. Execute `node scripts/contact-mail-drain.mjs --apply` once per minute, without embedding credentials in the crontab or shell history. A nonzero exit, `dead > 0`, growing due count or lease losses requires operator investigation. Verify both internal and customer mail with controlled EN/EL test recipients before enabling customer acknowledgements for real visitors.
 
 Contact abuse controls also depend on a trusted Passenger/front-proxy boundary. Before production acceptance, hosting must confirm all of the following:
 
