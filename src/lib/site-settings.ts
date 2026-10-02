@@ -1,7 +1,7 @@
 import { defaultSiteSettings, isValidBrandColor, isValidLogoUrl, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from './site-settings-shared';
 import type { SiteSettings } from './site-settings-shared';
 
-export { defaultSiteSettings, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from './site-settings-shared';
+export { defaultSiteSettings, isValidTermsPdfUrl, externalSocialUrl, whatsappLink, resolvePrivacyPdfUrl } from './site-settings-shared';
 export type { SiteSettings } from './site-settings-shared';
 
 export function mapSiteSettings(row: Record<string, unknown> | null | undefined): SiteSettings {

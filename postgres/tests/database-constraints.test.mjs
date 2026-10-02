@@ -528,6 +528,50 @@ test('rejects incomplete and extra-key nested snapshot rows', async () => {
   });
 });
 
+test('accepts full generated logo URLs and rejects truncated or mismatched upload IDs', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  const validLogo = `/media/uploads/${id}/${id}.svg`;
+  const truncatedId = '11111111-1111-4111-111111111111';
+  const truncatedLogo = `/media/uploads/${truncatedId}/${truncatedId}.svg`;
+  const mismatchedLogo = `/media/uploads/${id}/22222222-2222-4222-8222-222222222222.png`;
+
+  const result = await client.query(`
+    select
+      miracon.is_valid_content_snapshot('site_settings', 'singleton', jsonb_build_object(
+        'aggregateType', 'site_settings', 'aggregateId', 'singleton',
+        'settings', to_jsonb(settings) || jsonb_build_object('logo_url', $1::text)
+      )) as valid_logo,
+      miracon.is_valid_content_snapshot('site_settings', 'singleton', jsonb_build_object(
+        'aggregateType', 'site_settings', 'aggregateId', 'singleton',
+        'settings', to_jsonb(settings) || jsonb_build_object('logo_url', $2::text)
+      )) as truncated_logo,
+      miracon.is_valid_content_snapshot('site_settings', 'singleton', jsonb_build_object(
+        'aggregateType', 'site_settings', 'aggregateId', 'singleton',
+        'settings', to_jsonb(settings) || jsonb_build_object('logo_url', $3::text)
+      )) as mismatched_logo
+    from miracon.site_settings as settings where id = 1
+  `, [validLogo, truncatedLogo, mismatchedLogo]);
+  assert.deepEqual(result.rows[0], { valid_logo: true, truncated_logo: false, mismatched_logo: false });
+
+  await client.query('begin');
+  try {
+    await client.query('update miracon.site_settings set logo_url = $1 where id = 1', [validLogo]);
+    const stored = await client.query('select logo_url from miracon.site_settings where id = 1');
+    assert.equal(stored.rows[0].logo_url, validLogo);
+  } finally {
+    await client.query('rollback');
+  }
+
+  await assert.rejects(
+    client.query('update miracon.site_settings set logo_url = $1 where id = 1', [truncatedLogo]),
+    { code: '23514', constraint: 'site_settings_logo_url_format' },
+  );
+  await assert.rejects(
+    client.query('update miracon.site_settings set logo_url = $1 where id = 1', [mismatchedLogo]),
+    { code: '23514', constraint: 'site_settings_logo_url_format' },
+  );
+});
+
 test('allows a later-numbered approved revision to establish a previously absent head', async () => {
   // Given
   await client.query(`

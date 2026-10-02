@@ -41,7 +41,9 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode, type SyntheticEvent } from 'react';
-import { AdminApi, type AdminUser, type PendingProposal, type RevisionHistoryItem, type SessionState } from './admin-api';
+import { AdminApi, AdminApiError, type AdminUser, type PendingProposal, type RevisionHistoryItem, type SessionState } from './admin-api';
+import ProposalReviewContent from './ProposalReviewContent';
+import { isStaleProposal } from './proposal-diff';
 import AdminNavigation, { type AdminNavView } from './AdminNavigation';
 import ContactsManager from './ContactsManager';
 import PagesSettingsFields from './PagesSettingsFields';
@@ -62,6 +64,7 @@ import {
 } from '../lib/project-types';
 import {
   defaultSiteSettings,
+  externalSocialUrl,
   isValidTermsPdfUrl,
   type SiteSettings,
 } from '../lib/site-settings-shared';
@@ -570,6 +573,15 @@ function SortableHomeHeroVideo({
   );
 }
 
+function HomepageTabs({ active, onNavigate }: { active: 'videos' | 'text'; onNavigate: (view: AdminNavView) => void }) {
+  return (
+    <nav className="admin-page-tabs" aria-label="Homepage sections">
+      <button type="button" className={active === 'videos' ? 'active' : ''} aria-current={active === 'videos' ? 'page' : undefined} onClick={() => onNavigate('home-hero')}>Hero videos</button>
+      <button type="button" className={active === 'text' ? 'active' : ''} aria-current={active === 'text' ? 'page' : undefined} onClick={() => onNavigate('pages-home')}>Page text</button>
+    </nav>
+  );
+}
+
 function HomeHeroManager({
   initialVideos,
   projects,
@@ -578,6 +590,8 @@ function HomeHeroManager({
   onToast,
   role,
   currentRevisionId,
+  onDirtyChange,
+  onNavigate,
 }: {
   initialVideos: HomeHeroVideo[];
   projects: Project[];
@@ -586,6 +600,8 @@ function HomeHeroManager({
   onToast: (toast: Toast) => void;
   role: 'owner' | 'editor';
   currentRevisionId?: string | null;
+  onDirtyChange: (dirty: boolean) => void;
+  onNavigate: (view: AdminNavView) => void;
 }) {
   const [videos, setVideos] = useState<HomeHeroVideo[]>(() => structuredClone(initialVideos));
   const [savedVideos, setSavedVideos] = useState<HomeHeroVideo[]>(() => structuredClone(initialVideos));
@@ -595,6 +611,10 @@ function HomeHeroManager({
   const [historyOpen, setHistoryOpen] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const isDirty = JSON.stringify(videos) !== JSON.stringify(savedVideos);
+  useEffect(() => {
+    onDirtyChange(isDirty);
+    return () => onDirtyChange(false);
+  }, [isDirty, onDirtyChange]);
 
   useEffect(() => {
     setVideos(structuredClone(initialVideos));
@@ -698,6 +718,7 @@ function HomeHeroManager({
           </button>
         </div>
       </header>
+      <HomepageTabs active="videos" onNavigate={onNavigate} />
 
       <section className="home-hero-help">
         <Film size={22} />
@@ -774,6 +795,16 @@ const legalDocumentFields: Array<{
   { label: 'Cookie Policy', description: 'Cookie policy PDF in the website footer', storageDirectory: 'cookie-policy', visibilityKey: 'footerCookieVisible', urlKey: 'footerCookiePdfUrl' },
 ];
 
+type SettingsMode = 'pages-home' | 'pages-visa' | 'pages-shared' | 'branding' | 'legal';
+
+const settingsHeadings: Record<SettingsMode, { breadcrumb: string; title: string; description: string }> = {
+  'pages-home': { breadcrumb: 'Content / Pages / Homepage', title: 'Homepage text', description: 'Edit homepage text in English and Greek; hero videos are in the other tab' },
+  'pages-visa': { breadcrumb: 'Content / Pages / Golden Visa', title: 'Golden Visa', description: 'Edit Golden Visa page text in English and Greek' },
+  'pages-shared': { breadcrumb: 'Content / Pages / Shared blocks', title: 'Shared blocks', description: 'Edit the shared contact form and stages in English and Greek' },
+  branding: { breadcrumb: 'Settings / Brand & contacts', title: 'Logo, name & contacts', description: 'Change the website name, logo, primary color and footer contacts' },
+  legal: { breadcrumb: 'Settings / Documents', title: 'Legal documents', description: 'Upload legal PDFs. The Privacy Policy is linked automatically after upload (after owner approval for editors).' },
+};
+
 function SiteSettingsManager({
   initialSettings,
   api,
@@ -781,6 +812,8 @@ function SiteSettingsManager({
   onToast,
   role,
   currentRevisionId,
+  onDirtyChange,
+  onNavigate,
   mode,
 }: {
   initialSettings: SiteSettings;
@@ -789,7 +822,9 @@ function SiteSettingsManager({
   onToast: (toast: Toast) => void;
   role: 'owner' | 'editor';
   currentRevisionId?: string | null;
-  mode: 'pages' | 'branding' | 'legal';
+  onDirtyChange: (dirty: boolean) => void;
+  onNavigate: (view: AdminNavView) => void;
+  mode: SettingsMode;
 }) {
   const [settings, setSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
   const [savedSettings, setSavedSettings] = useState<SiteSettings>(() => ({ ...initialSettings }));
@@ -823,7 +858,21 @@ function SiteSettingsManager({
     };
   });
   const hasInvalidDocument = documents.some((document) => document.invalid);
+  const invalidSocialUrl = (['facebookUrl', 'instagramUrl', 'linkedinUrl'] as const)
+    .find((key) => settings[key] !== '' && externalSocialUrl(settings[key]) === null);
   const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings);
+
+  useEffect(() => {
+    onDirtyChange(isDirty);
+    return () => onDirtyChange(false);
+  }, [isDirty, onDirtyChange]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warnBeforeUnload);
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+  }, [isDirty]);
 
   async function persistSettings(nextSettings: SiteSettings, pdfUploaded = false) {
     setSaving(true);
@@ -913,6 +962,10 @@ function SiteSettingsManager({
       onToast({ tone: 'error', message: 'Upload a PDF before enabling a legal document link' });
       return;
     }
+    if (invalidSocialUrl) {
+      onToast({ tone: 'error', message: 'Enter an HTTPS profile URL for each social link (for example https://www.instagram.com/username/)' });
+      return;
+    }
 
     const nextSettings: SiteSettings = {
       ...settings,
@@ -927,28 +980,33 @@ function SiteSettingsManager({
     <main className="admin-main site-settings-manager">
       <header className="list-header">
         <div>
-          <span className="eyebrow">Website / {mode === 'pages' ? 'Page content' : mode === 'branding' ? 'Identity & contacts' : 'Documents'}</span>
-          <h1>{mode === 'pages' ? 'Page content' : mode === 'branding' ? 'Brand & contacts' : 'Legal PDFs'}</h1>
-          <p>{mode === 'pages' ? 'Edit visitor-facing text in English and Greek' : mode === 'branding' ? 'Change the logo and primary color, company details, footer contacts and social links' : 'Upload legal PDFs. The Privacy Policy is linked automatically after upload (after owner approval for editors).'}</p>
+          <span className="eyebrow">{settingsHeadings[mode].breadcrumb}</span>
+          <h1>{settingsHeadings[mode].title}</h1>
+          <p>{settingsHeadings[mode].description}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="secondary-button" onClick={() => setHistoryOpen(true)} title="View revision history"><History size={17} />History</button>
-          <button className="primary-button" onClick={saveSettings} disabled={saving || uploadingLogo || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument}>
+          <button className="primary-button" onClick={saveSettings} disabled={saving || uploadingLogo || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument || Boolean(invalidSocialUrl)}>
             {saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
             {role === 'owner' ? 'Save settings' : 'Submit proposal'}
           </button>
         </div>
       </header>
 
+      {mode === 'pages-home' && <HomepageTabs active="text" onNavigate={onNavigate} />}
+
       <div className="site-settings-list">
         {mode === 'branding' && <section className="site-settings-card brand-settings-card">
           <header>
             <span className="site-settings-icon"><ImagePlus size={22} /></span>
-            <div><strong>Logo &amp; primary color</strong><small>Shown on the public website after saving or owner approval</small></div>
+            <div><strong>Website identity</strong><small>Site name, logo and primary website color publish together after saving or owner approval</small></div>
           </header>
           <div className="brand-settings-fields">
             <div className="brand-logo-preview"><img src={settings.logoUrl || '/img/logo_mark.svg'} alt={`${settings.siteName} logo preview`} /></div>
             <div className="brand-logo-controls">
+              <label className="brand-site-name">Website name
+                <input type="text" value={settings.siteName} onChange={(event) => setSettings((current) => ({ ...current, siteName: event.target.value }))} />
+              </label>
               <strong>Website logo</strong>
               <small>Upload an SVG or PNG image (up to 20 MB). The original logo remains available.</small>
               <div className="brand-logo-actions">
@@ -967,7 +1025,7 @@ function SiteSettingsManager({
             </div>
           </div>
         </section>}
-        {(mode === 'pages' || mode === 'branding') && <PagesSettingsFields settings={settings} onChange={setSettings} mode={mode} />}
+        {(mode === 'pages-home' || mode === 'pages-visa' || mode === 'pages-shared' || mode === 'branding') && <PagesSettingsFields settings={settings} onChange={setSettings} mode={mode} />}
         {mode === 'legal' && documents.map((document) => (
           <section className="site-settings-card" key={document.urlKey}>
             <header>
@@ -1467,202 +1525,6 @@ function UsersManager({
   );
 }
 
-function ProjectProposalVisual({ project }: { project: Record<string, unknown> }) {
-  const coverUrl = String(project['cover_image_url'] || project['coverImageUrl'] || project['hero_poster_url'] || '');
-  const title = String(project['title'] || 'Untitled Project');
-  const category = String(project['category'] || '');
-  const status = String(project['status'] || '');
-  const city = String(project['city'] || project['location'] || '');
-  const remainingUnits = project['remaining_units'] ?? project['remainingUnits'];
-  const shortDesc = String(project['short_description'] || project['shortDescription'] || '');
-  const images = (project['images'] as Array<{ id?: string; url: string; alt?: string }>) || [];
-  const characteristics = (project['characteristics'] as Array<{ id?: string; label: string; value: string }>) || [];
-  const floorPlans = (project['floor_plan_groups'] as Array<{ title: string; plans?: Array<{ title: string }> }>) || [];
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', background: '#fff', padding: '14px', borderRadius: '8px', border: '1px solid var(--admin-line)' }}>
-        {coverUrl ? (
-          <img src={coverUrl} alt={title} style={{ width: '130px', height: '88px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--admin-line)', flexShrink: 0 }} />
-        ) : null}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h4 style={{ margin: 0, fontSize: '18px', color: 'var(--admin-navy)', fontFamily: 'Georgia, serif' }}>{title}</h4>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '8px 0 6px' }}>
-            {category && <span className="role-badge owner">{category}</span>}
-            {status && <span className="role-badge editor">{status}</span>}
-            {remainingUnits !== undefined && remainingUnits !== null && (
-              <span className="role-badge" style={{ background: '#eef2f6', color: 'var(--admin-navy)' }}>
-                {String(remainingUnits)} {Number(remainingUnits) === 1 ? 'unit left' : 'units left'}
-              </span>
-            )}
-          </div>
-          {city && <div style={{ fontSize: '13px', color: 'var(--admin-muted)' }}>📍 {city}</div>}
-        </div>
-      </div>
-
-      {shortDesc && (
-        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--admin-line)', fontSize: '13px', lineHeight: '1.5', color: '#2d3748' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--admin-gold)', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.05em' }}>
-            Description
-          </div>
-          {shortDesc}
-        </div>
-      )}
-
-      {characteristics.length > 0 && (
-        <div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-navy)', marginBottom: '8px' }}>
-            Characteristics ({characteristics.length})
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
-            {characteristics.map((c, i) => (
-              <div key={c.id || i} style={{ background: '#fff', border: '1px solid var(--admin-line)', borderRadius: '6px', padding: '8px 10px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>{c.label}</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--admin-navy)', marginTop: '2px' }}>{c.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {images.length > 0 && (
-        <div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-navy)', marginBottom: '8px' }}>
-            Gallery Images ({images.length})
-          </div>
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
-            {images.map((img, i) => (
-              <div key={img.id || i} style={{ flexShrink: 0, width: '84px', textAlign: 'center' }}>
-                <img src={img.url} alt={img.alt || ''} style={{ width: '84px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--admin-line)' }} />
-                {img.alt && <div style={{ fontSize: '10px', color: 'var(--admin-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{img.alt}</div>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {floorPlans.length > 0 && (
-        <div style={{ background: '#fff', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--admin-line)', fontSize: '13px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--admin-gold)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
-            Floor Plan Groups ({floorPlans.length})
-          </div>
-          <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--admin-navy)' }}>
-            {floorPlans.map((g, i) => (
-              <li key={i} style={{ marginBottom: '4px' }}>
-                <strong>{g.title}</strong> {g.plans?.length ? `(${g.plans.length} plan sheets)` : ''}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function HeroProposalVisual({ videos }: { videos: Array<Record<string, unknown>> }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-navy)', marginBottom: '4px' }}>
-        Hero Videos Playlist ({videos.length} videos)
-      </div>
-      {videos.map((vid, i) => {
-        const isActive = Boolean(vid['is_active'] ?? vid['isActive']);
-        const title = String(vid['title'] || `Video #${i + 1}`);
-        const desktopUrl = String(vid['desktop_url'] || vid['desktopUrl'] || '');
-        const mobileUrl = String(vid['mobile_url'] || vid['mobileUrl'] || '');
-
-        return (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '12px 16px', borderRadius: '6px', border: '1px solid var(--admin-line)' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontWeight: 600, color: 'var(--admin-navy)', fontSize: '14px' }}>{title}</span>
-                <span className={`role-badge ${isActive ? 'owner' : ''}`} style={{ fontSize: '11px', background: isActive ? undefined : '#e2e8f0', color: isActive ? undefined : '#64748b' }}>
-                  {isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--admin-muted)', marginTop: '4px', wordBreak: 'break-all' }}>
-                🖥️ {desktopUrl || 'No desktop video'} {mobileUrl ? `| 📱 ${mobileUrl}` : ''}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function SettingsProposalVisual({ settings }: { settings: Record<string, unknown> }) {
-  const items = [
-    { label: 'Company Name', value: settings['company_name'] ?? settings['companyName'] },
-    { label: 'Email', value: settings['contact_email'] ?? settings['contactEmail'] },
-    { label: 'Phone', value: settings['contact_phone'] ?? settings['contactPhone'] },
-    { label: 'Address', value: settings['office_address'] ?? settings['officeAddress'] },
-    { label: 'Privacy Policy PDF', value: settings['privacy_policy_pdf_url'] ?? settings['privacyPolicyPdfUrl'] },
-    { label: 'Terms PDF', value: settings['terms_pdf_url'] ?? settings['termsPdfUrl'] },
-  ];
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-navy)', marginBottom: '4px' }}>
-        Updated Site Settings
-      </div>
-      {items.map((item, i) => (
-        item.value ? (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: '#fff', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--admin-line)', fontSize: '13px' }}>
-            <span style={{ color: 'var(--admin-muted)', fontWeight: 500 }}>{item.label}:</span>
-            <span style={{ color: 'var(--admin-navy)', fontWeight: 600, maxWidth: '60%', textAlign: 'right', wordBreak: 'break-all' }}>{String(item.value)}</span>
-          </div>
-        ) : null
-      ))}
-    </div>
-  );
-}
-
-function ProposalReviewContent({ proposal }: { proposal: PendingProposal }) {
-  const [viewMode, setViewMode] = useState<'visual' | 'json'>('visual');
-  const snap = proposal.snapshot as Record<string, unknown>;
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-        <button
-          type="button"
-          className={viewMode === 'visual' ? 'primary-button' : 'secondary-button'}
-          style={{ minHeight: '32px', height: '32px', padding: '0 14px', fontSize: '12px' }}
-          onClick={() => setViewMode('visual')}
-        >
-          Visual summary
-        </button>
-        <button
-          type="button"
-          className={viewMode === 'json' ? 'primary-button' : 'secondary-button'}
-          style={{ minHeight: '32px', height: '32px', padding: '0 14px', fontSize: '12px' }}
-          onClick={() => setViewMode('json')}
-        >
-          Raw JSON
-        </button>
-      </div>
-
-      <div style={{ maxHeight: '400px', overflowY: 'auto', background: 'var(--admin-paper)', padding: '16px', borderRadius: '8px', border: '1px solid var(--admin-line)', marginBottom: '24px' }}>
-        {viewMode === 'json' ? (
-          <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace' }}>
-            {JSON.stringify(proposal.snapshot, null, 2)}
-          </pre>
-        ) : proposal.aggregateType === 'project' ? (
-          <ProjectProposalVisual project={(snap['project'] as Record<string, unknown>) ?? snap} />
-        ) : proposal.aggregateType === 'homepage_hero' ? (
-          <HeroProposalVisual videos={(snap['videos'] as Array<Record<string, unknown>>) ?? []} />
-        ) : proposal.aggregateType === 'site_settings' ? (
-          <SettingsProposalVisual settings={(snap['settings'] as Record<string, unknown>) ?? snap} />
-        ) : (
-          <pre style={{ margin: 0, fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace' }}>
-            {JSON.stringify(proposal.snapshot, null, 2)}
-          </pre>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function ProposalsManager({
   api,
@@ -1685,8 +1547,11 @@ function ProposalsManager({
     try {
       const items = await api.listPendingProposals();
       setProposals(items);
+      setReviewingProposal((current) => current ? items.find((item) => item.id === current.id) ?? null : null);
+      return items;
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to load proposals' });
+      return null;
     } finally {
       setLoading(false);
     }
@@ -1695,6 +1560,11 @@ function ProposalsManager({
   useEffect(() => {
     loadProposals();
   }, [loadProposals]);
+
+  async function openReview(id: string) {
+    const items = await loadProposals();
+    if (items) setReviewingProposal(items.find((item) => item.id === id) ?? null);
+  }
 
   async function handleApprove(proposal: PendingProposal) {
     setProcessingId(proposal.id);
@@ -1707,6 +1577,7 @@ function ProposalsManager({
       onRefreshProposalsCount();
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to approve proposal' });
+      if (error instanceof AdminApiError && error.status === 409) await loadProposals();
     } finally {
       setProcessingId(null);
     }
@@ -1722,6 +1593,7 @@ function ProposalsManager({
       onRefreshProposalsCount();
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to reject proposal' });
+      if (error instanceof AdminApiError && error.status === 409) await loadProposals();
     } finally {
       setProcessingId(null);
     }
@@ -1778,20 +1650,18 @@ function ProposalsManager({
                     <span className="history-action-badge proposal">Proposal #{proposal.revisionNumber}</span>
                   </div>
                   <h3>{getProposalTitle(proposal)}</h3>
+                  {isStaleProposal(proposal) && <span className="proposal-stale">Outdated HEAD — approval blocked</span>}
                   <div className="proposal-meta">
                     <span><strong>Proposed by:</strong> {proposal.creatorEmail} ({proposal.creatorRole})</span>
                     <span><strong>Date:</strong> {formatDateTime(proposal.createdAt)}</span>
                   </div>
                 </div>
                 <div className="proposal-actions">
-                  <button className="secondary-button" onClick={() => setReviewingProposal(proposal)}>
+                  <button className="secondary-button" onClick={() => { void openReview(proposal.id); }} disabled={Boolean(processingId)}>
                     <Eye size={16} />Review
                   </button>
                   <button className="action-btn danger" onClick={() => handleReject(proposal)} disabled={isProcessing}>
                     {isProcessing ? <LoaderCircle className="spin" size={15} /> : <X size={15} />}Reject
-                  </button>
-                  <button className="primary-button" onClick={() => handleApprove(proposal)} disabled={isProcessing}>
-                    {isProcessing ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />}Approve &amp; Publish
                   </button>
                 </div>
               </section>
@@ -1811,15 +1681,16 @@ function ProposalsManager({
               </div>
               <button className="preview-close" onClick={() => setReviewingProposal(null)}><X size={19} /></button>
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--admin-muted)', marginBottom: '16px' }}>
+            <div className="proposal-review-meta" style={{ fontSize: '13px', color: 'var(--admin-muted)', marginBottom: '16px' }}>
               Proposed by <strong>{reviewingProposal.creatorEmail}</strong> on {formatDateTime(reviewingProposal.createdAt)}
+              {isStaleProposal(reviewingProposal) && <p className="proposal-stale">Outdated proposal: current HEAD differs from the revision expected at submission. Comparison is against current HEAD; request a new proposal before approving.</p>}
             </div>
             <ProposalReviewContent proposal={reviewingProposal} />
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button className="danger-button" onClick={() => handleReject(reviewingProposal)} disabled={Boolean(processingId)}>
                 <X size={16} />Reject proposal
               </button>
-              <button className="primary-button" onClick={() => handleApprove(reviewingProposal)} disabled={Boolean(processingId)}>
+              <button className="primary-button" onClick={() => handleApprove(reviewingProposal)} disabled={Boolean(processingId) || isStaleProposal(reviewingProposal)}>
                 {processingId === reviewingProposal.id ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}Approve &amp; Publish to live
               </button>
             </div>
@@ -2139,13 +2010,14 @@ function ProjectEditor({
 
       <div className="editor-layout">
         <aside className="editor-nav">
-          <span className="eyebrow">Project editor</span>
+          <span className="eyebrow">Content / Projects</span>
           <div className="editor-readiness"><div><span>Content readiness</span><strong>{readiness}%</strong></div><i><b style={{ width: `${readiness}%` }}></b></i><small>{missingRequirements.length ? `${missingRequirements.length} required items left` : 'Ready to publish'}</small></div>
           {sections.map((item, index) => <button key={item.id} type="button" className={section === item.id ? 'active' : ''} aria-current={section === item.id ? 'step' : undefined} onClick={() => setSection(item.id)}><i>{String(index + 1).padStart(2, '0')}</i><span className="editor-nav-copy"><strong>{item.label}</strong><small>{item.description}</small></span><ChevronRight size={15} /></button>)}
           {role === 'owner' && <button className="delete-project" onClick={() => setConfirmDelete(true)}><Trash2 size={16} />Delete project</button>}
         </aside>
 
         <section className="editor-canvas">
+          <div className="editor-breadcrumb">Content / Projects / <strong>{project.title || 'New project'}</strong></div>
           <div className="editor-locale-toolbar">
             <div><strong>Content language</strong><span>{editingLocale === 'el' ? 'Greek fields are optional; empty values fall back to English' : 'English is the source content and controls shared structure'}</span></div>
             <div className="presentation-switch" role="group" aria-label="Content language"><button type="button" className={editingLocale === 'en' ? 'active' : ''} onClick={() => setEditingLocale('en')}>EN</button><button type="button" className={editingLocale === 'el' ? 'active' : ''} onClick={() => setEditingLocale('el')}>ΕΛ</button></div>
@@ -2446,65 +2318,167 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
   const [pendingProposalsCount, setPendingProposalsCount] = useState(0);
   const [view, setView] = useState<AdminNavView>('projects');
   const [selected, setSelected] = useState<Project | null>(null);
+  const hasUnsavedChanges = useRef(false);
   const [globalToast, setGlobalToast] = useState<Toast>(null);
+  const sessionEpoch = useRef(0);
+  const sessionRef = useRef(sessionState);
+  sessionRef.current = sessionState;
+  const [checkingSession, setCheckingSession] = useState(false);
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const lastActivitySent = useRef(0);
+  const activityInFlight = useRef(false);
+  const checkInFlight = useRef(false);
 
   const clearSession = useCallback(() => {
+    sessionEpoch.current += 1;
+    lastActivitySent.current = 0;
+    sessionRef.current = { authenticated: false };
     setSessionState({ authenticated: false });
     setProjects([]);
     setHomeHeroVideos([]);
     setSiteSettings({ ...defaultSiteSettings });
     setSelected(null);
     setPendingProposalsCount(0);
+    hasUnsavedChanges.current = false;
+    setCheckingSession(false);
   }, []);
 
   const api = useMemo(() => new AdminApi({ onUnauthorized: clearSession }), [clearSession]);
 
+  const checkSession = useCallback(async () => {
+    if (!sessionRef.current.authenticated || checkInFlight.current) return;
+    checkInFlight.current = true;
+    const epoch = sessionEpoch.current;
+    setCheckingSession(true);
+    try {
+      const session = await api.session();
+      if (epoch !== sessionEpoch.current) return;
+      if (!session.authenticated) {
+        clearSession();
+        return;
+      }
+      sessionRef.current = session;
+      setSessionState(session);
+    } catch {
+      // Keep private content hidden until the server can confirm this session.
+    } finally {
+      checkInFlight.current = false;
+      if (epoch === sessionEpoch.current && sessionRef.current.authenticated && Date.now() < Math.min(
+        Date.parse(sessionRef.current.idleExpiresAt ?? ''), Date.parse(sessionRef.current.expiresAt ?? ''),
+      )) setCheckingSession(false);
+    }
+  }, [api, clearSession]);
+
+  useEffect(() => {
+    if (!sessionState.authenticated || !sessionState.idleExpiresAt) return;
+    const timeout = window.setTimeout(() => { void checkSession(); },
+      Math.max(0, Math.min(Date.parse(sessionState.idleExpiresAt), Date.parse(sessionState.expiresAt ?? sessionState.idleExpiresAt)) - Date.now()));
+    return () => window.clearTimeout(timeout);
+  }, [sessionState, checkSession]);
+
+  useEffect(() => {
+    if (!sessionState.authenticated) return;
+    const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('miracon-admin-session');
+    channelRef.current = channel;
+    if (channel) channel.onmessage = (event: MessageEvent) => {
+      if (event.data?.type === 'logout') {
+        api.clearCredentials();
+      } else if (event.data?.type === 'activity' && typeof event.data.idleExpiresAt === 'string') {
+        void checkSession();
+      }
+    };
+    const onReturn = () => {
+      if (!document.hidden) void checkSession();
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
+    const onActivity = (event: Event) => {
+      if (!event.isTrusted || document.hidden || activityInFlight.current || checkInFlight.current) return;
+      const now = Date.now();
+      if (now - lastActivitySent.current < 60_000) return;
+      lastActivitySent.current = now;
+      activityInFlight.current = true;
+      const epoch = sessionEpoch.current;
+      void api.activity().then((deadlines) => {
+        if (epoch !== sessionEpoch.current) return;
+        setSessionState((current) => ({ ...current, ...deadlines }));
+        channelRef.current?.postMessage({ type: 'activity', idleExpiresAt: deadlines.idleExpiresAt });
+      }).catch(() => {
+        // A failed touch never extends the local deadline; a 401 clears the session via AdminApi.
+      }).finally(() => { activityInFlight.current = false; });
+    };
+    window.addEventListener('keydown', onActivity);
+    window.addEventListener('pointerdown', onActivity);
+    window.addEventListener('touchstart', onActivity);
+    window.addEventListener('scroll', onActivity, true);
+    return () => {
+      window.removeEventListener('keydown', onActivity);
+      window.removeEventListener('pointerdown', onActivity);
+      window.removeEventListener('touchstart', onActivity);
+      window.removeEventListener('scroll', onActivity, true);
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
+      channel?.close();
+      if (channelRef.current === channel) channelRef.current = null;
+    };
+  }, [sessionState.authenticated, api, checkSession]);
+
   const loadPendingProposalsCount = useCallback(async () => {
+    const epoch = sessionEpoch.current;
     try {
       const proposals = await api.listPendingProposals();
-      setPendingProposalsCount(proposals.length);
+      if (epoch === sessionEpoch.current) setPendingProposalsCount(proposals.length);
     } catch {
       // ignore
     }
   }, [api]);
-
   const loadProjects = useCallback(async () => {
+    const epoch = sessionEpoch.current;
     try {
-      setProjects(await api.listProjects());
+      const items = await api.listProjects();
+      if (epoch === sessionEpoch.current) setProjects(items);
     } catch (error) {
-      setGlobalToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to load projects' });
+      if (epoch === sessionEpoch.current) setGlobalToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to load projects' });
     }
   }, [api]);
 
   const loadHomeHeroVideos = useCallback(async () => {
+    const epoch = sessionEpoch.current;
     try {
       const data = await api.listHomeHeroVideos();
-      setHomeHeroVideos(data.videos);
-      setHomeHeroRevisionId(data.currentRevisionId);
+      if (epoch === sessionEpoch.current) {
+        setHomeHeroVideos(data.videos);
+        setHomeHeroRevisionId(data.currentRevisionId);
+      }
     } catch (error) {
-      setGlobalToast({ tone: 'error', message: `Hero playlist: ${error instanceof Error ? error.message : 'Unable to load'}` });
+      if (epoch === sessionEpoch.current) setGlobalToast({ tone: 'error', message: `Hero playlist: ${error instanceof Error ? error.message : 'Unable to load'}` });
     }
   }, [api]);
 
   const loadSiteSettings = useCallback(async () => {
+    const epoch = sessionEpoch.current;
     try {
       const data = await api.getSiteSettings();
-      setSiteSettings(data.settings);
-      setSiteSettingsRevisionId(data.currentRevisionId);
+      if (epoch === sessionEpoch.current) {
+        setSiteSettings(data.settings);
+        setSiteSettingsRevisionId(data.currentRevisionId);
+      }
     } catch (error) {
-      setGlobalToast({ tone: 'error', message: `Site settings: ${error instanceof Error ? error.message : 'Unable to load'}` });
+      if (epoch === sessionEpoch.current) setGlobalToast({ tone: 'error', message: `Site settings: ${error instanceof Error ? error.message : 'Unable to load'}` });
     }
   }, [api]);
 
   useEffect(() => {
     let active = true;
+    const epoch = sessionEpoch.current;
 
     async function initializeSession() {
       try {
         const session = await api.session();
         if (!session.authenticated) return;
         await api.bootstrapCsrf();
-        if (!active) return;
+        if (!active || epoch !== sessionEpoch.current) return;
+        sessionRef.current = session;
         setSessionState(session);
         await Promise.all([
           loadProjects(),
@@ -2527,10 +2501,13 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
 
   async function login(email: string, password: string) {
     setLoginLoading(true);
+    const epoch = sessionEpoch.current;
     setLoginError('');
     try {
       const session = await api.login(email, password);
       await api.bootstrapCsrf();
+      if (epoch !== sessionEpoch.current) return;
+      sessionRef.current = session;
       setSessionState(session);
       await Promise.all([
         loadProjects(),
@@ -2545,11 +2522,23 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
     }
   }
 
+  function navigate(nextView: AdminNavView) {
+    if (nextView === view) return;
+    const keepingPageDraft = view.startsWith('pages-') && nextView.startsWith('pages-');
+    if (!keepingPageDraft && hasUnsavedChanges.current && !window.confirm('Discard unsaved changes?')) return;
+    if (!keepingPageDraft) hasUnsavedChanges.current = false;
+    setView(nextView);
+  }
+
   async function logout() {
+    if (hasUnsavedChanges.current && !window.confirm('Discard unsaved changes and sign out?')) return;
+    const pending = api.logout();
+    channelRef.current?.postMessage({ type: 'logout' });
+    api.clearCredentials();
     try {
-      await api.logout();
-    } finally {
-      clearSession();
+      await pending;
+    } catch {
+      // The UI has already been cleared; the server still enforces expiry.
     }
   }
 
@@ -2593,6 +2582,9 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
   }
 
   if (!ready) return <LoadingScreen logoUrl={logoUrl} />;
+  if (checkingSession || (sessionState.authenticated && Date.now() >= Math.min(
+    Date.parse(sessionState.idleExpiresAt ?? ''), Date.parse(sessionState.expiresAt ?? ''),
+  ))) return <LoadingScreen logoUrl={logoUrl} />;
   if (!sessionState.authenticated) return <LoginScreen onLogin={login} error={loginError} loading={loginLoading} siteName={siteName} logoUrl={logoUrl} />;
 
   const userRole = sessionState.role ?? 'editor';
@@ -2603,7 +2595,7 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
       {!selected && (
         <aside className="admin-rail">
           <BrandLockup siteName={siteSettings.siteName} logoUrl={siteSettings.logoUrl} />
-          <AdminNavigation view={view} onChange={setView} isOwner={isOwner} pendingProposalsCount={pendingProposalsCount} />
+          <AdminNavigation view={view} onChange={navigate} isOwner={isOwner} pendingProposalsCount={pendingProposalsCount} />
           <div>
             <div className="rail-user-section">
               <span className="rail-user-email" title={sessionState.email ?? ''}>{sessionState.email ?? 'Administrator'}</span>
@@ -2640,9 +2632,12 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
           onToast={setGlobalToast}
           role={userRole}
           currentRevisionId={homeHeroRevisionId}
+          onDirtyChange={(dirty) => { hasUnsavedChanges.current = dirty; }}
+          onNavigate={navigate}
         />
-      ) : (view === 'pages' || view === 'branding' || view === 'legal') ? (
+      ) : (view === 'pages-home' || view === 'pages-visa' || view === 'pages-shared' || view === 'branding' || view === 'legal') ? (
         <SiteSettingsManager
+          key={view.startsWith('pages-') ? 'pages' : view}
           initialSettings={siteSettings}
           api={api}
           onSaved={(settings, revisionId) => {
@@ -2654,6 +2649,8 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
           onToast={setGlobalToast}
           role={userRole}
           currentRevisionId={siteSettingsRevisionId}
+          onDirtyChange={(dirty) => { hasUnsavedChanges.current = dirty; }}
+          onNavigate={navigate}
           mode={view}
         />
       ) : view === 'contacts' ? (

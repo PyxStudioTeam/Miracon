@@ -23,6 +23,7 @@ export type PendingProposal = {
   readonly creatorRole: AdminRole;
   readonly createdAt: string;
   readonly currentHeadRevisionId: string | null;
+  readonly currentHeadSnapshot: ContentSnapshot | null;
 };
 
 export type RevisionHistoryItem = {
@@ -60,6 +61,7 @@ const pendingProposalRowSchema = z.object({
   creator_email: z.string().min(1),
   creator_role: z.enum(['owner', 'editor']),
   current_head_revision_id: databaseUuidSchema.nullable(),
+  current_head_snapshot: z.unknown().nullable(),
 });
 
 const revisionHistoryRowSchema = z.object({
@@ -89,17 +91,28 @@ export async function getPendingProposals(pool: RevisionPool): Promise<PendingPr
              r.state::text as state, r.action::text as action, r.snapshot, r.expected_revision_id,
              r.created_by, r.created_at,
              u.email as creator_email, u.role::text as creator_role,
-             h.current_revision_id as current_head_revision_id
+             h.current_revision_id as current_head_revision_id,
+             head.snapshot as current_head_snapshot
       from miracon.content_revisions as r
       join miracon.admin_users as u on u.id = r.created_by
       left join miracon.content_revision_heads as h
         on h.aggregate_type = r.aggregate_type and h.aggregate_id = r.aggregate_id
+      left join miracon.content_revisions as head
+        on head.id = h.current_revision_id
+       and head.aggregate_type = r.aggregate_type and head.aggregate_id = r.aggregate_id
       where r.state = 'pending'
       order by r.created_at desc
     `);
 
     return result.rows.map((row) => {
       const parsed = pendingProposalRowSchema.parse(row);
+      const snapshot = parseStoredSnapshot(parsed.snapshot);
+      const currentHeadSnapshot = parsed.current_head_snapshot === null ? null : parseStoredSnapshot(parsed.current_head_snapshot);
+      if (snapshot.aggregateType !== parsed.aggregate_type || snapshot.aggregateId !== parsed.aggregate_id
+        || currentHeadSnapshot && (currentHeadSnapshot.aggregateType !== parsed.aggregate_type || currentHeadSnapshot.aggregateId !== parsed.aggregate_id)
+        || (parsed.current_head_revision_id === null) !== (currentHeadSnapshot === null)) {
+        throw new Error('Proposal and current HEAD snapshots must match their aggregate');
+      }
       return {
         id: parsed.id,
         aggregateType: parsed.aggregate_type,
@@ -107,13 +120,14 @@ export async function getPendingProposals(pool: RevisionPool): Promise<PendingPr
         revisionNumber: parsed.revision_number,
         state: parsed.state,
         action: parsed.action,
-        snapshot: parseStoredSnapshot(parsed.snapshot),
+        snapshot,
         expectedRevisionId: parsed.expected_revision_id,
         createdBy: parsed.created_by,
         creatorEmail: parsed.creator_email,
         creatorRole: parsed.creator_role,
         createdAt: parsed.created_at.toISOString(),
         currentHeadRevisionId: parsed.current_head_revision_id,
+        currentHeadSnapshot,
       };
     });
   } finally {

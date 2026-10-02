@@ -30,6 +30,8 @@ Migration `0014_contact_challenge_immediate.sql` removes the challenge dwell col
 
 Migration `0015_site_branding.sql` adds defaulted `logo_url` and `brand_color` columns. It constrains logo paths to generated local upload URLs and colors to `#RRGGBB`, extends revision snapshot validation and exact materialization, and preserves historical snapshots; rolling back an old revision restores the original logo and blue rather than retaining later branding. Apply it before publishing branding changes through `/admin`.
 Migrations `0016_kriopigi_virtual_tour.sql` through `0018_qualify_project_card_copy.sql` populate the Kriopigi hosted 360° URL and replace obsolete default Golden Visa and Monastiriou card copy. Each update is guarded by the original value so administrator-edited URLs and text remain untouched; new catalogs also carry the revised defaults in their seeds.
+Migration `0019_fix_logo_url_uuid.sql` corrects both PostgreSQL logo-path checks to accept the full generated 8-4-4-4-12 UUID. Migration `0015` omitted one group: uploads succeeded but their site-settings revisions could not publish. Existing paths, historical snapshots, and other validation rules are preserved.
+
 
 
 ## Apply migrations

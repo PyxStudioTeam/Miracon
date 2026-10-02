@@ -46,7 +46,15 @@ export async function POST({ request, clientAddress }: ApiContext): Promise<Resp
 
   const { session } = authentication;
   return json(
-    { authenticated: true, csrfToken: session.csrfToken, expiresAt: session.expiresAt.toISOString() },
+    {
+      authenticated: true,
+      csrfToken: session.csrfToken,
+      expiresAt: session.expiresAt.toISOString(),
+      idleExpiresAt: session.idleExpiresAt.toISOString(),
+      role: authentication.role,
+      email: input.data.email.toLowerCase(),
+      adminUserId: authentication.adminUserId,
+    },
     { headers: { 'set-cookie': createSessionCookie(session.sessionToken, SESSION_LIFETIME_SECONDS) } },
   );
 }

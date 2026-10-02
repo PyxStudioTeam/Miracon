@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { SiteSettings } from '../lib/site-settings-shared';
-import { goldenVisaCopyKeys, homeCopyKeys } from '../lib/site-settings-shared';
+import { externalSocialUrl, goldenVisaCopyKeys, homeCopyKeys } from '../lib/site-settings-shared';
 
 const titleCase = (value: string) => value.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase());
 const locales = ['en', 'el'] as const;
@@ -28,7 +28,7 @@ function PageCopyHeader({ title, locale, onLocaleChange }: {
 export default function PagesSettingsFields({ settings, onChange, mode }: {
   settings: SiteSettings;
   onChange: (settings: SiteSettings) => void;
-  mode: 'pages' | 'branding';
+  mode: 'pages-home' | 'pages-visa' | 'pages-shared' | 'branding';
 }) {
   const [homeLocale, setHomeLocale] = useState<Locale>('en');
   const [goldenVisaLocale, setGoldenVisaLocale] = useState<Locale>('en');
@@ -36,8 +36,7 @@ export default function PagesSettingsFields({ settings, onChange, mode }: {
     <div className="pages-settings-fields">
       {mode === 'branding' ? <>
       <h3>Company and contact details</h3>
-      <p>Site identity, footer contacts and social links are managed here. The logo and primary color are above.</p>
-      <label>Site name<input type="text" value={settings.siteName} onChange={(event) => onChange({ ...settings, siteName: event.target.value })} /></label>
+      <p>The website name and logo are above. Manage your company name, footer contacts and social links here.</p>
       <label>Company name<input type="text" value={settings.companyName} onChange={(event) => onChange({ ...settings, companyName: event.target.value })} /></label>
       <label>Phone (international)<input type="tel" value={settings.footerPhone} onChange={(event) => onChange({ ...settings, footerPhone: event.target.value })} /></label>
       <label>Email<input type="email" value={settings.footerEmail} onChange={(event) => onChange({ ...settings, footerEmail: event.target.value })} /></label>
@@ -48,10 +47,12 @@ export default function PagesSettingsFields({ settings, onChange, mode }: {
       {(['facebook', 'instagram', 'linkedin'] as const).map((network) => {
         const visibleKey = `${network}Visible` as const;
         const urlKey = `${network}Url` as const;
+        const invalidUrl = settings[urlKey] !== '' && externalSocialUrl(settings[urlKey]) === null;
         return <fieldset key={network}>
           <legend>{titleCase(network)}</legend>
           <label><input type="checkbox" checked={settings[visibleKey]} onChange={(event) => onChange({ ...settings, [visibleKey]: event.target.checked })} /> Show link</label>
-          <label>HTTPS profile URL<input type="url" value={settings[urlKey]} onChange={(event) => onChange({ ...settings, [urlKey]: event.target.value })} /></label>
+          <label>HTTPS profile URL<input type="url" value={settings[urlKey]} aria-invalid={invalidUrl} aria-describedby={invalidUrl ? `${network}-url-error` : undefined} onChange={(event) => onChange({ ...settings, [urlKey]: event.target.value })} /></label>
+          {invalidUrl && <small id={`${network}-url-error`} className="social-url-error" role="alert">Enter your {titleCase(network)} profile URL starting with https:// (not http://).</small>}
         </fieldset>;
       })}
       <fieldset>
@@ -61,7 +62,7 @@ export default function PagesSettingsFields({ settings, onChange, mode }: {
         <label>Prefilled message (optional)<textarea value={settings.whatsappMessage} onChange={(event) => onChange({ ...settings, whatsappMessage: event.target.value })} /></label>
       </fieldset>
       </> : <>
-      <section className="pages-copy-section" aria-label="Homepage content">
+      {mode === 'pages-home' && <section className="pages-copy-section" aria-label="Homepage content">
         <PageCopyHeader title="Homepage" locale={homeLocale} onLocaleChange={setHomeLocale} />
         <div className="pages-copy-fields">
           {homeCopyKeys.map((key) => <label key={key}>{titleCase(key)}
@@ -70,8 +71,8 @@ export default function PagesSettingsFields({ settings, onChange, mode }: {
             } })} />
           </label>)}
         </div>
-      </section>
-      <section className="pages-copy-section" aria-label="Golden Visa page content">
+      </section>}
+      {mode === 'pages-visa' && <section className="pages-copy-section" aria-label="Golden Visa page content">
         <PageCopyHeader title="Golden Visa page" locale={goldenVisaLocale} onLocaleChange={setGoldenVisaLocale} />
         <div className="pages-copy-fields">
           {goldenVisaCopyKeys.map((key) => <label key={key}>{titleCase(key)}
@@ -80,8 +81,8 @@ export default function PagesSettingsFields({ settings, onChange, mode }: {
             } })} />
           </label>)}
         </div>
-      </section>
-      {locales.map((locale) => <section key={locale} aria-label={`${locale.toUpperCase()} page content`}>
+      </section>}
+      {mode === 'pages-shared' && locales.map((locale) => <section key={locale} aria-label={`${locale.toUpperCase()} page content`}>
         <h3>{locale === 'en' ? 'English' : 'Greek'} contact form and stages</h3>
         <fieldset>
           <legend>Contact form</legend>

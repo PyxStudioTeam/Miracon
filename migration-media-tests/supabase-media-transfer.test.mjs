@@ -20,7 +20,7 @@ function snapshot() {
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'miracon-media-cli-'));
-  t.after(() => rm(root, { recursive: true, force: true }));
+  t.after(() => rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
   const input = join(root, 'input');
   const mediaRoot = join(root, 'media');
   const statePath = join(root, 'state', 'transfer.json');

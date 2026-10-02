@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { cp, copyFile, mkdtemp, rm, symlink } from 'node:fs/promises';
 import { createServer } from 'node:net';
@@ -255,6 +256,22 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     const headed = await fetch(`${baseUrl}/media/${media.relativePath}`, { method: 'HEAD' });
     assert.equal(headed.status, 200);
     assert.equal(Number(requiredHeader(headed, 'content-length')), source.length);
+
+    const sessionDigest = createHash('sha256').update(sessionCookie.split('=', 2)[1]).digest();
+    await database.query(`update miracon.admin_sessions set last_seen_at = now() - interval '30 minutes'
+      where session_token_hash = $1`, [sessionDigest]);
+    await assertApiError(fetch(`${baseUrl}/api/auth/session`, { headers: { cookie: sessionCookie } }), 401, 'unauthorized');
+    await assertApiError(fetch(`${baseUrl}/api/admin/projects`, { headers: { cookie: sessionCookie } }), 401, 'unauthorized');
+    const expiredPreview = await fetch(`${baseUrl}/preview/http-transport-project`, {
+      headers: { cookie: sessionCookie }, redirect: 'manual',
+    });
+    assert.equal(expiredPreview.status, 302);
+    assert.equal(requiredHeader(expiredPreview, 'location'), '/admin');
+    const expiredGreekPreview = await fetch(`${baseUrl}/el/preview/http-transport-project`, {
+      headers: { cookie: sessionCookie }, redirect: 'manual',
+    });
+    assert.equal(expiredGreekPreview.status, 302);
+    assert.equal(requiredHeader(expiredGreekPreview, 'location'), '/admin');
   } finally {
     await stopAstro(server);
     await database.end();

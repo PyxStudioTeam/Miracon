@@ -1,5 +1,5 @@
 ---
-import { getSiteSettings } from '../lib/site-settings';
+import { getSiteSettings, resolvePrivacyPdfUrl } from '../lib/site-settings';
 import FooterSocialLinks from './FooterSocialLinks.astro';
 import type { SiteSettings } from '../lib/site-settings-shared';
 import { getLocale, getMessages, localizePath, oppositeLocale, type SiteLocale } from '../lib/i18n';
@@ -14,6 +14,7 @@ const siteSettings = settings ?? await getSiteSettings();
 const m = getMessages(locale);
 const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 const phoneHref = siteSettings.footerPhone.replace(/[^0-9+]/g, '');
+const privacyPdfUrl = resolvePrivacyPdfUrl(siteSettings.footerPrivacyPdfUrl, locale);
 ---
 
 <footer class="footer">
@@ -41,7 +42,7 @@ const phoneHref = siteSettings.footerPhone.replace(/[^0-9+]/g, '');
     <div class="footer-bottom">
       <div class="footer-links">
         <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
-        {siteSettings.footerPrivacyPdfUrl && <a href={siteSettings.footerPrivacyPdfUrl} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>}
+        {privacyPdfUrl && <a href={privacyPdfUrl} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>}
         <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
       </div>
       <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span>{m['common.switchLanguage']}</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></a>

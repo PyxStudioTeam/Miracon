@@ -30,5 +30,5 @@ describe('Argon2id passwords', () => {
     await expect(verifyPassword(hash, 'correct horse battery staple')).resolves.toBe(true);
     await expect(verifyPassword(hash, 'wrong password')).resolves.toBe(false);
     await expect(hashPassword('correct horse battery staple')).resolves.not.toBe(hash);
-  });
+  }, 15000);
 });

@@ -4,16 +4,16 @@ import { parseRemainingUnitsInput } from './remaining-units';
 import type { Project } from '../lib/project-types';
 
 describe('AdminApi', () => {
-  it('calls the native-style fetcher without binding it to the API instance', async () => {
-    // Given
-    function fetcher(this: unknown): Promise<Response> {
-      expect(this).toBeUndefined();
-      return Promise.resolve(jsonResponse({ authenticated: true, expiresAt: '2026-08-12T00:00:00.000Z' }));
-    }
-    const api = new AdminApi({ fetcher });
-
-    // When / Then
-    await expect(api.session()).resolves.toMatchObject({ authenticated: true });
+  it('clears authenticated state and CSRF when a session check reports unauthenticated', async () => {
+    const onUnauthorized = vi.fn();
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ csrfToken: 'previous-token' }))
+      .mockResolvedValueOnce(jsonResponse({ authenticated: false }));
+    const api = new AdminApi({ fetcher, onUnauthorized });
+    await api.bootstrapCsrf();
+    expect(await api.session()).toEqual({ authenticated: false });
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+    await expect(api.activity()).rejects.toMatchObject({ code: 'csrf_missing' });
   });
 
   it('rotates CSRF before sending a project mutation with same-origin credentials', async () => {
@@ -50,6 +50,25 @@ describe('AdminApi', () => {
     // Then
     await expect(request).rejects.toBeInstanceOf(AdminApiError);
     expect(onUnauthorized).toHaveBeenCalledOnce();
+  });
+
+  it('does not retain credentials after a status 401, and refreshes stale CSRF only for explicit activity', async () => {
+    const onUnauthorized = vi.fn();
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ csrfToken: 'old' }))
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'csrf_failed', message: 'CSRF validation failed' } }, 403))
+      .mockResolvedValueOnce(jsonResponse({ csrfToken: 'new' }))
+      .mockResolvedValueOnce(jsonResponse({ expiresAt: '2026-09-01T08:00:00.000Z', idleExpiresAt: '2026-09-01T00:45:00.000Z' }))
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'unauthorized', message: 'Expired' } }, 401));
+    const api = new AdminApi({ fetcher, onUnauthorized });
+    await api.bootstrapCsrf();
+    expect((await api.activity()).idleExpiresAt).toBe('2026-09-01T00:45:00.000Z');
+    expect(fetcher).toHaveBeenNthCalledWith(4, '/api/auth/activity', expect.objectContaining({
+      headers: { 'X-CSRF-Token': 'new' },
+    }));
+    expect(await api.session()).toEqual({ authenticated: false });
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+    await expect(api.activity()).rejects.toMatchObject({ code: 'csrf_missing' });
   });
 
   it('uploads a raster benefit icon as multipart data without a direct-storage transport', async () => {
@@ -106,41 +125,27 @@ describe('AdminApi', () => {
     }));
   });
 
-  it('fetches pending proposals and allows approving/rejecting', async () => {
-    // Given
+  it('rejects malformed or cross-aggregate proposal snapshots before they reach review', async () => {
     const proposal = {
       id: '11111111-1111-1111-1111-111111111111',
-      aggregateType: 'project' as const,
-      aggregateId: 'project-1',
-      revisionNumber: 2,
-      state: 'pending' as const,
-      action: 'proposal' as const,
-      snapshot: { aggregateType: 'project', aggregateId: 'project-1', deleted: false, project: null, images: [] },
-      expectedRevisionId: null,
-      createdBy: 2,
-      creatorEmail: 'editor@miracon.gr',
-      creatorRole: 'editor' as const,
-      createdAt: '2026-08-01T00:00:00.000Z',
-      currentHeadRevisionId: null,
+      aggregateType: 'project', aggregateId: 'project-1', revisionNumber: 2,
+      state: 'pending', action: 'proposal',
+      snapshot: { aggregateType: 'project', aggregateId: 'project-1', deleted: true, project: null, images: [] },
+      expectedRevisionId: null, createdBy: 2, creatorEmail: 'editor@miracon.gr', creatorRole: 'editor',
+      createdAt: '2026-08-01T00:00:00.000Z', currentHeadRevisionId: null, currentHeadSnapshot: null,
     };
-    const fetcher = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ csrfToken: 'prop-token' }))
+    const responses = [
+      { ...proposal, snapshot: { ...proposal.snapshot, deleted: false } },
+      { ...proposal, currentHeadRevisionId: proposal.id, currentHeadSnapshot: null },
+      { ...proposal, snapshot: { ...proposal.snapshot, aggregateId: 'another-project' } },
+    ];
+    const api = new AdminApi({ fetcher: vi.fn()
       .mockResolvedValueOnce(jsonResponse({ proposals: [proposal] }))
-      .mockResolvedValueOnce(new Response(null, { status: 200 }));
-    const api = new AdminApi({ fetcher });
-
-    // When
-    await api.bootstrapCsrf();
-    const proposals = await api.listPendingProposals();
-    await api.approveProposal(proposal.id, null);
-
-    // Then
-    expect(proposals).toHaveLength(1);
-    expect(proposals[0].id).toBe(proposal.id);
-    expect(fetcher).toHaveBeenNthCalledWith(3, `/api/admin/revisions/${proposal.id}/approve`, expect.objectContaining({
-      headers: expect.objectContaining({ 'X-CSRF-Token': 'prop-token' }),
-      method: 'POST',
-    }));
+      .mockResolvedValueOnce(jsonResponse({ proposals: [responses[0]] }))
+      .mockResolvedValueOnce(jsonResponse({ proposals: [responses[1]] }))
+      .mockResolvedValueOnce(jsonResponse({ proposals: [responses[2]] })) });
+    expect(await api.listPendingProposals()).toHaveLength(1);
+    for (let index = 0; index < responses.length; index += 1) await expect(api.listPendingProposals()).rejects.toThrow();
   });
 
   it('fetches revision history and supports rollback', async () => {

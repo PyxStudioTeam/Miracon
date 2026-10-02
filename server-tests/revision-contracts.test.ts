@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   CONTENT_AGGREGATE_TYPES,
   CONTENT_AUDIT_ACTIONS,
@@ -27,6 +27,7 @@ import {
   rollbackRevisionInputSchema,
   siteSettingsSnapshotSchema,
 } from '../src/lib/server/revision-contracts';
+import { getPendingProposals } from '../src/lib/server/revision-queries';
 
 const revisionId = '4c4e0a24-0e6a-4f37-91f0-813768e0a7da';
 const nextRevisionId = '2d57a00e-4240-419a-8cbe-40fd4b2bfb3d';
@@ -211,6 +212,30 @@ describe('revision contracts', () => {
     ];
     // Then
     expect(results.every((result) => !result.success)).toBe(true);
+  });
+
+  it('returns immutable proposal and current HEAD snapshots together, including a missing HEAD', async () => {
+    const proposed = projectSnapshot({ project: project({ title: 'Proposal' }) });
+    const head = projectSnapshot({ project: project({ title: 'Current HEAD' }) });
+    const row = {
+      id: nextRevisionId, aggregate_type: 'project', aggregate_id: 'project-1', revision_number: 2,
+      state: 'pending', action: 'proposal', snapshot: proposed, expected_revision_id: revisionId,
+      created_by: 1, created_at: new Date('2026-01-02T00:00:00Z'),
+      creator_email: 'owner@example.com', creator_role: 'owner',
+      current_head_revision_id: revisionId, current_head_snapshot: head,
+    };
+    const query = vi.fn().mockResolvedValueOnce({ rows: [row] }).mockResolvedValueOnce({
+      rows: [{ ...row, expected_revision_id: null, current_head_revision_id: null, current_head_snapshot: null }],
+    });
+    const release = vi.fn();
+    const pool = { connect: async () => ({ query, release }) } as unknown as Parameters<typeof getPendingProposals>[0];
+    expect(await getPendingProposals(pool)).toMatchObject([{
+      snapshot: proposed, expectedRevisionId: revisionId, currentHeadRevisionId: revisionId, currentHeadSnapshot: head,
+    }]);
+    expect(await getPendingProposals(pool)).toMatchObject([{
+      snapshot: proposed, currentHeadRevisionId: null, currentHeadSnapshot: null,
+    }]);
+    expect(release).toHaveBeenCalledTimes(2);
   });
 
   it('requires governed heads to carry valid singleton and UUID identity', () => {

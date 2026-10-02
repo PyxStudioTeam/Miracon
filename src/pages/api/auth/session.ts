@@ -7,6 +7,7 @@ export async function GET({ request }: ApiContext): Promise<Response> {
   return json({
     authenticated: true,
     expiresAt: result.value.session.expiresAt.toISOString(),
+    idleExpiresAt: result.value.session.idleExpiresAt.toISOString(),
     role: result.value.session.role,
     email: result.value.session.email,
     adminUserId: result.value.session.adminUserId,

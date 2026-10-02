@@ -3,16 +3,24 @@ import { homepageVideosSchema, projectSchema, siteSettingsSchema } from '../lib/
 import type { HomeHeroVideo } from '../lib/home-hero';
 import type { Project } from '../lib/project-types';
 import type { SiteSettings } from '../lib/site-settings-shared';
+import { contentSnapshotSchema } from '../lib/server/revision-contracts';
 
 const sessionSchema = z.object({
   authenticated: z.literal(true),
   expiresAt: z.iso.datetime(),
+  idleExpiresAt: z.iso.datetime(),
   role: z.enum(['owner', 'editor']).optional(),
   email: z.string().optional(),
   adminUserId: z.number().optional(),
 });
+const sessionStatusSchema = z.union([sessionSchema, z.object({ authenticated: z.literal(false) })]);
 const csrfSchema = z.object({ csrfToken: z.string().min(1) });
-const loginSchema = sessionSchema.extend({ csrfToken: z.string().min(1) });
+const loginSchema = sessionSchema.extend({
+  role: z.enum(['owner', 'editor']),
+  email: z.string(),
+  adminUserId: z.number(),
+  csrfToken: z.string().min(1),
+});
 const canonicalProjectSchema = projectSchema.extend({
   updatedAt: z.iso.datetime(),
   currentRevisionId: z.string().optional(),
@@ -86,15 +94,24 @@ const pendingProposalSchema = z.object({
   revisionNumber: z.number(),
   state: z.literal('pending'),
   action: z.literal('proposal'),
-  snapshot: z.unknown(),
+  snapshot: contentSnapshotSchema,
   expectedRevisionId: z.string().nullable(),
   createdBy: z.number(),
   creatorEmail: z.string(),
   creatorRole: z.enum(['owner', 'editor']),
   createdAt: z.string(),
   currentHeadRevisionId: z.string().nullable(),
+  currentHeadSnapshot: contentSnapshotSchema.nullable(),
+}).superRefine((proposal, context) => {
+  if (proposal.snapshot.aggregateType !== proposal.aggregateType || proposal.snapshot.aggregateId !== proposal.aggregateId
+    || proposal.currentHeadSnapshot && (proposal.currentHeadSnapshot.aggregateType !== proposal.aggregateType
+      || proposal.currentHeadSnapshot.aggregateId !== proposal.aggregateId)
+    || (proposal.currentHeadRevisionId === null) !== (proposal.currentHeadSnapshot === null)) {
+    context.addIssue({ code: 'custom', message: 'Proposal and HEAD must match their aggregate' });
+  }
 });
 const proposalsResponseSchema = z.object({ proposals: z.array(pendingProposalSchema) });
+
 
 const revisionHistoryItemSchema = z.object({
   id: z.string(),
@@ -128,6 +145,7 @@ export type UploadedMedia = z.infer<typeof mediaSchema>;
 export type SessionState = {
   readonly authenticated: boolean;
   readonly expiresAt?: string;
+  readonly idleExpiresAt?: string;
   readonly role?: 'owner' | 'editor';
   readonly email?: string;
   readonly adminUserId?: number;
@@ -177,11 +195,19 @@ export class AdminApi {
 
   async session(): Promise<SessionState> {
     const response = await this.#fetcher('/api/auth/session', { credentials: 'same-origin' });
-    if (response.status === 401) return { authenticated: false };
-    const session = await this.#response(response, sessionSchema);
+    if (response.status === 401) {
+      this.clearCredentials();
+      return { authenticated: false };
+    }
+    const session = await this.#response(response, sessionStatusSchema);
+    if (!session.authenticated) {
+      this.clearCredentials();
+      return { authenticated: false };
+    }
     return {
       authenticated: session.authenticated,
       expiresAt: session.expiresAt,
+      idleExpiresAt: session.idleExpiresAt,
       role: session.role,
       email: session.email,
       adminUserId: session.adminUserId,
@@ -195,6 +221,7 @@ export class AdminApi {
     return {
       authenticated: true,
       expiresAt: session.expiresAt,
+      idleExpiresAt: session.idleExpiresAt,
       role: session.role,
       email: session.email,
       adminUserId: session.adminUserId,
@@ -205,6 +232,26 @@ export class AdminApi {
     const response = await this.#fetcher('/api/auth/csrf', { credentials: 'same-origin', method: 'POST' });
     const result = await this.#response(response, csrfSchema);
     this.#csrfToken = result.csrfToken;
+  }
+
+  async activity(): Promise<{ expiresAt: string; idleExpiresAt: string }> {
+    const send = () => this.#fetcher('/api/auth/activity', {
+      credentials: 'same-origin', method: 'POST', headers: this.#mutationHeaders(),
+    });
+    let response = await send();
+    if (response.status === 403) {
+      const error = errorSchema.safeParse(await response.clone().json().catch(() => null));
+      if (error.data?.error.code === 'csrf_failed') {
+        await this.bootstrapCsrf();
+        response = await send();
+      }
+    }
+    return this.#response(response, z.object({ expiresAt: z.iso.datetime(), idleExpiresAt: z.iso.datetime() }));
+  }
+
+  clearCredentials(): void {
+    this.#csrfToken = null;
+    this.#onUnauthorized?.();
   }
 
   async logout(): Promise<void> {
@@ -429,7 +476,7 @@ export class AdminApi {
     if (!response.ok) {
       const parsed = errorSchema.safeParse(await response.json().catch(() => null));
       const error = new AdminApiError(response.status, parsed.data?.error.code ?? 'request_failed', parsed.data?.error.message ?? 'Unable to complete the request');
-      if (response.status === 401) this.#onUnauthorized?.();
+      if (response.status === 401) this.clearCredentials();
       throw error;
     }
     return schema.parse(await response.json());

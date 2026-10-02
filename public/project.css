@@ -2615,19 +2615,30 @@ body.js-enabled .project-page .project-brochure-link {
   }
 }
 
-.project-virtual-tour { padding-block: clamp(24px, 4vw, 64px); }
+.project-virtual-tour { padding-block: clamp(24px, 4vw, 64px); text-align: center; }
 .project-virtual-tour a {
   display: inline-flex;
-  min-height: 48px;
-  padding: 12px 24px;
+  min-height: 52px;
+  padding: 14px 32px;
   align-items: center;
   justify-content: center;
-  border-radius: 24px;
-  background: var(--brand-color);
-  color: #fff;
+  border-radius: 9999px;
+  background: var(--brand-color, #003075);
+  color: #ffffff;
   font-size: 16px;
   font-weight: 600;
   text-decoration: none;
+  box-shadow: 0 4px 16px rgba(0, 48, 117, 0.2);
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
-.project-virtual-tour a:hover { background: #164c91; }
-.project-virtual-tour a:focus-visible { outline: 3px solid var(--brand-color); outline-offset: 3px; }
+.project-virtual-tour a:hover {
+  background: #164c91;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 48, 117, 0.3);
+}
+.project-virtual-tour a:focus-visible {
+  outline: 3px solid var(--brand-color, #003075);
+  outline-offset: 3px;
+  color: #ffffff;
+}

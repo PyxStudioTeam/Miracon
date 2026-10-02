@@ -16,6 +16,7 @@ import {
   createSession,
   findSession,
   revokeSession,
+  touchSession,
   verifySessionCsrf,
 } from '../src/lib/server/auth/session';
 
@@ -453,6 +454,27 @@ describe('opaque database sessions', () => {
     await pool.query('update miracon.admin_users set is_active = true where id = 1');
     await revokeSession(pool, issued.sessionToken, new Date(now.getTime() + 2));
     await expect(findSession(pool, issued.sessionToken, new Date(now.getTime() + 3))).resolves.toBeNull();
+  });
+
+  it('expires at the idle boundary without extending it on reads, and only a valid touch extends it', async () => {
+    const now = new Date('2026-08-11T17:00:00.000Z');
+    const token = await createSession(pool, 1, { now, ttlMs: 8 * 60 * 60 * 1000 });
+    const at = (ms: number) => new Date(now.getTime() + ms);
+    expect(token.idleExpiresAt).toEqual(at(30 * 60 * 1000));
+    expect((await findSession(pool, token.sessionToken, at(29 * 60 * 1000 + 59_999)))?.idleExpiresAt)
+      .toEqual(at(30 * 60 * 1000));
+    expect(await findSession(pool, token.sessionToken, at(30 * 60 * 1000))).toBeNull();
+    expect(await touchSession(pool, token.sessionToken, at(30 * 60 * 1000 + 1))).toBeNull();
+    const extended = await touchSession(pool, token.sessionToken, at(29 * 60 * 1000));
+    expect(extended?.idleExpiresAt).toEqual(at(59 * 60 * 1000));
+    const concurrent = await Promise.all([
+      touchSession(pool, token.sessionToken, at(29 * 60 * 1000 + 2)),
+      touchSession(pool, token.sessionToken, at(29 * 60 * 1000 + 1)),
+    ]);
+    expect(concurrent.every(Boolean)).toBe(true);
+    expect((await findSession(pool, token.sessionToken, at(59 * 60 * 1000 + 1)))?.idleExpiresAt)
+      .toEqual(at(59 * 60 * 1000 + 2));
+    expect(await touchSession(pool, token.sessionToken, at(8 * 60 * 60 * 1000))).toBeNull();
   });
 
   it('loads the role from the currently linked live administrator on every request', async () => {

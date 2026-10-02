@@ -1,6 +1,6 @@
 ---
 import { getContactDescriptionLines, getMessages, type SiteLocale } from '../lib/i18n';
-import { defaultSiteSettings, getSiteSettings } from '../lib/site-settings';
+import { defaultSiteSettings, getSiteSettings, resolvePrivacyPdfUrl } from '../lib/site-settings';
 import type { SiteSettings } from '../lib/site-settings-shared';
 
 interface Props {
@@ -12,7 +12,7 @@ const { locale = 'en', settings } = Astro.props;
 const siteSettings = settings ?? await getSiteSettings();
 const m = getMessages(locale);
 const contactCopy = siteSettings.contactCopy[locale];
-const privacyHref = siteSettings.footerPrivacyPdfUrl;
+const privacyHref = resolvePrivacyPdfUrl(siteSettings.footerPrivacyPdfUrl, locale);
 ---
 
 <section id="contacts" class="contacts-section">

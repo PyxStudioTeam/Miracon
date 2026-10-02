@@ -9,7 +9,7 @@ import { getHomeHeroVideos } from '../lib/home-hero';
 import { getContactDescriptionLines, getLocale, getMessages, localizePath } from '../lib/i18n';
 import { getPublishedProjects, localizeProject } from '../lib/projects';
 import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
-import { defaultSiteSettings, getSiteSettings } from '../lib/site-settings';
+import { defaultSiteSettings, getSiteSettings, resolvePrivacyPdfUrl } from '../lib/site-settings';
 import { brandCopy, brandThemeStyle } from '../lib/site-settings-shared';
 
 const locale = getLocale(Astro.originPathname);
@@ -39,7 +39,7 @@ const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
 const homeUrl = absoluteLocalizedUrl('/', locale, Astro.url);
 const projectsHref = localizePath('/#projects', locale);
 const goldenVisaHref = localizePath('/golden-visa', locale);
-const privacyPolicyHref = siteSettings.footerPrivacyPdfUrl;
+const privacyPolicyHref = resolvePrivacyPdfUrl(siteSettings.footerPrivacyPdfUrl, locale);
 const homeStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [

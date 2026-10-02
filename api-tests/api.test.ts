@@ -8,8 +8,10 @@ import { seedProjects } from '../src/data/projects';
 import { defaultSiteSettings } from '../src/lib/site-settings-shared';
 import { migrate } from '../scripts/postgres-migrate.mjs';
 import { provisionSingletonAdmin } from '../scripts/provision-admin.mjs';
+import { sha256 } from '../src/lib/server/auth/crypto';
 import { GET as getSession } from '../src/pages/api/auth/session';
 import { POST as bootstrapCsrf } from '../src/pages/api/auth/csrf';
+import { POST as activity } from '../src/pages/api/auth/activity';
 import { POST as login } from '../src/pages/api/auth/login';
 import { POST as logout } from '../src/pages/api/auth/logout';
 import { GET as getProjects, POST as saveProject } from '../src/pages/api/admin/projects';
@@ -76,6 +78,47 @@ describe('Phase 2 server API', () => {
     expect(blockedLogout.status).toBe(403);
     expect(logoutResponse.status).toBe(204);
     expect((await getSession(context('/api/auth/session', { headers: { cookie } }))).status).toBe(401);
+  });
+
+  it('extends idle time only on authenticated same-origin activity and rejects expired media and reads', async () => {
+    const auth = await loginAsAdmin();
+    const token = auth.headers.cookie.split('=', 2)[1];
+    if (!token) throw new Error('Expected an opaque session token');
+    const digest = sha256(token);
+    await pool.query(`update miracon.admin_sessions set last_seen_at = now() - interval '29 minutes'
+      where session_token_hash = $1`, [digest]);
+    const before = await pool.query<{ last_seen_at: Date }>('select last_seen_at from miracon.admin_sessions where session_token_hash = $1', [digest]);
+    const read = await getSession(context('/api/auth/session', { headers: auth.headers }));
+    const csrf = await bootstrapCsrf(context('/api/auth/csrf', {
+      method: 'POST', headers: { cookie: auth.headers.cookie, origin: siteUrl },
+    }));
+    const freshCsrf = (await csrf.json() as { csrfToken: string }).csrfToken;
+    const wrongOrigin = await activity(context('/api/auth/activity', {
+      method: 'POST', headers: { cookie: auth.headers.cookie, origin: 'https://evil.test', 'x-csrf-token': freshCsrf },
+    }));
+    const wrongCsrf = await activity(context('/api/auth/activity', {
+      method: 'POST', headers: { ...auth.headers, 'x-csrf-token': 'wrong' },
+    }));
+    const unchanged = await pool.query<{ last_seen_at: Date }>('select last_seen_at from miracon.admin_sessions where session_token_hash = $1', [digest]);
+    expect(read.status).toBe(200);
+    expect((await read.json()).idleExpiresAt).toBe(new Date(before.rows[0]!.last_seen_at.getTime() + 30 * 60_000).toISOString());
+    expect(csrf.status).toBe(200);
+    expect(wrongOrigin.status).toBe(403);
+    expect(wrongCsrf.status).toBe(403);
+    expect(unchanged.rows[0]?.last_seen_at).toEqual(before.rows[0]?.last_seen_at);
+
+    const touched = await activity(context('/api/auth/activity', {
+      method: 'POST', headers: { ...auth.headers, 'x-csrf-token': freshCsrf },
+    }));
+    expect(touched.status).toBe(200);
+    expect(new Date((await touched.json() as { idleExpiresAt: string }).idleExpiresAt).getTime())
+      .toBeGreaterThan(before.rows[0]!.last_seen_at.getTime() + 30 * 60_000);
+    await pool.query(`update miracon.admin_sessions set last_seen_at = now() - interval '30 minutes'
+      where session_token_hash = $1`, [digest]);
+    expect((await getSession(context('/api/auth/session', { headers: auth.headers }))).status).toBe(401);
+    expect((await getProjects(context('/api/admin/projects', { headers: auth.headers }))).status).toBe(401);
+    expect((await activity(context('/api/auth/activity', { method: 'POST', headers: { ...auth.headers, 'x-csrf-token': freshCsrf } }))).status).toBe(401);
+    expect((await uploadMedia(context('/api/admin/media', { method: 'POST', headers: auth.headers, body: new FormData() }))).status).toBe(401);
   });
 
   it('rejects generic bad login credentials and enforces protected project operations', async () => {

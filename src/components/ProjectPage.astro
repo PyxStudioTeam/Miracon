@@ -362,6 +362,30 @@ const projectStructuredData = {
   .project-preview-banner { position: fixed; z-index: 100; top: 12px; left: 50%; padding: 10px 18px; border-radius: 999px; background: #b68a3d; color: white; font: 600 13px/1.2 Arial, sans-serif; transform: translateX(-50%); box-shadow: 0 8px 30px rgba(0, 48, 117, .25); }
   .project-preview-banner span { margin-left: 10px; opacity: .75; font-weight: 400; }
   .project-virtual-tour { margin-block: 36px 64px; text-align: center; }
-  .project-virtual-tour a { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; border: 1px solid currentColor; color: #073466; font-weight: 600; text-decoration: none; }
-  .project-virtual-tour a:hover, .project-virtual-tour a:focus-visible { background: #073466; color: white; }
+  .project-virtual-tour a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 14px 32px;
+    border-radius: 9999px;
+    background: var(--brand-color, #003075);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 4px 16px rgba(0, 48, 117, 0.2);
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .project-virtual-tour a:hover {
+    background: #164c91;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 48, 117, 0.3);
+  }
+  .project-virtual-tour a:focus-visible {
+    outline: 3px solid var(--brand-color, #003075);
+    outline-offset: 3px;
+    color: #ffffff;
+  }
 </style>

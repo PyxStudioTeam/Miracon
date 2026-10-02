@@ -8,6 +8,7 @@ import { createSession, type IssuedSession } from '../src/lib/server/auth/sessio
 import { hashPassword } from '../src/lib/server/auth/password';
 import type { Project } from '../src/lib/project-types';
 import { projectSnapshotSchema, revisionActionInputSchema, type ProjectSnapshot } from '../src/lib/server/revision-contracts';
+import { getPendingProposals } from '../src/lib/server/revision-queries';
 import { RevisionService } from '../src/lib/server/revisions';
 import { parseStoredSnapshot } from '../src/lib/server/revision-materializers';
 import { saveProject } from '../src/lib/server/projects';
@@ -55,6 +56,45 @@ afterAll(async () => {
 });
 
 describe('PostgreSQL revision service', () => {
+  it('reads each pending proposal with the current immutable HEAD in the same query', async () => {
+    const id = `proposal-read-${randomUUID()}`;
+    const original = { ...baselineSnapshot, aggregateId: id, project: { ...baselineSnapshot.project!, id }, images: [] };
+    const changed = { ...original, project: { ...original.project, title: 'Head after proposal' } };
+    const proposed = { ...original, project: { ...original.project, title: 'Proposed title' } };
+    const insert = async (revisionNumber: number, state: string, action: string, snapshot: unknown, expectedId: string | null) => {
+      const result = await pool.query<{ id: string }>(`insert into miracon.content_revisions
+        (aggregate_type, aggregate_id, revision_number, state, action, snapshot, expected_revision_id, created_by, approved_by, approved_at)
+        values ('project', $1, $2, $3::miracon.content_revision_state, $4::miracon.content_revision_action, $5::jsonb, $6, $7, $8, $9) returning id`,
+      [id, revisionNumber, state, action, JSON.stringify(snapshot), expectedId,
+        action === 'baseline' ? null : 1, action === 'publish' ? 1 : null, state === 'approved' ? new Date() : null]);
+      return result.rows[0]!.id;
+    };
+    const baseline = await insert(1, 'approved', 'baseline', original, null);
+    await pool.query(`insert into miracon.content_revision_heads
+      (aggregate_type, aggregate_id, current_revision_id, current_revision_number)
+      values ('project', $1, $2, 1)`, [id, baseline]);
+    const proposalId = await insert(2, 'pending', 'proposal', proposed, baseline);
+    const initial = (await getPendingProposals(pool)).find((item) => item.id === proposalId);
+    expect(initial).toMatchObject({ expectedRevisionId: baseline, currentHeadRevisionId: baseline, snapshot: proposed, currentHeadSnapshot: original });
+    const newHead = await insert(3, 'approved', 'publish', changed, baseline);
+    await pool.query(`update miracon.content_revision_heads set current_revision_id = $2, current_revision_number = 3
+      where aggregate_type = 'project' and aggregate_id = $1`, [id, newHead]);
+    const stale = (await getPendingProposals(pool)).find((item) => item.id === proposalId);
+    expect(stale).toMatchObject({ expectedRevisionId: baseline, currentHeadRevisionId: newHead, snapshot: proposed, currentHeadSnapshot: changed });
+    const approval = await new RevisionService(pool).execute(ownerSession.sessionToken, {
+      action: 'approve', revisionId: proposalId, expectedCurrentRevisionId: newHead,
+    });
+    expect(approval).toMatchObject({ ok: false, error: { kind: 'revision_conflict' } });
+    expect((await pool.query('select state::text from miracon.content_revisions where id = $1', [proposalId])).rows[0]?.state).toBe('pending');
+    const noHeadId = `proposal-no-head-${randomUUID()}`;
+    const noHead = { ...original, aggregateId: noHeadId, project: { ...original.project, id: noHeadId } };
+    const result = await pool.query<{ id: string }>(`insert into miracon.content_revisions
+      (aggregate_type, aggregate_id, revision_number, state, action, snapshot, created_by)
+      values ('project', $1, 1, 'pending', 'proposal', $2::jsonb, 1) returning id`, [noHeadId, JSON.stringify(noHead)]);
+    expect((await getPendingProposals(pool)).find((item) => item.id === result.rows[0]?.id))
+      .toMatchObject({ currentHeadRevisionId: null, currentHeadSnapshot: null });
+  });
+
   it('proposes, approves, rejects, rolls back, deletes, restores, and records immutable evidence', async () => {
     // Given
     const service = new RevisionService(pool);

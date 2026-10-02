@@ -144,3 +144,13 @@ export function whatsappLink(settings: Pick<SiteSettings, 'whatsappPhone' | 'wha
   if (!digits || digits.length < 7 || digits.length > 15) return null;
   return `https://wa.me/${digits}${settings.whatsappMessage.trim() ? `?text=${encodeURIComponent(settings.whatsappMessage.trim())}` : ''}`;
 }
+
+export function resolvePrivacyPdfUrl(value: string | null | undefined, locale: SiteLocale): string {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  const effective = trimmed || (locale === 'el' ? '/media/documents/privacy-policy/privacy-policy-el.pdf' : '/media/documents/privacy-policy/privacy-policy-en.pdf');
+  if (locale === 'el') {
+    if (effective.includes('-en.pdf')) return effective.replace('-en.pdf', '-el.pdf');
+    if (effective.endsWith('privacy-policy.pdf')) return effective.replace('privacy-policy.pdf', 'privacy-policy-el.pdf');
+  }
+  return effective;
+}

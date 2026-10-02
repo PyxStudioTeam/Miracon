@@ -8,7 +8,7 @@ import SeoHead from '../components/SeoHead.astro';
 import { getContactDescriptionLines, getLocale, getMessages, localizePath } from '../lib/i18n';
 import { getPublishedProjects, localizeProject } from '../lib/projects';
 import { absoluteLocalizedUrl } from '../lib/seo';
-import { defaultSiteSettings, getSiteSettings } from '../lib/site-settings';
+import { defaultSiteSettings, getSiteSettings, resolvePrivacyPdfUrl } from '../lib/site-settings';
 import { brandCopy, brandThemeStyle } from '../lib/site-settings-shared';
 
 const locale = getLocale(Astro.originPathname);
@@ -23,7 +23,7 @@ Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-r
 const goldenVisaUrl = absoluteLocalizedUrl('/golden-visa', locale, Astro.url);
 const projectsHref = localizePath('/#projects', locale);
 const contactsHref = localizePath('/golden-visa#contacts', locale);
-const privacyPolicyHref = siteSettings.footerPrivacyPdfUrl;
+const privacyPolicyHref = resolvePrivacyPdfUrl(siteSettings.footerPrivacyPdfUrl, locale);
 const visaConditions = [
   { title: m['gv.residency'], text: m['gv.residencyText'] },
   { title: m['gv.investment'], text: m['gv.investmentText'] },

@@ -8,22 +8,22 @@ const m = getMessages(locale);
 const phoneDigits = settings.footerPhone.replace(/[^0-9+]/g, '');
 const whatsappHref = settings.whatsappVisible ? whatsappLink(settings) : null;
 const networks = [
-  { name: 'Facebook', href: settings.facebookVisible ? externalSocialUrl(settings.facebookUrl) : null, letter: 'f' },
-  { name: 'Instagram', href: settings.instagramVisible ? externalSocialUrl(settings.instagramUrl) : null, letter: '◎' },
-  { name: 'LinkedIn', href: settings.linkedinVisible ? externalSocialUrl(settings.linkedinUrl) : null, letter: 'in' },
+  { name: 'Facebook', href: settings.facebookVisible ? externalSocialUrl(settings.facebookUrl) : null, icon: '/img/social/facebook.svg' },
+  { name: 'Instagram', href: settings.instagramVisible ? externalSocialUrl(settings.instagramUrl) : null, icon: '/img/social/instagram.svg' },
+  { name: 'LinkedIn', href: settings.linkedinVisible ? externalSocialUrl(settings.linkedinUrl) : null, icon: '/img/social/linkedin.svg' },
 ];
 ---
 <nav class="footer-socials site-social-links" aria-label={m['common.contactLinks']}>
   {settings.footerEmail && <a href={`mailto:${settings.footerEmail}`} aria-label={`${m['form.email']}: ${settings.footerEmail}`} title={settings.footerEmail}>
-    <img src="/img/contact_header/Group 37313 (1).svg" alt="">
+    <img src="/img/mail.svg" alt="" width="37" height="37">
   </a>}
   {phoneDigits && <a href={`tel:${phoneDigits}`} aria-label={`${m['form.phone']}: ${settings.footerPhone}`} title={settings.footerPhone}>
-    <img src="/img/contact_header/Vector (1).svg" alt="">
+    <img src="/img/phone.svg" alt="" width="37" height="37">
   </a>}
-  {networks.map(({ name, href, letter }) => href && <a href={href} target="_blank" rel="noopener noreferrer" aria-label={name} title={name}>
-    <span class="site-social-glyph" aria-hidden="true">{letter}</span>
+  {networks.map(({ name, href, icon }) => href && <a href={href} target="_blank" rel="noopener noreferrer" aria-label={name} title={name}>
+    <img src={icon} alt="" width="37" height="37">
   </a>)}
   {whatsappHref && <a href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${settings.whatsappPhone}`} title="WhatsApp">
-    <img src="/img/footer-whatsapp.svg" alt="">
+    <img src="/img/footer-whatsapp.svg" alt="" width="37" height="37">
   </a>}
 </nav>

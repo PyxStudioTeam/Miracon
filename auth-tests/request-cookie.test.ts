@@ -57,6 +57,7 @@ describe('login route contract', () => {
         sessionToken: 'opaque-session-token',
         csrfToken: 'csrf-token',
         expiresAt: new Date('2026-09-05T12:00:00.000Z'),
+        idleExpiresAt: new Date('2026-09-05T04:30:00.000Z'),
       },
     });
   });
@@ -65,7 +66,7 @@ describe('login route contract', () => {
     authentication.mockReset();
   });
 
-  it('preserves the valid login response and session cookie contract', async () => {
+  it('returns the authenticated role and identity with the session cookie', async () => {
     // Given
     const body = JSON.stringify({ email: 'admin@miracon.gr', password: 'correct horse battery staple' });
 
@@ -78,6 +79,10 @@ describe('login route contract', () => {
       authenticated: true,
       csrfToken: 'csrf-token',
       expiresAt: '2026-09-05T12:00:00.000Z',
+      idleExpiresAt: '2026-09-05T04:30:00.000Z',
+      role: 'owner',
+      email: 'admin@miracon.gr',
+      adminUserId: 1,
     });
     expect(response.headers.get('set-cookie')).toBe(
       '__Host-session=opaque-session-token; Max-Age=28800; Path=/; HttpOnly; Secure; SameSite=Lax',
@@ -314,4 +319,24 @@ describe('same-origin mutation verification', () => {
     expect(verifySameOriginMutation('POST', 'http://miracon.gr', 'http://miracon.gr/login', '')).toBe(false);
     expect(verifySameOriginMutation('POST', 'http://miracon.gr', 'http://miracon.gr/login', '   ')).toBe(false);
   });
+
+  it('allows loopback alias origins (localhost vs 127.0.0.1) in development or when configured with loopback', () => {
+    // When configured with 127.0.0.1 loopback origin
+    const configuredLoopback = 'http://127.0.0.1:10000';
+    expect(verifySameOriginMutation('POST', 'http://localhost:10000', 'http://localhost:10000/login', configuredLoopback)).toBe(true);
+    expect(verifySameOriginMutation('POST', 'http://127.0.0.1:10000', 'http://127.0.0.1:10000/login', configuredLoopback)).toBe(true);
+
+    // Port mismatch must be rejected
+    expect(verifySameOriginMutation('POST', 'http://localhost:9999', 'http://localhost:10000/login', configuredLoopback)).toBe(false);
+
+    // External origin targeting loopback must be rejected
+    expect(verifySameOriginMutation('POST', 'https://evil.example', 'http://localhost:10000/login', configuredLoopback)).toBe(false);
+  });
+
+  it('allows matching preview host origins when ALLOW_PREVIEW_HOSTS is enabled', () => {
+    vi.stubEnv('ALLOW_PREVIEW_HOSTS', 'true');
+    const previewOrigin = 'https://miracon-pr-1.onrender.com';
+    expect(verifySameOriginMutation('POST', previewOrigin, `${previewOrigin}/login`, 'https://miracon.gr')).toBe(true);
+  });
 });
+

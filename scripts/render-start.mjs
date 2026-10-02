@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import pg from 'pg';
 import { migrate } from './postgres-migrate.mjs';
+import { ensurePrivacyDocuments } from './ensure-privacy-documents.mjs';
 
 async function main() {
   console.log('[Render Start] Initializing Miracon preview environment...');
@@ -153,11 +154,15 @@ async function main() {
         `);
         console.log(`[Render Start] Seeded ${seedProjects.length} default projects with revision baselines.`);
       }
+
+      // Ensure privacy policy documents exist in MEDIA_ROOT and are registered in database
+      await ensurePrivacyDocuments(client, process.env.MEDIA_ROOT);
     } finally {
       await client.end();
     }
   } else {
     console.warn('[Render Start] DATABASE_URL is not defined; skipping migrations and seeds');
+    await ensurePrivacyDocuments(null, process.env.MEDIA_ROOT);
   }
 
   // 3. Launch Astro Standalone Server

@@ -22,6 +22,7 @@ const ownerSession: AuthenticatedSession = {
   adminUserId: 1,
   csrfTokenDigest: Buffer.from('owner-csrf'),
   expiresAt: new Date('2026-08-29T12:00:00.000Z'),
+  idleExpiresAt: new Date('2026-08-29T04:30:00.000Z'),
   role: 'owner',
   email: 'admin@miracon.gr',
 };
