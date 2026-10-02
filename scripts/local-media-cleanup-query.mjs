@@ -53,6 +53,9 @@ const REFERENCE_CTES = `
     union all select footer_terms_pdf_url from miracon.site_settings
     union all select footer_privacy_pdf_url from miracon.site_settings
     union all select footer_cookie_pdf_url from miracon.site_settings
+    union all select footer_terms_el_pdf_url from miracon.site_settings
+    union all select footer_privacy_el_pdf_url from miracon.site_settings
+    union all select footer_cookie_el_pdf_url from miracon.site_settings
   ),
   media_references(reference) as (
     select regexp_replace(reference, '[?#].*$', '')

@@ -29,7 +29,10 @@ beforeEach(async () => {
     update miracon.site_settings set
       footer_terms_visible = false, footer_terms_pdf_url = '',
       footer_privacy_visible = false, footer_privacy_pdf_url = '',
-      footer_cookie_visible = false, footer_cookie_pdf_url = ''
+      footer_cookie_visible = false, footer_cookie_pdf_url = '',
+      footer_terms_el_visible = false, footer_terms_el_pdf_url = '',
+      footer_privacy_el_visible = false, footer_privacy_el_pdf_url = '',
+      footer_cookie_el_visible = false, footer_cookie_el_pdf_url = ''
   `);
 });
 
@@ -51,7 +54,7 @@ describe('local media cleanup reference discovery', () => {
       'walkthrough', 'walkthrough-mobile', 'walkthrough-poster',
       'walkthrough-playlist', 'walkthrough-playlist-mobile', 'walkthrough-playlist-poster',
       'intro', 'brochure', 'benefit', 'floor-plan', 'project-image-url',
-      'project-image-path', 'homepage-url', 'homepage-path', 'settings',
+      'project-image-path', 'homepage-url', 'homepage-path', 'settings', 'greek-terms',
     ];
     await Promise.all(references.map((id) => insertMedia(id, oldDate)));
     await pool.query(`
@@ -81,7 +84,8 @@ describe('local media cleanup reference discovery', () => {
       ('image-path', 'project', '/external/image.jpg', $2, 'gallery')`, [mediaUrl('project-image-url'), mediaPath('project-image-path')]);
     await pool.query(`insert into miracon.homepage_videos (id, desktop_url, mobile_url, mobile_storage_path) values
       ('homepage', $1, 'https://external.test/video.mp4', $2)`, [mediaUrl('homepage-url'), mediaPath('homepage-path')]);
-    await pool.query('update miracon.site_settings set footer_terms_pdf_url = $1', [mediaUrl('settings')]);
+    await pool.query('update miracon.site_settings set footer_terms_pdf_url = $1, footer_terms_el_pdf_url = $2',
+      [mediaUrl('settings'), mediaUrl('greek-terms')]);
 
     // When
     const result = await runLocalMediaCleanup({ database: pool, mediaRoot: root, siteOrigin: 'https://miracon.test', now, graceDays: 7, apply: false });

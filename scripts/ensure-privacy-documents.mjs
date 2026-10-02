@@ -63,6 +63,12 @@ export async function ensurePrivacyDocuments(client, mediaRoot) {
           footer_privacy_pdf_url = '/media/documents/privacy-policy/privacy-policy-en.pdf'
       where id = 1 and (footer_privacy_pdf_url is null or footer_privacy_pdf_url = '');
     `);
+    await client.query(`
+      update miracon.site_settings
+      set footer_privacy_el_visible = true,
+          footer_privacy_el_pdf_url = '/media/documents/privacy-policy/privacy-policy-el.pdf'
+      where id = 1 and footer_privacy_el_pdf_url = '';
+    `);
 
     console.log('[Privacy Policy] Registered in database and site settings updated.');
   }

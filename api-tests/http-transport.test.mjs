@@ -154,6 +154,18 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     });
     assert.equal(uploadedPrivacy.status, 201);
     const privacyPdfUrl = (await uploadedPrivacy.json()).media.relativeUrl;
+    const uploadedGreekTerms = await upload(baseUrl, authHeaders, pdfSignature(), {
+      filename: 'terms-el.pdf',
+      mimeType: 'application/pdf',
+    });
+    assert.equal(uploadedGreekTerms.status, 201);
+    const greekTermsPdfUrl = (await uploadedGreekTerms.json()).media.relativeUrl;
+    const uploadedGreekPrivacy = await upload(baseUrl, authHeaders, pdfSignature(), {
+      filename: 'privacy-policy-el.pdf',
+      mimeType: 'application/pdf',
+    });
+    assert.equal(uploadedGreekPrivacy.status, 201);
+    const greekPrivacyPdfUrl = (await uploadedGreekPrivacy.json()).media.relativeUrl;
 
     const siteSettings = await fetch(`${baseUrl}/api/admin/site-settings`, {
       method: 'PUT',
@@ -162,6 +174,8 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
         ...currentSettings,
         footerTermsVisible: true, footerTermsPdfUrl: termsPdfUrl,
         footerPrivacyPdfUrl: privacyPdfUrl,
+        footerTermsElVisible: true, footerTermsElPdfUrl: greekTermsPdfUrl,
+        footerPrivacyElVisible: true, footerPrivacyElPdfUrl: greekPrivacyPdfUrl,
         homeCopy: { ...currentSettings.homeCopy, el: { ...currentSettings.homeCopy.el, heroTitleLine1: 'Νέα κατοικία' } },
         footerPhone: '+30 210 123 4567',
       }),
@@ -185,7 +199,9 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     assert.doesNotMatch(greekHomeHtml, /Πρόχειρο έργο PostgreSQL/u);
     assert.match(greekHomeHtml, /Νέα κατοικία/u);
     assert.match(greekHomeHtml, /tel:\+302101234567/u);
-    assert.equal(greekHomeHtml.split(`href="${privacyPdfUrl}"`).length - 1, 2);
+    assert.ok(greekHomeHtml.includes(`href="${greekTermsPdfUrl}"`));
+    assert.equal(greekHomeHtml.split(`href="${greekPrivacyPdfUrl}"`).length - 1, 2);
+    assert.ok(!greekHomeHtml.includes(`href="${privacyPdfUrl}"`));
 
     const publicProject = await fetch(`${baseUrl}/projects/postgres-public-project`);
     assert.equal(publicProject.status, 200);

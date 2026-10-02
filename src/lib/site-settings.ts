@@ -8,6 +8,9 @@ export function mapSiteSettings(row: Record<string, unknown> | null | undefined)
   const footerTermsPdfUrl = String(row?.footer_terms_pdf_url ?? '').trim();
   const footerPrivacyPdfUrl = String(row?.footer_privacy_pdf_url ?? '').trim();
   const footerCookiePdfUrl = String(row?.footer_cookie_pdf_url ?? '').trim();
+  const footerTermsElPdfUrl = String(row?.footer_terms_el_pdf_url ?? '').trim();
+  const footerPrivacyElPdfUrl = String(row?.footer_privacy_el_pdf_url ?? '').trim();
+  const footerCookieElPdfUrl = String(row?.footer_cookie_el_pdf_url ?? '').trim();
   // Columns added after the original singleton have defaults; legacy snapshots
   // and migration-free local previews retain the public copy they started with.
   return {
@@ -17,6 +20,12 @@ export function mapSiteSettings(row: Record<string, unknown> | null | undefined)
     footerPrivacyPdfUrl: isValidTermsPdfUrl(footerPrivacyPdfUrl) ? footerPrivacyPdfUrl : '',
     footerCookieVisible: Boolean(row?.footer_cookie_visible) && isValidTermsPdfUrl(footerCookiePdfUrl),
     footerCookiePdfUrl: isValidTermsPdfUrl(footerCookiePdfUrl) ? footerCookiePdfUrl : '',
+    footerTermsElVisible: Boolean(row?.footer_terms_el_visible) && isValidTermsPdfUrl(footerTermsElPdfUrl),
+    footerTermsElPdfUrl: isValidTermsPdfUrl(footerTermsElPdfUrl) ? footerTermsElPdfUrl : '',
+    footerPrivacyElVisible: Boolean(row?.footer_privacy_el_visible) && isValidTermsPdfUrl(footerPrivacyElPdfUrl),
+    footerPrivacyElPdfUrl: isValidTermsPdfUrl(footerPrivacyElPdfUrl) ? footerPrivacyElPdfUrl : '',
+    footerCookieElVisible: Boolean(row?.footer_cookie_el_visible) && isValidTermsPdfUrl(footerCookieElPdfUrl),
+    footerCookieElPdfUrl: isValidTermsPdfUrl(footerCookieElPdfUrl) ? footerCookieElPdfUrl : '',
     siteName: String(row?.site_name ?? defaultSiteSettings.siteName),
     logoUrl: isValidLogoUrl(String(row?.logo_url ?? '')) ? String(row?.logo_url) : defaultSiteSettings.logoUrl,
     brandColor: isValidBrandColor(String(row?.brand_color ?? '')) ? String(row?.brand_color) : defaultSiteSettings.brandColor,

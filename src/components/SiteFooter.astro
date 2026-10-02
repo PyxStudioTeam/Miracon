@@ -14,7 +14,7 @@ const siteSettings = settings ?? await getSiteSettings();
 const m = getMessages(locale);
 const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 const phoneHref = siteSettings.footerPhone.replace(/[^0-9+]/g, '');
-const privacyPdfUrl = resolvePrivacyPdfUrl(siteSettings.footerPrivacyPdfUrl, locale);
+const privacyPdfUrl = resolvePrivacyPdfUrl(siteSettings, locale);
 ---
 
 <footer class="footer">
@@ -41,9 +41,9 @@ const privacyPdfUrl = resolvePrivacyPdfUrl(siteSettings.footerPrivacyPdfUrl, loc
     </div>
     <div class="footer-bottom">
       <div class="footer-links">
-        <a href={siteSettings.footerTermsPdfUrl || '#'} target={siteSettings.footerTermsPdfUrl ? '_blank' : undefined} rel={siteSettings.footerTermsPdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerTermsVisible}>{m['common.terms']}</a>
-        {privacyPdfUrl && <a href={privacyPdfUrl} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>}
-        <a href={siteSettings.footerCookiePdfUrl || '#'} target={siteSettings.footerCookiePdfUrl ? '_blank' : undefined} rel={siteSettings.footerCookiePdfUrl ? 'noreferrer' : undefined} hidden={!siteSettings.footerCookieVisible}>{m['common.cookies']}</a>
+        <a href={(locale === 'el' ? siteSettings.footerTermsElPdfUrl : siteSettings.footerTermsPdfUrl) || '#'} target="_blank" rel="noopener noreferrer" hidden={!(locale === 'el' ? siteSettings.footerTermsElVisible : siteSettings.footerTermsVisible)}>{m['common.terms']}</a>
+        <a href={privacyPdfUrl} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>
+        <a href={(locale === 'el' ? siteSettings.footerCookieElPdfUrl : siteSettings.footerCookiePdfUrl) || '#'} target="_blank" rel="noopener noreferrer" hidden={!(locale === 'el' ? siteSettings.footerCookieElVisible : siteSettings.footerCookieVisible)}>{m['common.cookies']}</a>
       </div>
       <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span>{m['common.switchLanguage']}</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></a>
     </div>

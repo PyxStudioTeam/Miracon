@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { seedProjects } from '../src/data/projects';
 import { fallbackHomeHeroVideos, getHomeHeroVideos } from '../src/lib/home-hero';
-import { defaultSiteSettings } from '../src/lib/site-settings-shared';
+import { defaultSiteSettings, resolvePrivacyPdfUrl } from '../src/lib/site-settings-shared';
 import {
   SiteOriginConfigurationError,
   getPublicIdentityRedirect,
@@ -238,6 +238,32 @@ describe('runtime contracts', () => {
     // Then
     expect(localDocument.success).toBe(true);
     expect(unrelatedRelativeUrl.success).toBe(false);
+  });
+
+  it('selects the uploaded legal PDF for each locale without guessing the Greek filename', () => {
+    const settings = {
+      ...defaultSiteSettings,
+      footerPrivacyPdfUrl: '/media/uploads/english/english.pdf',
+      footerPrivacyElPdfUrl: '/media/uploads/greek/greek.pdf',
+    };
+
+    expect(resolvePrivacyPdfUrl(settings, 'en')).toBe(settings.footerPrivacyPdfUrl);
+    expect(resolvePrivacyPdfUrl(settings, 'el')).toBe(settings.footerPrivacyElPdfUrl);
+    expect(resolvePrivacyPdfUrl({ ...settings, footerPrivacyElPdfUrl: '' }, 'el'))
+      .toBe('/documents/privacy-policy-el.pdf');
+    expect(resolvePrivacyPdfUrl({ ...settings, footerPrivacyPdfUrl: '' }, 'en'))
+      .toBe('/documents/privacy-policy-en.pdf');
+  });
+
+  it('validates Greek legal PDFs independently from English documents', () => {
+    const settings = {
+      ...defaultSiteSettings,
+      footerTermsElVisible: true,
+      footerTermsElPdfUrl: '/media/uploads/greek-terms.pdf',
+    };
+    expect(siteSettingsSchema.safeParse(settings).success).toBe(true);
+    expect(siteSettingsSchema.safeParse({ ...settings, footerTermsElPdfUrl: 'javascript:alert(1)' }).success).toBe(false);
+    expect(siteSettingsSchema.safeParse({ ...settings, footerTermsElPdfUrl: '/documents/unknown.pdf' }).success).toBe(false);
   });
 
   it('uses bundled videos when the active database playlist is empty', async () => {

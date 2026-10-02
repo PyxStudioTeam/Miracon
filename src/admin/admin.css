@@ -570,6 +570,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .admin-page-tabs + .site-settings-list { margin-top: 26px; }
 .admin-page-tabs + .home-hero-help { margin-top: 26px; }
 .site-settings-list { display: grid; max-width: 920px; margin-top: 46px; gap: 16px; }
+.site-settings-list .site-settings-locale-toolbar { margin: 0 0 4px; }
 .site-settings-card { overflow: hidden; border: 1px solid rgba(8,47,93,.13); border-radius: 18px; background: rgba(255,255,255,.78); box-shadow: var(--admin-shadow); }
 .site-settings-card > header { display: grid; min-height: 82px; padding: 16px 20px; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 14px; border-bottom: 1px solid rgba(8,47,93,.1); }
 .site-settings-icon { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 12px; background: #f2e8d6; color: var(--admin-gold); }
@@ -585,7 +586,9 @@ button:disabled { cursor: wait; opacity: .55; }
 .site-settings-document-actions a,
 .site-settings-document-actions label { display: inline-flex; min-height: 40px; padding: 0 13px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--admin-line); border-radius: 9px; background: white; color: var(--admin-navy); cursor: pointer; font-size: 10px; font-weight: 700; }
 .site-settings-document-actions label { background: var(--admin-navy); color: white; }
-.site-settings-document-actions input { display: none; }
+.site-settings-document-actions input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.site-settings-document-actions label:focus-within { outline: 2px solid var(--admin-gold); outline-offset: 2px; }
+.site-settings-document-actions label:has(input:disabled) { opacity: .55; cursor: not-allowed; }
 .site-settings-state { display: flex; min-height: 54px; padding: 14px 24px; align-items: center; gap: 9px; border-top: 1px solid rgba(8,47,93,.08); background: rgba(244,241,234,.72); color: var(--admin-green); font-size: 11px; }
 .site-settings-state.error { color: var(--admin-red); }
 .site-settings-state a { display: inline-flex; margin-left: auto; align-items: center; gap: 5px; color: var(--admin-navy); font-weight: 700; }

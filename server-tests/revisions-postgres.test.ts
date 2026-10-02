@@ -7,7 +7,7 @@ import { sha256 } from '../src/lib/server/auth/crypto';
 import { createSession, type IssuedSession } from '../src/lib/server/auth/session';
 import { hashPassword } from '../src/lib/server/auth/password';
 import type { Project } from '../src/lib/project-types';
-import { projectSnapshotSchema, revisionActionInputSchema, type ProjectSnapshot } from '../src/lib/server/revision-contracts';
+import { projectSnapshotSchema, revisionActionInputSchema, siteSettingsSnapshotSchema, type ProjectSnapshot } from '../src/lib/server/revision-contracts';
 import { getPendingProposals } from '../src/lib/server/revision-queries';
 import { RevisionService } from '../src/lib/server/revisions';
 import { parseStoredSnapshot } from '../src/lib/server/revision-materializers';
@@ -253,6 +253,65 @@ describe('PostgreSQL revision service', () => {
     expect(live.rows[0]).toMatchObject({ videos: ['revision-homepage-video'], terms_url: '/media/legal/terms.pdf' });
     expect(await singletonLiveSnapshot('homepage_hero')).toEqual(homepageCommand.snapshot);
     expect(await singletonLiveSnapshot('site_settings')).toEqual(settings.value.snapshot);
+  });
+
+  it('approves Greek legal documents independently and rolls back historical and localized revisions exactly', async () => {
+    const service = new RevisionService(pool);
+    const oldHead = await singletonHead('site_settings');
+    const historical = await pool.query<{ id: string; snapshot: unknown }>(`select id, snapshot from miracon.content_revisions
+      where aggregate_type = 'site_settings' and aggregate_id = 'singleton' and action = 'baseline'`);
+    const historicalRevision = historical.rows[0];
+    if (!historicalRevision) throw new Error('Historical site settings baseline is required');
+    const historicalSnapshot = siteSettingsSnapshotSchema.parse(parseStoredSnapshot(historicalRevision.snapshot));
+    const initial = siteSettingsSnapshotSchema.parse(await singletonLiveSnapshot('site_settings'));
+    const localized = siteSettingsSnapshotSchema.parse({
+      ...initial,
+      settings: {
+        ...initial.settings,
+        footer_terms_visible: true, footer_terms_pdf_url: '/media/legal/english-terms.pdf',
+        footer_privacy_visible: false, footer_privacy_pdf_url: '',
+        footer_cookie_visible: false, footer_cookie_pdf_url: '',
+        footer_terms_el_visible: true, footer_terms_el_pdf_url: '/media/legal/greek-terms.pdf',
+        footer_privacy_el_visible: true, footer_privacy_el_pdf_url: '/media/legal/greek-privacy.pdf',
+        footer_cookie_el_visible: false, footer_cookie_el_pdf_url: '/media/legal/greek-cookies.pdf',
+        updated_at: '2024-03-04T05:06:07.000Z',
+      },
+    });
+    const proposal = await service.execute(editorSession.sessionToken, {
+      action: 'proposal', aggregateType: 'site_settings', aggregateId: 'singleton',
+      snapshot: localized, expectedRevisionId: oldHead, mediaFileIds: [],
+    });
+    if (!proposal.ok) throw new Error('Greek settings proposal failed');
+    const approval = await service.execute(ownerSession.sessionToken, {
+      action: 'approve', revisionId: proposal.value.id, expectedCurrentRevisionId: oldHead,
+    });
+    expect(approval.ok).toBe(true);
+    expect(await singletonLiveSnapshot('site_settings')).toEqual(localized);
+    expect((await pool.query(`select footer_terms_pdf_url, footer_terms_el_pdf_url,
+      footer_privacy_el_visible, footer_privacy_el_pdf_url, footer_cookie_el_visible, footer_cookie_el_pdf_url
+      from miracon.site_settings where id = 1`)).rows[0]).toMatchObject({
+      footer_terms_pdf_url: '/media/legal/english-terms.pdf',
+      footer_terms_el_pdf_url: '/media/legal/greek-terms.pdf',
+      footer_privacy_el_visible: true, footer_privacy_el_pdf_url: '/media/legal/greek-privacy.pdf',
+      footer_cookie_el_visible: false, footer_cookie_el_pdf_url: '/media/legal/greek-cookies.pdf',
+    });
+
+    const oldRollback = await service.execute(ownerSession.sessionToken, {
+      action: 'rollback', targetRevisionId: historicalRevision.id, expectedCurrentRevisionId: proposal.value.id,
+    });
+    if (!oldRollback.ok) throw new Error('Historical settings rollback failed');
+    expect(await singletonLiveSnapshot('site_settings')).toEqual(historicalSnapshot);
+    expect(siteSettingsSnapshotSchema.parse(await singletonLiveSnapshot('site_settings')).settings).toMatchObject({
+      footer_terms_el_visible: false, footer_terms_el_pdf_url: '',
+      footer_privacy_el_visible: false, footer_privacy_el_pdf_url: '',
+      footer_cookie_el_visible: false, footer_cookie_el_pdf_url: '',
+    });
+
+    const restored = await service.execute(ownerSession.sessionToken, {
+      action: 'rollback', targetRevisionId: proposal.value.id, expectedCurrentRevisionId: oldRollback.value.id,
+    });
+    expect(restored.ok).toBe(true);
+    expect(await singletonLiveSnapshot('site_settings')).toEqual(localized);
   });
 
   it('rolls back materialization when canonical image ordering differs from the revision snapshot', async () => {

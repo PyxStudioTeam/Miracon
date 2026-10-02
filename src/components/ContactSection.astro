@@ -12,7 +12,7 @@ const { locale = 'en', settings } = Astro.props;
 const siteSettings = settings ?? await getSiteSettings();
 const m = getMessages(locale);
 const contactCopy = siteSettings.contactCopy[locale];
-const privacyHref = resolvePrivacyPdfUrl(siteSettings.footerPrivacyPdfUrl, locale);
+const privacyHref = resolvePrivacyPdfUrl(siteSettings, locale);
 ---
 
 <section id="contacts" class="contacts-section">

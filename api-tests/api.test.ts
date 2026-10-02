@@ -267,17 +267,24 @@ describe('Phase 2 server API', () => {
     const auth = await loginAsAdmin();
     const videos = [{ id: 'api-hero', title: 'API hero', projectId: null, desktopUrl: '/media/api.mp4', desktopStoragePath: null, mobileUrl: null, mobileStoragePath: null, sortOrder: 0, isActive: true }];
 
-    // Seed a real media_files record for the legal PDF URL so the server-side PDF validation passes
+    // Both languages must reference registered PDF media before they can be published.
     await pool.query(
       `insert into miracon.media_files (id, relative_url, relative_path, original_name, mime_type, size_bytes, sha256)
-       values ('test-terms-pdf', '/media/legal/terms.pdf', 'legal/terms.pdf', 'terms.pdf', 'application/pdf', 1024, $1)
+       values
+         ('test-terms-pdf', '/media/legal/terms.pdf', 'legal/terms.pdf', 'terms.pdf', 'application/pdf', 1024, $1),
+         ('test-terms-el-pdf', '/media/legal/terms-el.pdf', 'legal/terms-el.pdf', 'terms-el.pdf', 'application/pdf', 1024, $2),
+         ('test-privacy-el-pdf', '/media/legal/privacy-el.pdf', 'legal/privacy-el.pdf', 'privacy-el.pdf', 'application/pdf', 1024, $3)
        on conflict (id) do nothing`,
-      [createHash('sha256').update('terms.pdf').digest()],
+      ['terms.pdf', 'terms-el.pdf', 'privacy-el.pdf'].map((name) => createHash('sha256').update(name).digest()),
     );
     const settings = {
       ...structuredClone(defaultSiteSettings),
       footerTermsVisible: true,
       footerTermsPdfUrl: '/media/legal/terms.pdf',
+      footerTermsElVisible: true,
+      footerTermsElPdfUrl: '/media/legal/terms-el.pdf',
+      footerPrivacyElVisible: true,
+      footerPrivacyElPdfUrl: '/media/legal/privacy-el.pdf',
       siteName: 'New Brand',
       footerPhone: '+30 210 123 4567',
       footerEmail: 'office@example.com',

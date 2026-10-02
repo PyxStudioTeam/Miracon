@@ -39,7 +39,7 @@ const serializedHomeHeroVideos = JSON.stringify(homeHeroVideos.map((video) => ({
 const homeUrl = absoluteLocalizedUrl('/', locale, Astro.url);
 const projectsHref = localizePath('/#projects', locale);
 const goldenVisaHref = localizePath('/golden-visa', locale);
-const privacyPolicyHref = resolvePrivacyPdfUrl(siteSettings.footerPrivacyPdfUrl, locale);
+const privacyPolicyHref = resolvePrivacyPdfUrl(siteSettings, locale);
 const homeStructuredData = {
   '@context': 'https://schema.org',
   '@graph': [

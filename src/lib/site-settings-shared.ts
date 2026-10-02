@@ -32,6 +32,12 @@ export type SiteSettings = {
   footerPrivacyPdfUrl: string;
   footerCookieVisible: boolean;
   footerCookiePdfUrl: string;
+  footerTermsElVisible: boolean;
+  footerTermsElPdfUrl: string;
+  footerPrivacyElVisible: boolean;
+  footerPrivacyElPdfUrl: string;
+  footerCookieElVisible: boolean;
+  footerCookieElPdfUrl: string;
   siteName: string;
   logoUrl: string;
   brandColor: string;
@@ -67,6 +73,12 @@ export const defaultSiteSettings: SiteSettings = {
   footerPrivacyPdfUrl: '',
   footerCookieVisible: false,
   footerCookiePdfUrl: '',
+  footerTermsElVisible: false,
+  footerTermsElPdfUrl: '',
+  footerPrivacyElVisible: false,
+  footerPrivacyElPdfUrl: '',
+  footerCookieElVisible: false,
+  footerCookieElPdfUrl: '',
   siteName: 'MIRACON',
   companyName: 'MIRACON Constructions',
   logoUrl: '',
@@ -145,12 +157,10 @@ export function whatsappLink(settings: Pick<SiteSettings, 'whatsappPhone' | 'wha
   return `https://wa.me/${digits}${settings.whatsappMessage.trim() ? `?text=${encodeURIComponent(settings.whatsappMessage.trim())}` : ''}`;
 }
 
-export function resolvePrivacyPdfUrl(value: string | null | undefined, locale: SiteLocale): string {
-  const trimmed = typeof value === 'string' ? value.trim() : '';
-  const effective = trimmed || (locale === 'el' ? '/media/documents/privacy-policy/privacy-policy-el.pdf' : '/media/documents/privacy-policy/privacy-policy-en.pdf');
-  if (locale === 'el') {
-    if (effective.includes('-en.pdf')) return effective.replace('-en.pdf', '-el.pdf');
-    if (effective.endsWith('privacy-policy.pdf')) return effective.replace('privacy-policy.pdf', 'privacy-policy-el.pdf');
-  }
-  return effective;
+export function resolvePrivacyPdfUrl(
+  settings: Pick<SiteSettings, 'footerPrivacyPdfUrl' | 'footerPrivacyElPdfUrl'>,
+  locale: SiteLocale,
+): string {
+  return (locale === 'el' ? settings.footerPrivacyElPdfUrl : settings.footerPrivacyPdfUrl).trim()
+    || `/documents/privacy-policy-${locale}.pdf`;
 }

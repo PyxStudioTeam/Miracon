@@ -59,6 +59,9 @@ export async function PUT({ request }: ApiContext): Promise<Response> {
     input.value.footerTermsPdfUrl,
     input.value.footerPrivacyPdfUrl,
     input.value.footerCookiePdfUrl,
+    input.value.footerTermsElPdfUrl,
+    input.value.footerPrivacyElPdfUrl,
+    input.value.footerCookieElPdfUrl,
   ].filter((url): url is string => Boolean(url && url.trim()));
 
   const uniqueLegalUrls = [...new Set(legalUrls)];

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isValidBrandColor, isValidLogoUrl } from '../site-settings-shared';
+import { isValidBrandColor, isValidLogoUrl, isValidTermsPdfUrl } from '../site-settings-shared';
 
 export type JsonPrimitive = boolean | null | number | string;
 export type JsonValue = JsonPrimitive | { readonly [key: string]: JsonValue } | readonly JsonValue[];
@@ -52,9 +52,13 @@ export const canonicalHomepageVideoRowSchema = z.object({
 }).strict();
 export type CanonicalHomepageVideoRow = z.infer<typeof canonicalHomepageVideoRowSchema>;
 
+const legalPdfUrlSchema = z.string().max(2_048).refine((value) => value === '' || isValidTermsPdfUrl(value));
 export const canonicalSiteSettingsRowSchema = z.object({
   id: z.literal(1), footer_terms_visible: z.boolean(), footer_terms_pdf_url: z.string(), footer_privacy_visible: z.boolean(), footer_privacy_pdf_url: z.string(),
   footer_cookie_visible: z.boolean(), footer_cookie_pdf_url: z.string(),
+  footer_terms_el_visible: z.boolean().default(false), footer_terms_el_pdf_url: legalPdfUrlSchema.default(''),
+  footer_privacy_el_visible: z.boolean().default(false), footer_privacy_el_pdf_url: legalPdfUrlSchema.default(''),
+  footer_cookie_el_visible: z.boolean().default(false), footer_cookie_el_pdf_url: legalPdfUrlSchema.default(''),
   site_name: z.string().nullable().default(null), company_name: z.string().nullable().default(null),
   logo_url: z.string().refine((value) => value === '' || isValidLogoUrl(value)).default(''),
   brand_color: z.string().refine(isValidBrandColor).default('#003075'),

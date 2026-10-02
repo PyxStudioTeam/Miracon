@@ -780,19 +780,30 @@ function HomeHeroManager({
   );
 }
 
-type LegalVisibilityKey = 'footerTermsVisible' | 'footerPrivacyVisible' | 'footerCookieVisible';
-type LegalUrlKey = 'footerTermsPdfUrl' | 'footerPrivacyPdfUrl' | 'footerCookiePdfUrl';
+type LegalLocale = 'en' | 'el';
+type LegalVisibilityKey = 'footerTermsVisible' | 'footerPrivacyVisible' | 'footerCookieVisible'
+  | 'footerTermsElVisible' | 'footerPrivacyElVisible' | 'footerCookieElVisible';
+type LegalUrlKey = 'footerTermsPdfUrl' | 'footerPrivacyPdfUrl' | 'footerCookiePdfUrl'
+  | 'footerTermsElPdfUrl' | 'footerPrivacyElPdfUrl' | 'footerCookieElPdfUrl';
 
 const legalDocumentFields: Array<{
   label: string;
   description: string;
-  storageDirectory: string;
-  visibilityKey: LegalVisibilityKey;
-  urlKey: LegalUrlKey;
+  automatic: boolean;
+  fields: Record<LegalLocale, { visibilityKey: LegalVisibilityKey; urlKey: LegalUrlKey }>;
 }> = [
-  { label: 'Terms of Use', description: 'User agreement PDF in the website footer', storageDirectory: 'terms-of-use', visibilityKey: 'footerTermsVisible', urlKey: 'footerTermsPdfUrl' },
-  { label: 'Privacy Policy', description: 'PDF linked automatically in the footer and consultation forms', storageDirectory: 'privacy-policy', visibilityKey: 'footerPrivacyVisible', urlKey: 'footerPrivacyPdfUrl' },
-  { label: 'Cookie Policy', description: 'Cookie policy PDF in the website footer', storageDirectory: 'cookie-policy', visibilityKey: 'footerCookieVisible', urlKey: 'footerCookiePdfUrl' },
+  { label: 'Terms of Use', description: 'User agreement PDF in the website footer', automatic: false, fields: {
+    en: { visibilityKey: 'footerTermsVisible', urlKey: 'footerTermsPdfUrl' },
+    el: { visibilityKey: 'footerTermsElVisible', urlKey: 'footerTermsElPdfUrl' },
+  } },
+  { label: 'Privacy Policy', description: 'PDF linked automatically in the footer and consultation forms', automatic: true, fields: {
+    en: { visibilityKey: 'footerPrivacyVisible', urlKey: 'footerPrivacyPdfUrl' },
+    el: { visibilityKey: 'footerPrivacyElVisible', urlKey: 'footerPrivacyElPdfUrl' },
+  } },
+  { label: 'Cookie Policy', description: 'Cookie policy PDF in the website footer', automatic: false, fields: {
+    en: { visibilityKey: 'footerCookieVisible', urlKey: 'footerCookiePdfUrl' },
+    el: { visibilityKey: 'footerCookieElVisible', urlKey: 'footerCookieElPdfUrl' },
+  } },
 ];
 
 type SettingsMode = 'pages-home' | 'pages-visa' | 'pages-shared' | 'branding' | 'legal';
@@ -802,7 +813,7 @@ const settingsHeadings: Record<SettingsMode, { breadcrumb: string; title: string
   'pages-visa': { breadcrumb: 'Content / Pages / Golden Visa', title: 'Golden Visa', description: 'Edit Golden Visa page text in English and Greek' },
   'pages-shared': { breadcrumb: 'Content / Pages / Shared blocks', title: 'Shared blocks', description: 'Edit the shared contact form and stages in English and Greek' },
   branding: { breadcrumb: 'Settings / Brand & contacts', title: 'Logo, name & contacts', description: 'Change the website name, logo, primary color and footer contacts' },
-  legal: { breadcrumb: 'Settings / Documents', title: 'Legal documents', description: 'Upload legal PDFs. The Privacy Policy is linked automatically after upload (after owner approval for editors).' },
+  legal: { breadcrumb: 'Settings / Documents', title: 'Legal documents', description: 'Upload separate English and Greek PDFs. Privacy Policy links automatically after upload (after owner approval for editors).' },
 };
 
 function SiteSettingsManager({
@@ -832,6 +843,7 @@ function SiteSettingsManager({
   const [saving, setSaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState<LegalUrlKey | null>(null);
+  const [legalLocale, setLegalLocale] = useState<LegalLocale>('en');
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
@@ -843,21 +855,24 @@ function SiteSettingsManager({
     setRevisionId(currentRevisionId ?? null);
   }, [currentRevisionId]);
 
-  const documents = legalDocumentFields.map((document) => {
-    const normalizedUrl = settings[document.urlKey].trim();
+  const allDocuments = legalDocumentFields.flatMap((document) => (['en', 'el'] as const).map((locale) => {
+    const { visibilityKey, urlKey } = document.fields[locale];
+    const normalizedUrl = settings[urlKey].trim();
     const validUrl = isValidTermsPdfUrl(normalizedUrl);
-    const automatic = document.urlKey === 'footerPrivacyPdfUrl';
-    const visible = automatic ? validUrl : settings[document.visibilityKey];
+    const visible = document.automatic ? validUrl : settings[visibilityKey];
     return {
       ...document,
+      locale,
+      visibilityKey,
+      urlKey,
       normalizedUrl,
       validUrl,
       visible,
-      automatic,
-      invalid: (Boolean(normalizedUrl) && !validUrl) || (!automatic && visible && !validUrl),
+      invalid: (Boolean(normalizedUrl) && !validUrl) || (!document.automatic && visible && !validUrl),
     };
-  });
-  const hasInvalidDocument = documents.some((document) => document.invalid);
+  }));
+  const documents = allDocuments.filter((document) => document.locale === legalLocale);
+  const hasInvalidDocument = allDocuments.some((document) => document.invalid);
   const invalidSocialUrl = (['facebookUrl', 'instagramUrl', 'linkedinUrl'] as const)
     .find((key) => settings[key] !== '' && externalSocialUrl(settings[key]) === null);
   const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings);
@@ -874,7 +889,7 @@ function SiteSettingsManager({
     return () => window.removeEventListener('beforeunload', warnBeforeUnload);
   }, [isDirty]);
 
-  async function persistSettings(nextSettings: SiteSettings, pdfUploaded = false) {
+  async function persistSettings(nextSettings: SiteSettings, privacyLocale?: LegalLocale) {
     setSaving(true);
     try {
       const result = await api.saveSiteSettings(nextSettings, { expectedRevisionId: revisionId });
@@ -885,10 +900,11 @@ function SiteSettingsManager({
       setSavedSettings({ ...result.settings });
       onSaved(result.settings, result.currentRevisionId);
       let message = result.isProposal ? 'Site settings proposal submitted for owner review' : 'Site settings saved';
-      if (pdfUploaded) {
+      if (privacyLocale) {
+        const language = privacyLocale === 'el' ? 'Greek' : 'English';
         message = result.isProposal
-          ? 'Privacy Policy PDF submitted for owner approval; links update after approval'
-          : 'Privacy Policy PDF published and linked in the footer and forms';
+          ? `${language} Privacy Policy PDF submitted for owner approval; links update after approval`
+          : `${language} Privacy Policy PDF published and linked in the footer and forms`;
       }
       onToast({ tone: 'success', message });
     } catch (error) {
@@ -910,7 +926,8 @@ function SiteSettingsManager({
       onToast({ tone: 'error', message: 'PDF document must be smaller than 25 MB' });
       return;
     }
-    if (document.automatic && (isDirty || saving)) {
+    if (saving || uploadingDocument) return;
+    if (document.automatic && isDirty) {
       onToast({ tone: 'error', message: 'Save pending site settings changes before uploading the Privacy Policy PDF' });
       return;
     }
@@ -919,12 +936,12 @@ function SiteSettingsManager({
     try {
       const media = await api.uploadMedia(file);
       if (document.automatic) {
-        const nextSettings = { ...settings, footerPrivacyPdfUrl: media.relativeUrl, footerPrivacyVisible: true };
+        const nextSettings = { ...settings, [document.urlKey]: media.relativeUrl, [document.visibilityKey]: true };
         setSettings(nextSettings);
-        await persistSettings(nextSettings, true);
+        await persistSettings(nextSettings, document.locale);
       } else {
         setSettings((current) => ({ ...current, [document.urlKey]: media.relativeUrl }));
-        onToast({ tone: 'success', message: `${document.label} PDF uploaded. Save settings to apply.` });
+        onToast({ tone: 'success', message: `${document.locale === 'el' ? 'Greek' : 'English'} ${document.label} PDF uploaded. Save settings to apply.` });
       }
     } catch (error) {
       onToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to upload PDF document' });
@@ -967,12 +984,13 @@ function SiteSettingsManager({
       return;
     }
 
-    const nextSettings: SiteSettings = {
-      ...settings,
-      footerTermsPdfUrl: settings.footerTermsPdfUrl.trim(),
-      footerPrivacyPdfUrl: settings.footerPrivacyPdfUrl.trim(),
-      footerCookiePdfUrl: settings.footerCookiePdfUrl.trim(),
-    };
+    const nextSettings = { ...settings };
+    for (const document of legalDocumentFields) {
+      for (const locale of ['en', 'el'] as const) {
+        const key = document.fields[locale].urlKey;
+        nextSettings[key] = settings[key].trim();
+      }
+    }
     await persistSettings(nextSettings);
   }
 
@@ -1026,6 +1044,13 @@ function SiteSettingsManager({
           </div>
         </section>}
         {(mode === 'pages-home' || mode === 'pages-visa' || mode === 'pages-shared' || mode === 'branding') && <PagesSettingsFields settings={settings} onChange={setSettings} mode={mode} />}
+        {mode === 'legal' && <header className="editor-locale-toolbar site-settings-locale-toolbar">
+          <div><strong>Document language</strong><span>Upload and manage each language's PDFs independently</span></div>
+          <div className="presentation-switch" role="group" aria-label="Legal document language">
+            <button type="button" className={legalLocale === 'en' ? 'active' : ''} aria-pressed={legalLocale === 'en'} onClick={() => setLegalLocale('en')}>EN</button>
+            <button type="button" className={legalLocale === 'el' ? 'active' : ''} aria-pressed={legalLocale === 'el'} onClick={() => setLegalLocale('el')}>ΕΛ</button>
+          </div>
+        </header>}
         {mode === 'legal' && documents.map((document) => (
           <section className="site-settings-card" key={document.urlKey}>
             <header>
@@ -1034,23 +1059,23 @@ function SiteSettingsManager({
               {document.automatic
                 ? <span className="site-settings-auto">Auto-linked</span>
                 : <label className="home-hero-toggle site-settings-toggle">
-                    <input type="checkbox" checked={document.visible} onChange={(e) => setSettings((current) => ({ ...current, [document.visibilityKey]: e.target.checked }))} />
+                    <input type="checkbox" checked={document.visible} disabled={saving || Boolean(uploadingDocument)} onChange={(e) => setSettings((current) => ({ ...current, [document.visibilityKey]: e.target.checked }))} />
                     <span></span>{document.visible ? 'Visible' : 'Hidden'}
                   </label>}
             </header>
             <div className="site-settings-document">
-              <div><strong>{document.validUrl ? 'PDF uploaded' : 'No PDF uploaded'}</strong><small>Choose a PDF file up to 25 MB from your computer</small></div>
+              <div><strong>{document.validUrl ? 'PDF uploaded' : 'No PDF uploaded'}</strong><small>{document.automatic && isDirty ? 'Save pending settings changes before uploading a Privacy Policy PDF' : 'Choose a PDF file up to 25 MB from your computer'}</small></div>
               <div className="site-settings-document-actions">
                 {document.validUrl && <a href={document.normalizedUrl} target="_blank" rel="noreferrer">Open PDF <ExternalLink size={14} /></a>}
                 <label>
-                  <input type="file" accept="application/pdf,.pdf" disabled={saving || Boolean(uploadingDocument)} onChange={(e) => uploadLegalDocument(document, e)} />
+                  <input type="file" accept="application/pdf,.pdf" disabled={saving || Boolean(uploadingDocument) || (document.automatic && isDirty)} onChange={(e) => uploadLegalDocument(document, e)} />
                   {uploadingDocument === document.urlKey ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
                   {document.validUrl ? 'Replace PDF' : 'Upload PDF'}
                 </label>
               </div>
             </div>
             <div className={`site-settings-state ${document.invalid ? 'error' : ''}`}>
-              {document.invalid ? <><CircleAlert size={17} /><span>Upload a PDF before this document can be shown</span></> : document.validUrl ? <><Check size={17} /><span>{document.automatic ? 'PDF used for the footer and form consent when published' : 'PDF is ready to use'}</span></> : <><Eye size={17} /><span>{document.automatic ? 'No PDF: contact consent is unavailable' : 'This document is hidden by default'}</span></>}
+              {document.invalid ? <><CircleAlert size={17} /><span>Upload a PDF before this document can be shown</span></> : document.validUrl ? <><Check size={17} /><span>{document.automatic ? 'Uploaded PDF used for the footer and form consent when published' : document.visible ? 'PDF is ready to show after saving or approval' : 'PDF uploaded; link is hidden until enabled'}</span></> : <><Eye size={17} /><span>{document.automatic ? `No uploaded PDF: the bundled ${document.locale === 'el' ? 'Greek' : 'English'} Privacy Policy is linked in the footer and forms` : 'No PDF: this document is hidden'}</span></>}
             </div>
           </section>
         ))}
