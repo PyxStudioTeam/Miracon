@@ -127,31 +127,44 @@ describe('contact API', () => {
     expect((await limited.json()).error.code).toBe('rate_limited');
   });
 
-  it('allows an editor to list, view, and delete contacts without exposing abuse digests', async () => {
-    // Given
+  it('keeps contact PII owner-only for list and detail, and deletion owner-only', async () => {
     const challenge = await newChallenge();
     const created = await submitContact(contactRequest(challenge));
-    const createdBody = await created.json() as { readonly id: string };
-    const auth = await loginAs('editor@miracon.test', 'editor password long enough');
+    const { id } = await created.json() as { readonly id: string };
+    const editor = await loginAs('editor@miracon.test', 'editor password long enough');
+    const owner = await loginAs('owner@miracon.test', 'owner password long enough');
 
-    // When
-    const listed = await listContacts(context('/api/admin/contacts', { headers: { cookie: auth.cookie } }));
-    const detail = await getContact(context(`/api/admin/contacts/${createdBody.id}`, {
-      headers: { cookie: auth.cookie },
-    }, { id: createdBody.id }));
-    const deleted = await deleteContact(context(`/api/admin/contacts/${createdBody.id}`, {
+    const editorList = await listContacts(context('/api/admin/contacts', { headers: { cookie: editor.cookie } }));
+    const editorDetail = await getContact(context(`/api/admin/contacts/${id}`, {
+      headers: { cookie: editor.cookie },
+    }, { id }));
+    const editorDelete = await deleteContact(context(`/api/admin/contacts/${id}`, {
       method: 'DELETE',
-      headers: { cookie: auth.cookie, origin: siteUrl, 'x-csrf-token': auth.csrfToken },
-    }, { id: createdBody.id }));
+      headers: { cookie: editor.cookie, origin: siteUrl, 'x-csrf-token': editor.csrfToken },
+    }, { id }));
+    for (const response of [editorList, editorDetail, editorDelete]) {
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({
+        error: { code: 'forbidden', message: 'You do not have permission to perform this action' },
+      });
+    }
 
-    // Then
-    expect(listed.status).toBe(200);
-    expect(detail.status).toBe(200);
-    expect(deleted.status).toBe(204);
-    expect(JSON.stringify(await listed.json())).not.toMatch(/digest|clientAddress|ipAddress/iu);
-    expect((await getContact(context(`/api/admin/contacts/${createdBody.id}`, {
-      headers: { cookie: auth.cookie },
-    }, { id: createdBody.id }))).status).toBe(404);
+    const ownerList = await listContacts(context('/api/admin/contacts', { headers: { cookie: owner.cookie } }));
+    const ownerDetail = await getContact(context(`/api/admin/contacts/${id}`, {
+      headers: { cookie: owner.cookie },
+    }, { id }));
+    expect(ownerList.status).toBe(200);
+    expect(ownerDetail.status).toBe(200);
+    expect((await ownerList.json()).contacts).toEqual([expect.objectContaining({ id })]);
+    expect((await ownerDetail.json()).contact).toEqual(expect.objectContaining({ id }));
+    const ownerDelete = await deleteContact(context(`/api/admin/contacts/${id}`, {
+      method: 'DELETE',
+      headers: { cookie: owner.cookie, origin: siteUrl, 'x-csrf-token': owner.csrfToken },
+    }, { id }));
+    expect(ownerDelete.status).toBe(204);
+    expect((await getContact(context(`/api/admin/contacts/${id}`, {
+      headers: { cookie: owner.cookie },
+    }, { id }))).status).toBe(404);
   });
 
   it('exports every stored request beyond the list page without spreadsheet formulas', async () => {
@@ -171,11 +184,16 @@ describe('contact API', () => {
     const unauthenticated = await exportContacts(context('/api/admin/contacts/export'));
     expect(unauthenticated.status).toBe(401);
 
-    const auth = await loginAs('editor@miracon.test', 'editor password long enough');
-    const listed = await listContacts(context('/api/admin/contacts?limit=50', { headers: { cookie: auth.cookie } }));
-    const csvResponse = await exportContacts(context('/api/admin/contacts/export', { headers: { cookie: auth.cookie } }));
-    const csv = await csvResponse.text();
-
+    const editor = await loginAs('editor@miracon.test', 'editor password long enough');
+    const denied = await exportContacts(context('/api/admin/contacts/export', { headers: { cookie: editor.cookie } }));
+    expect(denied.status).toBe(403);
+    expect(await denied.json()).toEqual({
+      error: { code: 'forbidden', message: 'You do not have permission to perform this action' },
+    });
+    const owner = await loginAs('owner@miracon.test', 'owner password long enough');
+    const listed = await listContacts(context('/api/admin/contacts?limit=50', { headers: { cookie: owner.cookie } }));
+    const csvResponse = await exportContacts(context('/api/admin/contacts/export', { headers: { cookie: owner.cookie } }));
+    const csv = Buffer.from(await csvResponse.arrayBuffer()).toString('utf8');
     expect((await listed.json()).contacts).toHaveLength(50);
     expect(csvResponse.status).toBe(200);
     expect(csvResponse.headers.get('cache-control')).toBe('private, no-store');

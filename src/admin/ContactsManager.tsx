@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AdminApi, AdminContact } from './admin-api';
+import { isSafeSitePath } from '../lib/site-settings-shared';
 
 type ContactsManagerProps = { readonly api: AdminApi };
 const pageSize = 50;
@@ -69,7 +70,7 @@ export default function ContactsManager({ api }: ContactsManagerProps) {
                   <strong>{contact.name}</strong>
                   <p><time dateTime={contact.createdAt}>{new Date(contact.createdAt).toLocaleString()}</time> · {contact.locale.toUpperCase()}</p>
                   <p>Phone: {contact.phone ?? 'Not provided'} · Email: {contact.email ?? 'Not provided'}</p>
-                  <p>Source: <a href={contact.sourcePath} target="_blank" rel="noopener noreferrer">{contact.sourcePath}</a></p>
+                  <p>Source: {isSafeSitePath(contact.sourcePath) ? <a href={contact.sourcePath} target="_blank" rel="noopener noreferrer">{contact.sourcePath}</a> : contact.sourcePath}</p>
                   <p className="admin-contact-message">Full message: {contact.message}</p>
                 </article>
               ))}

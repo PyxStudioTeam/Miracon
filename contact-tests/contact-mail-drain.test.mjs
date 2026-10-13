@@ -26,9 +26,14 @@ function fixtureDatabase(kinds) {
     ...contact, contact_id: id, kind, state: 'queued', attempts: 0, created_at: createdAt,
     next_attempt_at: createdAt, lease_token: null, lease_expires_at: null, last_failure_category: null,
   }));
+  const publishedContactCopy = {
+    en: { title: 'Contact', description: 'Live', acknowledgement: 'Approved English: within 24 hours.' },
+    el: { title: 'Επικοινωνία', description: 'Live', acknowledgement: 'Εγκεκριμένο Ελληνικό: εντός 24 ωρών.' },
+  };
   const parsedQueries = new Set();
   return {
     jobs,
+    publishedContactCopy,
     async query(sql, values) {
       if (!parsedQueries.has(sql)) {
         await parse(sql);
@@ -53,7 +58,7 @@ function fixtureDatabase(kinds) {
           job.lease_token = token;
           job.lease_expires_at = expires;
         }
-        return { rows: [job] };
+        return { rows: [{ ...job, published_contact_copy: job.kind === 'ack' ? publishedContactCopy : null }] };
       }
       if (sql.includes('update miracon.contact_mail_jobs')) {
         const [contactId, kind, now, state, nextAttempt, category, token] = values;
@@ -140,16 +145,36 @@ test('both independent jobs process, rejected ack backs off and retries without 
   const run = () => drainContactMail({ database, config, transport, now: () => currentTime, log: (event) => events.push(event) });
   assert.deepEqual(await run(), { dryRun: false, sent: 1, queued: 1, dead: 0, leaseLost: 0 });
   assert.equal(database.jobs.find((job) => job.kind === 'ack').next_attempt_at.getTime(), currentTime.getTime() + 60_000);
+  assert.equal(sent[1].text, 'Approved English: within 24 hours.');
   assert.equal(sent.length, 2);
   assert.deepEqual(await run(), { dryRun: false, sent: 0, queued: 0, dead: 0, leaseLost: 0 });
   currentTime = new Date(currentTime.getTime() + 60_000);
   rejectAck = false;
+  database.publishedContactCopy.en.acknowledgement = 'Newly approved English copy, no personal details.';
   assert.deepEqual(await run(), { dryRun: false, sent: 1, queued: 0, dead: 0, leaseLost: 0 });
   assert.equal(database.jobs.find((job) => job.kind === 'team').attempts, 1);
   assert.equal(database.jobs.find((job) => job.kind === 'ack').attempts, 2);
+  assert.equal(sent[2].text, 'Newly approved English copy, no personal details.');
+  assert.equal(sent[2].subject, 'We received your message');
+  assert.ok(!sent[2].text.includes(contact.message));
   assert.equal(sent.length, 3);
   assert.equal(events.every((event) => Object.keys(event).sort().join(',') === 'category,id,kind'
     && !JSON.stringify(event).includes(contact.message)), true);
+});
+
+test('Greek customer acknowledgements use the approved singleton copy, not contact details', async () => {
+  const database = fixtureDatabase(['ack']);
+  database.jobs[0].locale = 'el';
+  const messages = [];
+  const result = await drainContactMail({ database, config, now: () => createdAt, transport: {
+    async send(message) { messages.push(message); return { acceptedCount: 1, rejectedCount: 0 }; },
+  } });
+  assert.deepEqual(result, { dryRun: false, sent: 1, queued: 0, dead: 0, leaseLost: 0 });
+  assert.equal(messages[0].text, database.publishedContactCopy.el.acknowledgement);
+  assert.equal(messages[0].subject, 'Λάβαμε το μήνυμά σας');
+  for (const sensitive of [database.jobs[0].name, database.jobs[0].message, database.jobs[0].phone]) {
+    assert.ok(!messages[0].text.includes(sensitive));
+  }
 });
 
 test('expired lease is reclaimed with a new token; stale sender cannot finalize it', async () => {

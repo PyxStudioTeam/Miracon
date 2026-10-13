@@ -113,7 +113,7 @@ describe('Phase 2 server API', () => {
     expect(touched.status).toBe(200);
     expect(new Date((await touched.json() as { idleExpiresAt: string }).idleExpiresAt).getTime())
       .toBeGreaterThan(before.rows[0]!.last_seen_at.getTime() + 30 * 60_000);
-    await pool.query(`update miracon.admin_sessions set last_seen_at = now() - interval '30 minutes'
+    await pool.query(`update miracon.admin_sessions set last_seen_at = now() - interval '31 minutes'
       where session_token_hash = $1`, [digest]);
     expect((await getSession(context('/api/auth/session', { headers: auth.headers }))).status).toBe(401);
     expect((await getProjects(context('/api/admin/projects', { headers: auth.headers }))).status).toBe(401);

@@ -687,9 +687,9 @@ function HomeHeroManager({
       if (result.currentRevisionId !== undefined) {
         setRevisionId(result.currentRevisionId);
       }
-      setVideos(normalized);
-      setSavedVideos(structuredClone(normalized));
-      onSaved(normalized, result.currentRevisionId);
+      setVideos(result.videos);
+      setSavedVideos(structuredClone(result.videos));
+      onSaved(result.videos, result.currentRevisionId);
       onToast({
         tone: 'success',
         message: result.isProposal ? 'Playlist proposal submitted for owner review' : 'Homepage video playlist saved',
@@ -811,7 +811,7 @@ type SettingsMode = 'pages-home' | 'pages-visa' | 'pages-shared' | 'branding' | 
 const settingsHeadings: Record<SettingsMode, { breadcrumb: string; title: string; description: string }> = {
   'pages-home': { breadcrumb: 'Content / Pages / Homepage', title: 'Homepage text', description: 'Edit homepage text in English and Greek; hero videos are in the other tab' },
   'pages-visa': { breadcrumb: 'Content / Pages / Golden Visa', title: 'Golden Visa', description: 'Edit Golden Visa page text in English and Greek' },
-  'pages-shared': { breadcrumb: 'Content / Pages / Shared blocks', title: 'Shared blocks', description: 'Edit the shared contact form and stages in English and Greek' },
+  'pages-shared': { breadcrumb: 'Content / Pages / Shared blocks', title: 'Shared blocks', description: 'Edit contact form, customer acknowledgement email and shared stages in English and Greek' },
   branding: { breadcrumb: 'Settings / Brand & contacts', title: 'Logo, name & contacts', description: 'Change the website name, logo, primary color and footer contacts' },
   legal: { breadcrumb: 'Settings / Documents', title: 'Legal documents', description: 'Upload separate English and Greek PDFs. Privacy Policy links automatically after upload (after owner approval for editors).' },
 };
@@ -875,6 +875,10 @@ function SiteSettingsManager({
   const hasInvalidDocument = allDocuments.some((document) => document.invalid);
   const invalidSocialUrl = (['facebookUrl', 'instagramUrl', 'linkedinUrl'] as const)
     .find((key) => settings[key] !== '' && externalSocialUrl(settings[key]) === null);
+  const invalidAcknowledgement = (['en', 'el'] as const).find((locale) => {
+    const value = settings.contactCopy[locale].acknowledgement;
+    return !value.trim() || value.length > 2_000 || /[\u0000-\u0009\u000b-\u001f\u007f]/u.test(value);
+  });
   const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSettings);
 
   useEffect(() => {
@@ -896,9 +900,10 @@ function SiteSettingsManager({
       if (result.currentRevisionId !== undefined) {
         setRevisionId(result.currentRevisionId);
       }
-      setSettings(result.settings);
-      setSavedSettings({ ...result.settings });
-      onSaved(result.settings, result.currentRevisionId);
+      const visibleSettings = result.isProposal ? initialSettings : result.settings;
+      setSettings({ ...visibleSettings });
+      setSavedSettings({ ...visibleSettings });
+      if (!result.isProposal) onSaved(result.settings, result.currentRevisionId);
       let message = result.isProposal ? 'Site settings proposal submitted for owner review' : 'Site settings saved';
       if (privacyLocale) {
         const language = privacyLocale === 'el' ? 'Greek' : 'English';
@@ -983,6 +988,10 @@ function SiteSettingsManager({
       onToast({ tone: 'error', message: 'Enter an HTTPS profile URL for each social link (for example https://www.instagram.com/username/)' });
       return;
     }
+    if (invalidAcknowledgement) {
+      onToast({ tone: 'error', message: `Enter valid ${invalidAcknowledgement === 'el' ? 'Greek' : 'English'} acknowledgement text (up to 2,000 characters)` });
+      return;
+    }
 
     const nextSettings = { ...settings };
     for (const document of legalDocumentFields) {
@@ -1004,7 +1013,7 @@ function SiteSettingsManager({
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="secondary-button" onClick={() => setHistoryOpen(true)} title="View revision history"><History size={17} />History</button>
-          <button className="primary-button" onClick={saveSettings} disabled={saving || uploadingLogo || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument || Boolean(invalidSocialUrl)}>
+          <button className="primary-button" onClick={saveSettings} disabled={saving || uploadingLogo || Boolean(uploadingDocument) || !isDirty || hasInvalidDocument || Boolean(invalidSocialUrl) || Boolean(invalidAcknowledgement)}>
             {saving ? <LoaderCircle className="spin" size={17} /> : <Save size={17} />}
             {role === 'owner' ? 'Save settings' : 'Submit proposal'}
           </button>
@@ -1591,11 +1600,19 @@ function ProposalsManager({
     if (items) setReviewingProposal(items.find((item) => item.id === id) ?? null);
   }
 
+  function approvalOutcome(proposal: PendingProposal): { label: string; message: string } {
+    if (proposal.snapshot.aggregateType === 'project') {
+      if (proposal.snapshot.deleted) return { label: 'Approve project removal', message: 'approved; project removed' };
+      if (proposal.snapshot.project?.status === 'draft') return { label: 'Approve as draft', message: 'approved as draft; not visible publicly' };
+    }
+    return { label: 'Approve & publish to live', message: 'approved and published to live website' };
+  }
+
   async function handleApprove(proposal: PendingProposal) {
     setProcessingId(proposal.id);
     try {
       await api.approveProposal(proposal.id, proposal.expectedRevisionId);
-      onToast({ tone: 'success', message: `Proposal #${proposal.revisionNumber} approved and published to live website` });
+      onToast({ tone: 'success', message: `Proposal #${proposal.revisionNumber} ${approvalOutcome(proposal).message}` });
       setReviewingProposal(null);
       await loadProposals();
       await onProposalApproved?.();
@@ -1704,7 +1721,7 @@ function ProposalsManager({
                 <span className="eyebrow">{reviewingProposal.aggregateType.replace('_', ' ')} proposal #{reviewingProposal.revisionNumber}</span>
                 <h3 style={{ margin: '4px 0 0', fontFamily: 'Georgia, serif', fontSize: '22px' }}>{getProposalTitle(reviewingProposal)}</h3>
               </div>
-              <button className="preview-close" onClick={() => setReviewingProposal(null)}><X size={19} /></button>
+              <button className="preview-close" aria-label="Close proposal review" onClick={() => setReviewingProposal(null)}><X size={19} /></button>
             </div>
             <div className="proposal-review-meta" style={{ fontSize: '13px', color: 'var(--admin-muted)', marginBottom: '16px' }}>
               Proposed by <strong>{reviewingProposal.creatorEmail}</strong> on {formatDateTime(reviewingProposal.createdAt)}
@@ -1716,7 +1733,7 @@ function ProposalsManager({
                 <X size={16} />Reject proposal
               </button>
               <button className="primary-button" onClick={() => handleApprove(reviewingProposal)} disabled={Boolean(processingId) || isStaleProposal(reviewingProposal)}>
-                {processingId === reviewingProposal.id ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}Approve &amp; Publish to live
+                {processingId === reviewingProposal.id ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{approvalOutcome(reviewingProposal).label}
               </button>
             </div>
           </div>
@@ -1757,6 +1774,7 @@ function ProjectEditor({
   const [confirmStatus, setConfirmStatus] = useState<Project['status'] | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [submittedProposal, setSubmittedProposal] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<number | '100%'>(1440);
 
   const mediaMapRef = useRef<Map<string, string>>(new Map());
@@ -1857,7 +1875,8 @@ function ProjectEditor({
       }
       setProject(result.project);
       setSavedSnapshot(JSON.stringify(result.project));
-      onSaved(result.project);
+      setSubmittedProposal(Boolean(result.isProposal));
+      if (!result.isProposal) onSaved(result.project);
       showToast({
         tone: 'success',
         message: result.isProposal ? 'Proposal submitted for owner review' : status === 'published' ? 'Project is live' : 'Draft saved',
@@ -1887,8 +1906,12 @@ function ProjectEditor({
   }
 
   function openPreview() {
+    if (!(project as Project & { currentRevisionId?: string }).currentRevisionId) {
+      showToast({ tone: 'error', message: role === 'editor' ? 'Preview is available after the owner approves this project' : 'Save the project before opening preview' });
+      return;
+    }
     if (isDirty) {
-      showToast({ tone: 'error', message: 'Save your changes before opening preview' });
+      showToast({ tone: 'error', message: role === 'editor' ? 'Submit or discard unsaved changes before viewing approved content' : 'Save your changes before opening preview' });
       return;
     }
     setPreviewOpen(true);
@@ -2015,6 +2038,7 @@ function ProjectEditor({
             <strong>{project.title}</strong>
             <small>{project.status}</small>
             {isDirty && <em>Unsaved</em>}
+            {submittedProposal && <em>Pending owner review</em>}
           </div>
         </div>
         <div className="editor-actions">
@@ -2307,7 +2331,7 @@ function ProjectEditor({
           {section === 'seo' && <>
             <div className="section-heading"><span>05 / SEO &amp; URL</span><h2>Search engine optimization</h2><p>Custom URL slug, meta tags and search preview</p></div>
             <div className="editor-form-grid">
-              <Field label="URL slug" wide hint="Unique lowercase path segment"><input value={project.slug} onChange={(e) => update('slug', normalizedSlug(e.target.value))} /></Field>
+              <Field label="URL slug" wide hint="Unique lowercase path segment"><input value={project.slug} onChange={(e) => update('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'))} /></Field>
               <Field label="SEO meta title" wide hint={`${project.seoTitle.length}/60`}><input maxLength={60} value={project.seoTitle} placeholder={`${project.title} — ${siteName}`} onChange={(e) => update('seoTitle', e.target.value)} /></Field>
               <Field label="SEO meta description" wide hint={`${project.seoDescription.length}/160`}><textarea rows={4} maxLength={160} value={project.seoDescription} placeholder={project.shortDescription} onChange={(e) => update('seoDescription', e.target.value)} /></Field>
             </div>
@@ -2324,7 +2348,26 @@ function ProjectEditor({
       {confirmDelete && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true"><span><Trash2 size={20} /></span><h3>Delete “{project.title}”?</h3><p>The project will be permanently marked deleted.</p><div><button className="secondary-button" onClick={() => setConfirmDelete(false)}>Cancel</button><button className="danger-button" onClick={removeProject}>Delete permanently</button></div></div></div>}
       {confirmLeave && <div className="modal-backdrop"><div className="confirm-modal" role="dialog" aria-modal="true"><span><CircleAlert size={20} /></span><h3>Discard unsaved changes?</h3><p>Your latest edits have not been saved.</p><div><button className="secondary-button" onClick={() => setConfirmLeave(false)}>Continue editing</button><button className="danger-button" onClick={onBack}>Discard changes</button></div></div></div>}
       {confirmStatus && <div className="modal-backdrop"><div className="confirm-modal status-confirm" role="dialog" aria-modal="true"><span><Check size={20} /></span><h3>{confirmStatus === 'published' ? 'Publish this project?' : 'Unpublish this project?'}</h3><p>{confirmStatus === 'published' ? 'The saved project will be live for all website visitors.' : 'The project will be moved back to draft status.'}</p><div><button className="secondary-button" onClick={() => setConfirmStatus(null)}>Cancel</button><button className="primary-button" disabled={saving} onClick={async () => { if (await save(confirmStatus)) setConfirmStatus(null); }}>{saving ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{confirmStatus === 'published' ? 'Publish project' : 'Unpublish'}</button></div></div></div>}
-      {previewOpen && <div className="responsive-preview"><header><div><strong>Responsive preview · {editingLocale.toUpperCase()}</strong><span>Save changes to refresh preview</span></div><div className="preview-sizes"><button className={previewWidth === 1440 ? 'active' : ''} onClick={() => setPreviewWidth(1440)}>Desktop</button><button className={previewWidth === 768 ? 'active' : ''} onClick={() => setPreviewWidth(768)}>Tablet</button><button className={previewWidth === 390 ? 'active' : ''} onClick={() => setPreviewWidth(390)}>Mobile</button><button className={previewWidth === '100%' ? 'active' : ''} onClick={() => setPreviewWidth('100%')}>Full</button></div><button className="preview-close" onClick={() => setPreviewOpen(false)}><X size={19} /></button></header><div className="preview-stage"><iframe title={`${project.title} responsive preview`} src={`${editingLocale === 'el' ? '/el' : ''}/preview/${project.slug}`} style={{ width: previewWidth === '100%' ? '100%' : `${previewWidth}px` }} /></div></div>}
+      {previewOpen && (
+        <div className="responsive-preview">
+          <header>
+            <div>
+              <strong>Responsive preview · {editingLocale.toUpperCase()}</strong>
+              <span>{role === 'editor' ? 'Shows approved content; proposals appear after owner approval' : 'Save changes to refresh preview'}</span>
+            </div>
+            <div className="preview-sizes">
+              <button className={previewWidth === 1440 ? 'active' : ''} onClick={() => setPreviewWidth(1440)}>Desktop</button>
+              <button className={previewWidth === 768 ? 'active' : ''} onClick={() => setPreviewWidth(768)}>Tablet</button>
+              <button className={previewWidth === 390 ? 'active' : ''} onClick={() => setPreviewWidth(390)}>Mobile</button>
+              <button className={previewWidth === '100%' ? 'active' : ''} onClick={() => setPreviewWidth('100%')}>Full</button>
+            </div>
+            <button className="preview-close" aria-label="Close preview" onClick={() => setPreviewOpen(false)}><X size={19} /></button>
+          </header>
+          <div className="preview-stage">
+            <iframe title={`${project.title} approved responsive preview`} src={`${editingLocale === 'el' ? '/el' : ''}/preview/${project.slug}`} style={{ width: previewWidth === '100%' ? '100%' : `${previewWidth}px` }} />
+          </div>
+        </div>
+      )}
       {historyOpen && <RevisionHistoryDrawer isOpen={historyOpen} onClose={() => setHistoryOpen(false)} aggregateType="project" aggregateId={project.id} title={project.title} role={role} api={api} currentRevisionId={(project as Project & { currentRevisionId?: string }).currentRevisionId ?? null} onRollbackSuccess={async () => { const list = await api.listProjects(); const updated = list.find((p) => p.id === project.id); if (updated) { setProject(updated); setSavedSnapshot(JSON.stringify(updated)); onSaved(updated); } }} onToast={showToast} />}
     </main>
   );
@@ -2548,6 +2591,7 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
   }
 
   function navigate(nextView: AdminNavView) {
+    if (nextView === 'contacts' && !isOwner) return;
     if (nextView === view) return;
     const keepingPageDraft = view.startsWith('pages-') && nextView.startsWith('pages-');
     if (!keepingPageDraft && hasUnsavedChanges.current && !window.confirm('Discard unsaved changes?')) return;
@@ -2557,13 +2601,12 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
 
   async function logout() {
     if (hasUnsavedChanges.current && !window.confirm('Discard unsaved changes and sign out?')) return;
-    const pending = api.logout();
-    channelRef.current?.postMessage({ type: 'logout' });
-    api.clearCredentials();
     try {
-      await pending;
+      await api.logout();
+      channelRef.current?.postMessage({ type: 'logout' });
+      api.clearCredentials();
     } catch {
-      // The UI has already been cleared; the server still enforces expiry.
+      setGlobalToast({ tone: 'error', message: 'Sign out failed. Your session may still be active; please try again.' });
     }
   }
 
@@ -2678,7 +2721,7 @@ export default function AdminApp({ siteName = 'MIRACON', logoUrl = '' }: { siteN
           onNavigate={navigate}
           mode={view}
         />
-      ) : view === 'contacts' ? (
+      ) : view === 'contacts' && isOwner ? (
         <ContactsManager api={api} />
       ) : view === 'proposals' && isOwner ? (
         <ProposalsManager

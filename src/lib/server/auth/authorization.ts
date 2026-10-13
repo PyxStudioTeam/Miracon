@@ -24,7 +24,6 @@ const capabilitiesByRole: Readonly<Record<AdminRole, readonly AdminCapability[]>
     'proposeProject',
     'proposeHomepageHero',
     'proposeSiteSettings',
-    'manageContacts',
   ],
 };
 

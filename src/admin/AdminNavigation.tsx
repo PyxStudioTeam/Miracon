@@ -39,7 +39,7 @@ const groups: { id: string; label: string; items: NavItem[] }[] = [
     id: 'work',
     label: 'Work',
     items: [
-      { view: 'contacts', label: 'Enquiries', icon: Inbox },
+      { view: 'contacts', label: 'Enquiries', icon: Inbox, ownerOnly: true },
       { view: 'proposals', label: 'Review changes', icon: Inbox, ownerOnly: true },
     ],
   },
@@ -65,7 +65,8 @@ export default function AdminNavigation({ view, onChange, isOwner, pendingPropos
   const [open, setOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const currentGroup = groups.find((group) => group.items.some((item) => item.view === view)) ?? groups[0];
+  const visibleGroups = isOwner ? groups : groups.filter((group) => group.items.some((item) => !item.ownerOnly));
+  const currentGroup = visibleGroups.find((group) => group.items.some((item) => item.view === view)) ?? visibleGroups[0];
   const [expandedGroup, setExpandedGroup] = useState(currentGroup.id);
   const current = currentGroup.items.find((item) => item.view === view);
 
@@ -111,7 +112,7 @@ export default function AdminNavigation({ view, onChange, isOwner, pendingPropos
         <ChevronDown size={18} aria-hidden="true" />
       </button>
       <div id="admin-nav-menu" className={`admin-nav-menu${open ? ' is-open' : ''}`}>
-        {groups.map((group) => (
+        {visibleGroups.map((group) => (
           <section className="admin-nav-group" aria-label={group.label} key={group.id}>
             <h2>
               <button
@@ -125,7 +126,7 @@ export default function AdminNavigation({ view, onChange, isOwner, pendingPropos
               </button>
             </h2>
             <div id={`admin-nav-${group.id}`} className="admin-nav-group-items" hidden={expandedGroup !== group.id}>
-              {group.items.filter((item) => !item.ownerOnly || isOwner).map((item) => {
+              {(isOwner ? group.items : group.items.filter((item) => !item.ownerOnly)).map((item) => {
                 const Icon = item.icon;
                 const active = item.view === view;
                 return (

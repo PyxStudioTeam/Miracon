@@ -72,8 +72,23 @@ export function createContactMailTransport(config, createTransport = nodemailer.
   };
 }
 
+const defaultAcknowledgementCopy = {
+  en: 'Thank you for contacting us. We received your message and will reply within 24 hours.',
+  el: 'Σας ευχαριστούμε που επικοινωνήσατε μαζί μας. Λάβαμε το μήνυμά σας και θα σας απαντήσουμε εντός 24 ωρών.',
+};
+const acknowledgementTextSchema = z.string().max(2_000).refine(
+  (text) => text.trim().length > 0 && !/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(text),
+);
+
+/** Missing/invalid historical settings get safe locale defaults, never submitted contact fields. */
+export function resolveAcknowledgementText(publishedContactCopy, locale) {
+  const language = locale === 'el' ? 'el' : 'en';
+  const text = publishedContactCopy?.[language]?.acknowledgement;
+  return acknowledgementTextSchema.safeParse(text).success ? text : defaultAcknowledgementCopy[language];
+}
+
 /** Returns only trusted/static headers plus the owner message or a short localized acknowledgement. */
-export function renderContactMail(contact, kind, config) {
+export function renderContactMail(contact, kind, config, publishedContactCopy) {
   if (config.kind !== 'enabled') throw new ContactMailConfigurationError();
   // Message-ID must be stable across attempts, and never incorporate user-controlled header text.
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(contact.id)) {
@@ -90,9 +105,7 @@ export function renderContactMail(contact, kind, config) {
       from: config.from,
       to: contact.email,
       subject: greek ? 'Λάβαμε το μήνυμά σας' : 'We received your message',
-      text: greek
-        ? 'Ευχαριστούμε που επικοινωνήσατε μαζί μας. Λάβαμε το μήνυμά σας και θα σας απαντήσουμε το συντομότερο δυνατό.\n\nΑυτή είναι αυτόματη επιβεβαίωση. Για να προσθέσετε στοιχεία, μπορείτε να απαντήσετε σε αυτό το email.\n'
-        : 'Thank you for contacting us. We received your message and will respond as soon as possible.\n\nThis is an automated acknowledgement. To add details, you may reply to this email.\n',
+      text: resolveAcknowledgementText(publishedContactCopy, contact.locale),
       messageId,
       headers: { 'Auto-Submitted': 'auto-replied', 'X-Auto-Response-Suppress': 'All' },
     };
@@ -120,8 +133,8 @@ export function renderContactMail(contact, kind, config) {
 }
 
 /** Sends at least once; SMTP acceptance followed by a crash can result in a duplicate on retry. */
-export async function deliverContactMail(contact, kind, config, transport) {
-  const message = renderContactMail(contact, kind, config);
+export async function deliverContactMail(contact, kind, config, transport, publishedContactCopy) {
+  const message = renderContactMail(contact, kind, config, publishedContactCopy);
   const ownedTransport = transport ?? createContactMailTransport(config);
   try {
     let result;

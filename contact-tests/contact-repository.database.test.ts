@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -381,16 +381,8 @@ describe('contact repository concurrency', () => {
     expect((await mailJobs()).map((job) => job.kind)).toEqual(['ack', 'team']);
   });
 
-  it('cascades queued and sent jobs on contact deletion and tolerates legacy null-email contacts', async () => {
+  it('deleting a contact cascades its queued and sent mail jobs without removing other enquiries', async () => {
     const repository = new PostgresContactRepository(pool);
-    const legacyId = randomUUID();
-    await pool.query(
-      `insert into miracon.contact_submissions
-         (id, name, email, phone, message, consented_at, locale, source_path,
-          client_digest, duplicate_digest, created_at)
-       values ($1, 'Legacy', null, '+302100000000', 'Historical', $2, 'en', '/contact-test', $3, $4, $2)`,
-      [legacyId, atSecond(-1), Buffer.alloc(32, 12), Buffer.alloc(32, 13)],
-    );
     const clientAddress = '203.0.113.50';
     const challengeToken = await challenge(repository, clientAddress, atSecond(0));
     const result = await submission({
@@ -399,7 +391,14 @@ describe('contact repository concurrency', () => {
     });
     expect(result.kind).toBe('accepted');
     if (result.kind !== 'accepted') throw new Error('Expected acceptance');
-    expect((await mailJobs()).map((job) => job.kind)).toEqual(['ack', 'team']);
+    const otherAddress = '203.0.113.51';
+    const otherToken = await challenge(repository, otherAddress, atSecond(1));
+    const other = await submission({
+      repository, challengeToken: otherToken, clientAddress: otherAddress,
+      email: 'other@example.test', message: 'Keep this request', now: atSecond(1),
+    });
+    expect(other.kind).toBe('accepted');
+    if (other.kind !== 'accepted') throw new Error('Expected acceptance');
     await pool.query(
       `update miracon.contact_mail_jobs set state = 'sent', sent_at = $2
        where contact_id = $1 and kind = 'team'`,
@@ -407,7 +406,9 @@ describe('contact repository concurrency', () => {
     );
 
     await pool.query('delete from miracon.contact_submissions where id = $1', [result.id]);
-    expect(await mailJobs()).toEqual([]);
+    expect((await mailJobs()).map(({ contact_id, kind }) => ({ contact_id, kind }))).toEqual([
+      { contact_id: other.id, kind: 'team' },
+    ]);
     await expect(submissionCount()).resolves.toBe(1);
   });
 });

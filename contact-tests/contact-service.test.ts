@@ -128,6 +128,16 @@ describe('contact intake service', () => {
     });
   });
 
+  it('keeps enquiry source links on this site, including legacy backslash authority tricks', () => {
+    for (const sourcePath of ['/', '/el/projects/example?campaign=test', '/projects/example#contact']) {
+      expect(contactSubmissionSchema.safeParse({ ...validSubmission, sourcePath }).success).toBe(true);
+    }
+    for (const sourcePath of ['//example.invalid/', '/\\example.invalid/', '/projects\\example.invalid', 'https://example.invalid/', '/\nexample.invalid']) {
+      expect(contactSubmissionSchema.safeParse({ ...validSubmission, sourcePath }).success).toBe(false);
+    }
+  });
+
+
   it('normalizes equivalent content into the same duplicate digest', async () => {
     // Given
     const firstRepository = new FakeContactRepository();

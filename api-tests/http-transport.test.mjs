@@ -213,11 +213,13 @@ test('serves Phase 2 APIs over real loopback HTTP', { timeout: 180_000 }, async 
     assert.equal(requiredHeader(greekPublicProject, 'cache-control'), 'public, s-maxage=300, stale-while-revalidate=86400');
     assert.match(await greekPublicProject.text(), /Δημόσιο έργο PostgreSQL/u);
 
-    const draftProject = await fetch(`${baseUrl}/projects/http-transport-project`);
-    assert.equal(draftProject.status, 404);
+    const draftProject = await fetch(`${baseUrl}/projects/http-transport-project`, { redirect: 'manual' });
+    assert.equal(draftProject.status, 302);
+    assert.equal(requiredHeader(draftProject, 'location'), '/#projects');
 
-    const greekDraftProject = await fetch(`${baseUrl}/el/projects/http-transport-project`);
-    assert.equal(greekDraftProject.status, 404);
+    const greekDraftProject = await fetch(`${baseUrl}/el/projects/http-transport-project`, { redirect: 'manual' });
+    assert.equal(greekDraftProject.status, 302);
+    assert.equal(requiredHeader(greekDraftProject, 'location'), '/el/#projects');
 
     const sitemap = await fetch(`${baseUrl}/sitemap.xml`);
     assert.equal(sitemap.status, 200);

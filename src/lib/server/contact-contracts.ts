@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isSafeSitePath } from '../site-settings-shared';
 
 export const contactIdSchema = z.uuid().brand<'ContactId'>();
 export const contactChallengeTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/u).brand<'ContactChallengeToken'>();
@@ -13,7 +14,7 @@ export const contactSubmissionSchema = z.object({
   message: z.string().trim().min(1).max(3_000),
   consent: z.literal(true),
   locale: z.enum(['en', 'el']),
-  sourcePath: z.string().trim().min(1).max(2_048).regex(/^\/(?!\/)/u),
+  sourcePath: z.string().trim().min(1).max(2_048).refine(isSafeSitePath, 'Use a site-local path'),
   website: z.string().max(256),
   challenge: contactChallengeTokenSchema,
 }).strict();

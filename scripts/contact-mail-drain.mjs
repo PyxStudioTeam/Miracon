@@ -31,10 +31,12 @@ const CLAIM_SQL = `
     select j.contact_id, j.kind, j.attempts, j.created_at as job_created_at,
            c.id::text as id, c.name, c.email, c.phone, c.message,
            c.locale, c.source_path, c.created_at as contact_created_at,
+           case when j.kind = 'ack' then settings.contact_copy else null end as published_contact_copy,
            (j.attempts >= 10 or j.created_at <= $1::timestamptz -
              case when j.kind = 'ack' then interval '24 hours' else interval '7 days' end) as exhausted
     from miracon.contact_mail_jobs j
     join miracon.contact_submissions c on c.id = j.contact_id
+    left join miracon.site_settings settings on settings.id = 1
     where (j.state = 'queued' and j.next_attempt_at <= $1)
        or (j.state = 'leased' and j.lease_expires_at <= $1)
     order by j.next_attempt_at, j.created_at, j.contact_id, j.kind
@@ -56,7 +58,7 @@ const CLAIM_SQL = `
   )
   select claimed.*, candidate.id, candidate.name, candidate.email,
          candidate.phone, candidate.message, candidate.locale,
-         candidate.source_path, candidate.contact_created_at
+         candidate.source_path, candidate.contact_created_at, candidate.published_contact_copy
   from claimed join candidate
     on claimed.contact_id = candidate.contact_id and claimed.kind = candidate.kind
 `;
@@ -84,6 +86,7 @@ export async function claimContactMailJob(database, now) {
       sourcePath: row.source_path,
       createdAt: new Date(row.contact_created_at),
     },
+    publishedContactCopy: row.published_contact_copy,
   };
 }
 
@@ -124,7 +127,7 @@ export async function drainContactMail({ database, config, now = () => new Date(
     }
     let category = null;
     try {
-      await deliverContactMail(job.contact, job.kind, config, transport);
+      await deliverContactMail(job.contact, job.kind, config, transport, job.publishedContactCopy);
     } catch (error) {
       category = error instanceof ContactMailDeliveryError ? error.category : 'transport_failed';
     }

@@ -280,9 +280,10 @@
 
   .project-bottom {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px 16px;
     margin-top: auto;
     padding-top: 24px;
   }

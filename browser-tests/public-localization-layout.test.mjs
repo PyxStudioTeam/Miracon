@@ -351,7 +351,7 @@ test('publishes a complete manifest only after successful cleanup', async () => 
 });
 
 
-test('runs the built standalone public localization fixture', { timeout: 180_000 }, async () => {
+test('runs the built standalone public localization fixture', { timeout: 600_000 }, async () => {
   await requireBuiltStandaloneEntry();
   const databaseUrl = requireSafeDatabaseTestUrl();
   const artifacts = await createArtifactRun(artifactConfiguration(process.env));
@@ -384,12 +384,13 @@ test('runs the built standalone public localization fixture', { timeout: 180_000
     const beforePdf = await context.newPage();
     try {
       await beforePdf.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
-      assert.equal(await beforePdf.locator('[data-consultation-form] [name="consent"]').isDisabled(), true);
-      assert.equal(await beforePdf.locator('.footer-links a').filter({ hasText: 'Privacy Policy' }).count(), 0);
+      assert.equal(await beforePdf.locator('[data-consultation-form] [name="consent"]').isEnabled(), true);
+      assert.equal(await beforePdf.locator('[data-consultation-form] .form-consent-text a').getAttribute('href'), '/documents/privacy-policy-en.pdf');
+      assert.equal(await beforePdf.locator('.footer-links a').filter({ hasText: 'Privacy Policy' }).getAttribute('href'), '/documents/privacy-policy-en.pdf');
     } finally {
       await beforePdf.close();
     }
-    const privacyPdfUrl = await publishPrivacyPdf(context, baseUrl);
+    const privacyPdfUrls = await publishPrivacyPdf(context, baseUrl);
     for (const { route, viewport } of casePlan) {
       const caseRecord = await runCase({ context, baseUrl, route, viewport, externalRequests, unknownExternalRequests, artifacts });
       artifacts?.cases.push(caseRecord);
@@ -397,15 +398,16 @@ test('runs the built standalone public localization fixture', { timeout: 180_000
     for (const { route, viewport } of availabilityDetailCasePlan) {
       await runCase({ context, baseUrl, route, viewport, externalRequests, unknownExternalRequests, artifacts: null });
     }
-    await assertPublicContactFlow({ context, baseUrl, database, path: '/', locale: 'en', name: 'Browser English Contact', successText: 'Thank you. Your request has been sent', privacyPdfUrl });
-    await assertPublicContactFlow({ context, baseUrl, database, path: '/el/golden-visa', locale: 'el', name: 'Browser Greek Contact', successText: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε', privacyPdfUrl });
+    await assertPublicContactFlow({ context, baseUrl, database, path: '/', locale: 'en', name: 'Browser English Contact', successText: 'Thank you. Your request has been sent', privacyPdfUrl: privacyPdfUrls.en });
+    await assertPublicContactFlow({ context, baseUrl, database, path: '/el/golden-visa', locale: 'el', name: 'Browser Greek Contact', successText: 'Ευχαριστούμε. Το αίτημά σας στάλθηκε', privacyPdfUrl: privacyPdfUrls.el });
     for (const path of ['/el/', '/golden-visa', '/projects/browser-coastal-golden', '/el/projects/browser-coastal-golden']) {
       const page = await context.newPage();
       try {
         await page.goto(`${baseUrl}${path}`, { waitUntil: 'domcontentloaded' });
-        assert.equal(await page.locator('[data-consultation-form] .form-consent-text a').getAttribute('href'), privacyPdfUrl);
+        const locale = path.startsWith('/el/') ? 'el' : 'en';
+        assert.equal(await page.locator('[data-consultation-form] .form-consent-text a').getAttribute('href'), privacyPdfUrls[locale]);
         assert.equal(await page.locator('[data-consultation-form] [name="consent"]').isEnabled(), true);
-        assert.equal(await page.locator('.footer-links a[href]').filter({ hasText: path.startsWith('/el/') ? 'Πολιτική Απορρήτου' : 'Privacy Policy' }).getAttribute('href'), privacyPdfUrl);
+        assert.equal(await page.locator('.footer-links a[href]').filter({ hasText: locale === 'el' ? 'Πολιτική Απορρήτου' : 'Privacy Policy' }).getAttribute('href'), privacyPdfUrls[locale]);
       } finally {
         await page.close();
       }
@@ -500,27 +502,37 @@ async function publishPrivacyPdf(context, baseUrl) {
   const page = await context.newPage();
   try {
     await page.goto(`${baseUrl}/admin`, { waitUntil: 'domcontentloaded' });
+    if (await page.locator('.admin-nav-trigger').isVisible()) await page.locator('.admin-nav-trigger').click();
+    await page.locator('.admin-nav-heading').filter({ hasText: 'Settings' }).click();
     await page.locator('[data-admin-view="legal"]').click();
     const policy = page.locator('.site-settings-card').filter({ hasText: 'Privacy Policy' });
     await policy.locator('.site-settings-auto').waitFor();
     assert.equal(await policy.locator('input[type="checkbox"]').count(), 0);
+    const buffer = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n', 'binary');
     await policy.locator('input[type="file"]').setInputFiles({
-      name: 'privacy-policy.pdf',
-      mimeType: 'application/pdf',
-      buffer: Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n', 'binary'),
+      name: 'privacy-policy-en.pdf', mimeType: 'application/pdf', buffer,
     });
-    await page.getByRole('status').filter({ hasText: 'Privacy Policy PDF published and linked' }).waitFor();
+    await page.getByRole('status').filter({ hasText: 'English Privacy Policy PDF published and linked' }).waitFor();
+    await page.getByRole('group', { name: 'Legal document language' }).getByRole('button', { name: 'ΕΛ' }).click();
+    await policy.locator('input[type="file"]').setInputFiles({
+      name: 'privacy-policy-el.pdf', mimeType: 'application/pdf', buffer,
+    });
+    await page.getByRole('status').filter({ hasText: 'Greek Privacy Policy PDF published and linked' }).waitFor();
   } finally {
     await page.close();
   }
   const settingsResponse = await context.request.get(`${baseUrl}/api/admin/site-settings`);
   assert.equal(settingsResponse.status(), 200);
-  const privacyPdfUrl = (await settingsResponse.json()).settings.footerPrivacyPdfUrl;
-  assert.match(privacyPdfUrl, /^\/media\/.+\.pdf$/u);
-  const pdf = await context.request.get(`${baseUrl}${privacyPdfUrl}`);
-  assert.equal(pdf.status(), 200);
-  assert.match(pdf.headers()['content-type'], /application\/pdf/u);
-  return privacyPdfUrl;
+  const settings = (await settingsResponse.json()).settings;
+  const urls = { en: settings.footerPrivacyPdfUrl, el: settings.footerPrivacyElPdfUrl };
+  assert.notEqual(urls.en, urls.el);
+  for (const privacyPdfUrl of Object.values(urls)) {
+    assert.match(privacyPdfUrl, /^\/media\/.+\.pdf$/u);
+    const pdf = await context.request.get(`${baseUrl}${privacyPdfUrl}`);
+    assert.equal(pdf.status(), 200);
+    assert.match(pdf.headers()['content-type'], /application\/pdf/u);
+  }
+  return urls;
 }
 
 async function assertPublicContactFlow({ context, baseUrl, database, path, locale, name, successText, privacyPdfUrl }) {

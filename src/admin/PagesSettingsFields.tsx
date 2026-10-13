@@ -91,6 +91,16 @@ export default function PagesSettingsFields({ settings, onChange, mode }: {
               ...settings.contactCopy, [locale]: { ...settings.contactCopy[locale], [key]: event.target.value },
             } })} />
           </label>)}
+          <label>Customer acknowledgement email (plain text, up to 2,000 characters)
+            <textarea maxLength={2000} value={settings.contactCopy[locale].acknowledgement} onChange={(event) => onChange({
+              ...settings,
+              contactCopy: {
+                ...settings.contactCopy,
+                [locale]: { ...settings.contactCopy[locale], acknowledgement: event.target.value },
+              },
+            })} />
+            <small>Sent only when customer auto-replies are enabled. Editors' changes require owner approval.</small>
+          </label>
         </fieldset>
         <fieldset>
           <legend>Five stages (shown on both pages)</legend>

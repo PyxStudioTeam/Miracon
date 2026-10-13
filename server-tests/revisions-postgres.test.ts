@@ -146,7 +146,7 @@ describe('PostgreSQL revision service', () => {
       action: 'rollback', targetRevisionId: baselineRevisionId, expectedCurrentRevisionId: proposal.value.id,
     });
     if (!rollback.ok) throw new Error('Rollback failed');
-    expect((await loadProjectSnapshot()).project?.virtual_tour_url).toBe('');
+    expect(await loadProjectSnapshot()).toEqual(baselineSnapshot);
     const deletion = await service.execute(ownerSession.sessionToken, {
       action: 'delete', aggregateType: 'project', aggregateId: projectId, expectedCurrentRevisionId: rollback.value.id,
     });

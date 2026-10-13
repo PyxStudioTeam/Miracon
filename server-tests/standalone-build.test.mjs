@@ -14,10 +14,10 @@ import { migrate } from '../scripts/postgres-migrate.mjs';
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const standaloneEntry = fileURLToPath(new URL('../dist/server/entry.mjs', import.meta.url));
 const chromeByRoute = {
-  homeEn: { links: [['/#projects', 'Projects'], ['/golden-visa', 'Golden Visa'], ['/#about', 'About us'], ['/#contacts', 'Contacts']], languageHref: '/el/', language: 'Ελληνικά', languageCode: 'EN' },
-  homeEl: { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/#contacts', 'Επικοινωνία']], languageHref: '/', language: 'English', languageCode: 'EL' },
-  goldenVisaEl: { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa#top', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/golden-visa#contacts', 'Επικοινωνία']], languageHref: '/golden-visa/', language: 'English', languageCode: 'EL' },
-  projectEl: { links: [['/el/?filter=coastal#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/projects/standalone-build-project/#contacts', 'Επικοινωνία']], languageHref: '/projects/standalone-build-project/?campaign=greek', language: 'English', languageCode: 'EL' },
+  homeEn: { links: [['/#projects', 'Projects'], ['/golden-visa', 'Golden Visa'], ['/#about', 'About us'], ['/#contacts', 'Contacts']], languageHref: '/el/', language: 'Ελληνικά', languageCode: 'ΕΛ' },
+  homeEl: { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/#contacts', 'Επικοινωνία']], languageHref: '/', language: 'English', languageCode: 'EN' },
+  goldenVisaEl: { links: [['/el/#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/golden-visa/#contacts', 'Επικοινωνία']], languageHref: '/golden-visa/', language: 'English', languageCode: 'EN' },
+  projectEl: { links: [['/el/?filter=coastal#projects', 'Έργα'], ['/el/golden-visa', 'Golden Visa'], ['/el/#about', 'Σχετικά με εμάς'], ['/el/projects/standalone-build-project/#contacts', 'Επικοινωνία']], languageHref: '/projects/standalone-build-project/?campaign=greek', language: 'English', languageCode: 'EN' },
 };
 
 test('rejects Google document-wide translation suppression', () => {
@@ -186,7 +186,7 @@ function assertLocalizedChrome(html, expected) {
   for (const [href, label] of expected.links) {
     assert.match(html, new RegExp(`<a\\b(?=[^>]*\\bhref="${escapeRegExp(href)}")[^>]*>\\s*${escapeRegExp(label)}\\s*<`, 'u'));
   }
-  assert.match(html, new RegExp(`<a\\b(?=[^>]*\\bclass="[^"]*\\blang-selector\\b[^"]*")(?=[^>]*\\bhref="${escapeRegExp(expected.languageHref)}")(?=[^>]*\\bhreflang="${expected.languageCode === 'EN' ? 'el' : 'en'}")(?=[^>]*\\baria-label="${escapeRegExp(expected.language)}")[^>]*>\\s*<span[^>]*>${expected.languageCode}</span>`, 'u'));
+  assert.match(html, new RegExp(`<a\\b(?=[^>]*\\bclass="[^"]*\\blang-selector\\b[^"]*")(?=[^>]*\\bhref="${escapeRegExp(expected.languageHref)}")(?=[^>]*\\bhreflang="${expected.languageCode === 'ΕΛ' ? 'el' : 'en'}")(?=[^>]*\\baria-label="${escapeRegExp(expected.language)}")[^>]*>\\s*<span[^>]*>${expected.languageCode}</span>`, 'u'));
 }
 
 function assertTranslationBoundaries(html, isHome, editorialClass) {

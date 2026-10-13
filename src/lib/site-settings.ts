@@ -1,8 +1,19 @@
-import { defaultSiteSettings, isValidBrandColor, isValidLogoUrl, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from './site-settings-shared';
+import { defaultAcknowledgementCopy, defaultSiteSettings, isValidBrandColor, isValidLogoUrl, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from './site-settings-shared';
 import type { SiteSettings } from './site-settings-shared';
 
 export { defaultSiteSettings, isValidTermsPdfUrl, externalSocialUrl, whatsappLink, resolvePrivacyPdfUrl } from './site-settings-shared';
 export type { SiteSettings } from './site-settings-shared';
+
+function mapContactCopy(value: unknown, locale: 'en' | 'el'): SiteSettings['contactCopy']['en'] {
+  const stored = (value as Partial<SiteSettings['contactCopy']> | null)?.[locale];
+  const fallback = defaultSiteSettings.contactCopy[locale];
+  return {
+    title: stored?.title ?? fallback.title,
+    description: stored?.description ?? fallback.description,
+    acknowledgement: typeof stored?.acknowledgement === 'string'
+      ? stored.acknowledgement : defaultAcknowledgementCopy[locale],
+  };
+}
 
 export function mapSiteSettings(row: Record<string, unknown> | null | undefined): SiteSettings {
   const footerTermsPdfUrl = String(row?.footer_terms_pdf_url ?? '').trim();
@@ -32,7 +43,10 @@ export function mapSiteSettings(row: Record<string, unknown> | null | undefined)
     companyName: String(row?.company_name ?? defaultSiteSettings.companyName),
     homeCopy: (row?.home_copy ?? defaultSiteSettings.homeCopy) as SiteSettings['homeCopy'],
     goldenVisaCopy: (row?.golden_visa_copy ?? defaultSiteSettings.goldenVisaCopy) as SiteSettings['goldenVisaCopy'],
-    contactCopy: (row?.contact_copy ?? defaultSiteSettings.contactCopy) as SiteSettings['contactCopy'],
+    contactCopy: {
+      en: mapContactCopy(row?.contact_copy, 'en'),
+      el: mapContactCopy(row?.contact_copy, 'el'),
+    },
     stagesCopy: (row?.stages_copy ?? defaultSiteSettings.stagesCopy) as SiteSettings['stagesCopy'],
     footerPhone: String(row?.footer_phone ?? defaultSiteSettings.footerPhone),
     footerEmail: String(row?.footer_email ?? defaultSiteSettings.footerEmail),

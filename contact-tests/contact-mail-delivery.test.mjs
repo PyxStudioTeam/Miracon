@@ -106,10 +106,35 @@ test('English and Greek acknowledgements contain no submitted details or owner r
       assert.equal(message.subject.includes(sensitive), false);
     }
   }
-  assert.match(english.text, /Thank you for contacting us/u);
-  assert.match(greek.text, /Ευχαριστούμε/u);
+  assert.match(english.text, /within 24 hours/u);
+  assert.match(greek.text, /εντός 24 ωρών/u);
   assert.notEqual(english.text, greek.text);
   assert.throws(() => renderContactMail({ ...contact, email: null }, 'ack', config), { category: 'invalid_recipient' });
+});
+
+test('approved EN/EL copy changes only the acknowledgement body; invalid or historical copy falls back safely', () => {
+  const config = getContactMailConfig(smtpEnvironment);
+  const published = {
+    en: { title: 'Contact', description: '', acknowledgement: 'English approved receipt. Reply within 24 hours.' },
+    el: { title: 'Επικοινωνία', description: '', acknowledgement: 'Ελληνική εγκεκριμένη απάντηση. Εντός 24 ωρών.' },
+  };
+  const english = renderContactMail(contact, 'ack', config, published);
+  const greek = renderContactMail({ ...contact, locale: 'el' }, 'ack', config, published);
+  assert.equal(english.text, published.en.acknowledgement);
+  assert.equal(greek.text, published.el.acknowledgement);
+  assert.equal(english.subject, 'We received your message');
+  assert.equal(greek.subject, 'Λάβαμε το μήνυμά σας');
+  for (const mail of [english, greek]) {
+    for (const sensitive of [contact.name, contact.phone, contact.message, contact.sourcePath]) {
+      assert.ok(!mail.text.includes(sensitive));
+    }
+  }
+  const legacy = { en: { title: 'Contact', description: 'Existing text' }, el: { title: 'Επικοινωνία' } };
+  assert.match(renderContactMail(contact, 'ack', config, legacy).text, /within 24 hours/u);
+  assert.match(renderContactMail({ ...contact, locale: 'el' }, 'ack', config, legacy).text, /εντός 24 ωρών/u);
+  assert.notEqual(renderContactMail(contact, 'ack', config, { en: { acknowledgement: 'Header\r\nBcc: spy@example.org' } }).text,
+    'Header\r\nBcc: spy@example.org');
+  assert.match(renderContactMail(contact, 'ack', config, { en: { acknowledgement: 'X'.repeat(2001) } }).text, /within 24 hours/u);
 });
 
 test('delivery accepts exactly one recipient and categorizes ambiguous SMTP failures without leaking details', async () => {

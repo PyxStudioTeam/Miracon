@@ -22,8 +22,11 @@ const loginSchema = sessionSchema.extend({
   csrfToken: z.string().min(1),
 });
 const canonicalProjectSchema = projectSchema.extend({
+  // Old stored links must remain editable; mutations and public rendering apply stricter guards.
+  brochureUrl: z.string().max(2_048).nullable(),
+  mapUrl: z.string().max(2_048),
   updatedAt: z.iso.datetime(),
-  currentRevisionId: z.string().optional(),
+  currentRevisionId: z.string().nullable().optional(),
   managedMedia: z.array(z.object({
     id: z.string(),
     relativeUrl: z.string(),

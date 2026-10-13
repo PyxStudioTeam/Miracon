@@ -19,7 +19,7 @@ export const goldenVisaCopyKeys = [
 ] as const;
 export type GoldenVisaCopy = Record<(typeof goldenVisaCopyKeys)[number], string>;
 
-export type ContactCopy = { title: string; description: string };
+export type ContactCopy = { title: string; description: string; acknowledgement: string };
 export type StageCopy = { title: string; description: string; steps: [
   { title: string; text: string }, { title: string; text: string }, { title: string; text: string },
   { title: string; text: string }, { title: string; text: string },
@@ -66,6 +66,11 @@ const copyFromMessages = <Key extends string>(locale: SiteLocale, prefix: string
   return Object.fromEntries(keys.map((key) => [key, messages[`${prefix}.${key}` as MessageKey]])) as Record<Key, string>;
 };
 
+export const defaultAcknowledgementCopy: Localized<string> = {
+  en: 'Thank you for contacting us. We received your message and will reply within 24 hours.',
+  el: 'Σας ευχαριστούμε που επικοινωνήσατε μαζί μας. Λάβαμε το μήνυμά σας και θα σας απαντήσουμε εντός 24 ωρών.',
+};
+
 export const defaultSiteSettings: SiteSettings = {
   footerTermsVisible: false,
   footerTermsPdfUrl: '',
@@ -85,7 +90,11 @@ export const defaultSiteSettings: SiteSettings = {
   brandColor: '#003075',
   homeCopy: localize((locale) => copyFromMessages(locale, 'home', homeCopyKeys)),
   goldenVisaCopy: localize((locale) => copyFromMessages(locale, 'gv', goldenVisaCopyKeys)),
-  contactCopy: localize((locale) => ({ title: getMessages(locale)['form.title'], description: getContactDescriptionLines(locale).join(' ') })),
+  contactCopy: localize((locale) => ({
+    title: getMessages(locale)['form.title'],
+    description: getContactDescriptionLines(locale).join(' '),
+    acknowledgement: defaultAcknowledgementCopy[locale],
+  })),
   stagesCopy: localize((locale) => {
     const messages = getMessages(locale);
     const stageKeys = ['consultation', 'reservation', 'dueDiligence', 'contract', 'handover'] as const;
@@ -132,6 +141,22 @@ export function brandThemeStyle(settings: Pick<SiteSettings, 'brandColor'>): str
   const rgb = [1, 3, 5].map((index) => parseInt(settings.brandColor.slice(index, index + 2), 16)).join(', ');
   return `--brand-color: ${settings.brandColor}; --brand-rgb: ${rgb}; --brand-blue: ${settings.brandColor}; --brand-muted-rgb: ${rgb}`;
 }
+
+export function isSafeSitePath(value: string): boolean {
+  return /^\/(?![\/\\])[^\\\u0000-\u001f\u007f]*$/u.test(value);
+}
+
+export function isSafeProjectLink(value: string): boolean {
+  if (isSafeSitePath(value)) return true;
+  if (!value.startsWith('https://') || /[\\\u0000-\u0020\u007f]/u.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 
 export function isValidTermsPdfUrl(value: string): boolean {
   if (value.startsWith('/media/')) return true;

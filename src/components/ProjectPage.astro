@@ -4,7 +4,7 @@ import { formatMessage, getMessages, type SiteLocale } from '../lib/i18n';
 import { getImageVariantSet, getLocalAvifSource, getOptimizedImageSources } from '../lib/media';
 import { absoluteLocalizedUrl, absoluteSiteUrl } from '../lib/seo';
 import { getSiteSettings } from '../lib/site-settings';
-import { brandThemeStyle } from '../lib/site-settings-shared';
+import { brandThemeStyle, isSafeProjectLink } from '../lib/site-settings-shared';
 import ContactSection from './ContactSection.astro';
 import OptimizedImage from './OptimizedImage.astro';
 import SeoHead from './SeoHead.astro';
@@ -56,7 +56,10 @@ const galleryMedia = gallerySource.map((image) => {
 const gallerySlotIndices = galleryMedia.length >= 4 ? [0, 1, 2, 3] : galleryMedia.length === 3 ? [1, 2, 3] : galleryMedia.length === 2 ? [2, 3] : [2];
 const galleryImageIndices = galleryMedia.length === 3 ? [2, 0, 1] : gallerySlotIndices.map((_, index) => index);
 const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(project.mapQuery || project.address)}&output=embed`;
-const mapHref = project.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(project.mapQuery || project.address)}`;
+const mapHref = project.mapUrl && isSafeProjectLink(project.mapUrl)
+  ? project.mapUrl
+  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(project.mapQuery || project.address)}`;
+const brochureHref = project.brochureUrl && isSafeProjectLink(project.brochureUrl) ? project.brochureUrl : null;
 const primaryCategory = project.categories[0] ?? 'coastal';
 const publicPath = `/projects/${encodeURIComponent(project.slug)}`;
 const publicUrl = absoluteLocalizedUrl(publicPath, locale, Astro.url);
@@ -78,9 +81,8 @@ const heroVideoPlaylist = resolveVideoPlaylist(project.heroVideos);
 const walkthroughVideoPlaylist = resolveVideoPlaylist(project.walkthroughVideos);
 const optimizedHeroPosterUrl = heroVideoPlaylist[0]?.posterUrl || project.heroPosterUrl || project.coverUrl;
 const showWalkthroughVideo = project.walkthroughVideoEnabled && walkthroughVideoPlaylist.length > 0;
-const embeddedTourUrl = project.virtualTourUrl && URL.canParse(project.virtualTourUrl) && new URL(project.virtualTourUrl).origin === 'https://storage.net-fs.com'
-  ? project.virtualTourUrl
-  : '';
+const tourHref = project.virtualTourUrl.startsWith('https://') && isSafeProjectLink(project.virtualTourUrl) ? project.virtualTourUrl : null;
+const embeddedTourUrl = tourHref && new URL(tourHref).origin === 'https://storage.net-fs.com' ? tourHref : '';
 const walkthroughVideoTitle = project.walkthroughVideoTitle.trim() || m['project.walkthrough'];
 const showHeroVideo = project.heroType === 'video' && heroVideoPlaylist.length > 0;
 const heroVariant = showHeroVideo ? 'immersive' : project.heroVariant;
@@ -191,8 +193,8 @@ const projectStructuredData = {
               {project.remainingUnits === 0 ? m['project.soldOut'] : formatMessage(m['project.availableUnits'], { count: String(project.remainingUnits) })}
             </p>
           )}
-          {project.brochureUrl && (
-            <a href={project.brochureUrl} class="project-brochure-link" target="_blank" rel="noreferrer">
+          {brochureHref && (
+            <a href={brochureHref} class="project-brochure-link" target="_blank" rel="noreferrer">
               <span class="project-brochure-icon" aria-hidden="true">
                 <img src="/img/olympus-detail/icons/hero-brochure-1.svg" alt="" class="project-brochure-icon-part project-brochure-icon-part--tray">
                 <img src="/img/olympus-detail/icons/hero-brochure-2.svg" alt="" class="project-brochure-icon-part project-brochure-icon-part--chevron">
@@ -284,8 +286,8 @@ const projectStructuredData = {
             <button class="project-gallery-arrow project-gallery-arrow--next" type="button" aria-label={m['project.nextImage']}><span aria-hidden="true">→</span></button>
           </div>
         )}
-        {project.brochureUrl && (
-          <a href={project.brochureUrl} class="project-floating-brochure" target="_blank" rel="noreferrer">
+        {brochureHref && (
+          <a href={brochureHref} class="project-floating-brochure" target="_blank" rel="noreferrer">
             <img src="/img/olympus-detail/icons/brochure-circle.svg" alt="" class="project-floating-icon" aria-hidden="true"><span>{m['project.brochure']}</span>
           </a>
         )}
@@ -311,9 +313,9 @@ const projectStructuredData = {
       </section>
     )}
 
-    {project.virtualTourUrl && (
+    {tourHref && (
       <div class="container project-virtual-tour">
-        <a href={project.virtualTourUrl} target="_blank" rel="noopener noreferrer">{m['project.virtualTour']} ↗</a>
+        <a href={tourHref} target="_blank" rel="noopener noreferrer">{m['project.virtualTour']} ↗</a>
       </div>
     )}
 
@@ -359,8 +361,11 @@ const projectStructuredData = {
 
 <style>
   .project-description-full { white-space: pre-line; }
-  .project-preview-banner { position: fixed; z-index: 100; top: 12px; left: 50%; padding: 10px 18px; border-radius: 999px; background: #b68a3d; color: white; font: 600 13px/1.2 Arial, sans-serif; transform: translateX(-50%); box-shadow: 0 8px 30px rgba(var(--brand-rgb), .25); }
+  .project-preview-banner { position: fixed; z-index: 100; top: 12px; left: 50%; padding: 10px 18px; border-radius: 999px; background: #b68a3d; color: white; font: 600 13px/1.2 Arial, sans-serif; transform: translateX(-50%); box-shadow: 0 8px 30px rgba(var(--brand-rgb), .25); pointer-events: none; }
   .project-preview-banner span { margin-left: 10px; opacity: .75; font-weight: 400; }
+  @media (max-width: 760px) {
+    .project-preview-banner { top: 84px; width: max-content; max-width: calc(100vw - 24px); text-align: center; }
+  }
   .project-virtual-tour { margin-block: 36px 64px; text-align: center; }
   .project-virtual-tour a {
     display: inline-flex;

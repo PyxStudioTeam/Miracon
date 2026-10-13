@@ -55,6 +55,19 @@ describe('runtime contracts', () => {
     }
   });
 
+  it('rejects executable and cross-origin project links while keeping published brochure paths', () => {
+    const project = seedProjects[0];
+    if (!project) throw new Error('Project schema fixture is required');
+    for (const url of ['/brochures/project.pdf', '/media/uploads/document.pdf', 'https://maps.google.com/?q=beach']) {
+      expect(projectSchema.safeParse({ ...project, mapUrl: url, brochureUrl: url }).success).toBe(true);
+    }
+    for (const url of ['javascript:void(0)', 'data:text/html,attack', '//example.invalid/path', '/\\example.invalid/path', 'https://user@example.invalid/path', 'https://example.invalid/path with space']) {
+      expect(projectSchema.safeParse({ ...project, mapUrl: url }).success).toBe(false);
+      expect(projectSchema.safeParse({ ...project, brochureUrl: url }).success).toBe(false);
+    }
+  });
+
+
   it('uses truthful remaining-unit values in project seeds', () => {
     // Given / When
     const availability = Object.fromEntries(seedProjects.map((project) => [project.slug, project.remainingUnits]));

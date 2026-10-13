@@ -15,6 +15,10 @@ const m = getMessages(locale);
 const languageHref = localizePath(`${Astro.originPathname}${Astro.url.search}`, oppositeLocale(locale));
 const phoneHref = siteSettings.footerPhone.replace(/[^0-9+]/g, '');
 const privacyPdfUrl = resolvePrivacyPdfUrl(siteSettings, locale);
+const termsPdfUrl = locale === 'el' ? siteSettings.footerTermsElPdfUrl : siteSettings.footerTermsPdfUrl;
+const termsVisible = locale === 'el' ? siteSettings.footerTermsElVisible : siteSettings.footerTermsVisible;
+const cookiePdfUrl = locale === 'el' ? siteSettings.footerCookieElPdfUrl : siteSettings.footerCookiePdfUrl;
+const cookieVisible = locale === 'el' ? siteSettings.footerCookieElVisible : siteSettings.footerCookieVisible;
 ---
 
 <footer class="footer">
@@ -41,9 +45,9 @@ const privacyPdfUrl = resolvePrivacyPdfUrl(siteSettings, locale);
     </div>
     <div class="footer-bottom">
       <div class="footer-links">
-        <a href={(locale === 'el' ? siteSettings.footerTermsElPdfUrl : siteSettings.footerTermsPdfUrl) || '#'} target="_blank" rel="noopener noreferrer" hidden={!(locale === 'el' ? siteSettings.footerTermsElVisible : siteSettings.footerTermsVisible)}>{m['common.terms']}</a>
+        {termsVisible && termsPdfUrl && <a href={termsPdfUrl} target="_blank" rel="noopener noreferrer">{m['common.terms']}</a>}
         <a href={privacyPdfUrl} target="_blank" rel="noopener noreferrer">{m['common.privacy']}</a>
-        <a href={(locale === 'el' ? siteSettings.footerCookieElPdfUrl : siteSettings.footerCookiePdfUrl) || '#'} target="_blank" rel="noopener noreferrer" hidden={!(locale === 'el' ? siteSettings.footerCookieElVisible : siteSettings.footerCookieVisible)}>{m['common.cookies']}</a>
+        {cookieVisible && cookiePdfUrl && <a href={cookiePdfUrl} target="_blank" rel="noopener noreferrer">{m['common.cookies']}</a>}
       </div>
       <a class="lang-dropdown-btn" href={languageHref} hreflang={oppositeLocale(locale)} aria-label={m['common.switchLanguage']}><span>{m['common.switchLanguage']}</span><span class="lang-refresh" aria-hidden="true"><img src="/img/Vector.svg" alt=""></span></a>
     </div>

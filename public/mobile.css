@@ -1047,7 +1047,7 @@
   .visa-consult-badge:focus-visible {
     position: absolute;
     z-index: 8;
-    top: 215px;
+    top: 195px;
     bottom: auto;
     left: 50%;
     transform: translateX(-50%);
@@ -1084,6 +1084,7 @@
 
   .visa-consult-arrow {
     position: relative;
+    inset: auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1754,11 +1755,15 @@
   .about-card h3 { min-height: 20px; font-size: 16px; line-height: 1.15; }
   .about-card p { margin-top: 6px; font-size: 11.5px; line-height: 1.22; }
 
-  .golden-visa-section, .golden-container { height: 650px; }
+  .golden-visa-section, .golden-container { height: auto; }
+  .golden-container { padding-top: 386px; padding-bottom: 24px; }
   .golden-content .section-subtitle { width: 100%; height: auto; }
-  .slider-wrapper { top: 386px; height: 238px; }
-  .slide-title { height: auto; min-height: 19px; align-items: flex-start; }
-  .slide-text, .slide-text-short { right: 17px; bottom: 58px; width: auto; height: auto; max-height: none; overflow: visible; line-height: 1.2; }
+  .slider-wrapper { position: relative; top: auto; left: auto; height: auto; }
+  .slider-slides { display: grid; height: auto; }
+  .slide { position: relative; grid-area: 1 / 1; padding: 17px 17px 0; }
+  .slide-title { position: static; height: auto; min-height: 19px; align-items: center; }
+  .slide-text, .slide-text-short { position: static; width: 100%; height: auto; max-height: none; margin-top: 14px; overflow: visible; line-height: 1.2; }
+  .slider-controls { position: relative; inset: auto; margin-top: 16px; padding: 0 17px 16px; }
 }
 
 /* Authoritative <=600 homepage hero flow. */

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { homeCopyKeys, goldenVisaCopyKeys, isValidBrandColor, isValidLogoUrl, isValidTermsPdfUrl, externalSocialUrl, whatsappLink } from '../site-settings-shared';
+import { homeCopyKeys, goldenVisaCopyKeys, isValidBrandColor, isValidLogoUrl, isValidTermsPdfUrl, isSafeProjectLink, externalSocialUrl, whatsappLink } from '../site-settings-shared';
 
 const nullableUrl = z.string().max(2_048).nullable();
 const optionalNullableUrl = nullableUrl.optional();
@@ -93,9 +93,9 @@ export const projectSchema = z.object({
   heroFocalX: z.number().min(0).max(100),
   heroFocalY: z.number().min(0).max(100),
   introImageUrl: z.string().max(2_048),
-  brochureUrl: nullableUrl,
+  brochureUrl: nullableUrl.refine((value) => value === null || value === '' || isSafeProjectLink(value), 'Use a site path or HTTPS URL'),
   mapQuery: z.string().max(2_048),
-  mapUrl: z.string().max(2_048),
+  mapUrl: z.string().max(2_048).refine((value) => value === '' || isSafeProjectLink(value), 'Use a site path or HTTPS URL'),
   cardImages: z.array(projectImageSchema),
   gallery: z.array(projectImageSchema),
   imageVariants: z.object({ version: z.literal(1), images: z.record(z.string(), imageVariantSetSchema) }).optional(),
@@ -141,6 +141,10 @@ const stagesSchema = z.object({
 const socialUrlSchema = z.string().max(2_048).refine((value) => value === '' || externalSocialUrl(value) !== null, 'Use an HTTPS URL');
 const phoneSchema = z.string().max(40).refine((value) => value === '' || /^\+?[0-9 ()-]{7,40}$/.test(value), 'Use an international phone number');
 const whatsappPhoneSchema = phoneSchema.refine((value) => !value || whatsappLink({ whatsappPhone: value, whatsappMessage: '' }) !== null, 'Use an international number with 7–15 digits');
+const acknowledgementTextSchema = z.string().max(2_000).refine(
+  (value) => value.trim().length > 0 && !/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(value),
+  'Enter text (up to 2000 characters; no control characters)',
+);
 
 export const siteSettingsSchema = z.object({
   footerTermsVisible: z.boolean(),
@@ -161,7 +165,7 @@ export const siteSettingsSchema = z.object({
   brandColor: z.string().refine(isValidBrandColor, 'Use a #RRGGBB color'),
   homeCopy: localized(copyFields(homeCopyKeys)),
   goldenVisaCopy: localized(copyFields(goldenVisaCopyKeys)),
-  contactCopy: localized(z.object({ title: copyText, description: copyText })),
+  contactCopy: localized(z.object({ title: copyText, description: copyText, acknowledgement: acknowledgementTextSchema })),
   stagesCopy: localized(stagesSchema),
   footerPhone: phoneSchema,
   footerEmail: z.union([z.literal(''), z.email().max(254)]),

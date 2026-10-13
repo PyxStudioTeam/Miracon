@@ -110,13 +110,29 @@ for (const fixture of fixtures) {
     });
   }
 }
+test('a visitor clock ahead of the server does not reject a fresh challenge', async () => {
+  await withContactPage({
+    challenges: [{ status: 200, body: validChallenge('K') }],
+    contacts: [accepted],
+  }, async ({ page, form, challengeRequests, submissions }) => {
+    await page.evaluate(() => {
+      const actualNow = Date.now;
+      Date.now = () => actualNow() + 24 * 60 * 60_000;
+    });
+    await prepareValidForm(form);
+    await form.locator('.btn-submit').click();
+    await expectStatus(form, 'Thank you');
+    assert.equal(challengeRequests.length, 1);
+    assert.deepEqual(submissions.map(({ challenge }) => challenge), ['K'.repeat(43)]);
+  });
+});
+
 
 for (const scenario of [
   { name: 'challenge outage', reply: { status: 500, body: { error: { code: 'unavailable' } } } },
   { name: 'challenge rate limit', reply: { status: 429, body: { error: { code: 'rate_limited' } } }, status: 'Too many requests' },
   { name: 'malformed challenge JSON', reply: { status: 200, rawBody: '{not-json' } },
   { name: 'malformed challenge payload', reply: { status: 200, body: { challenge: 'invalid' } } },
-  { name: 'expired challenge', reply: { status: 200, body: validChallenge('D', Date.now() - 1_000) } },
   { name: 'challenge network failure', reply: { abort: true } },
 ]) {
   test(`${scenario.name} requires another explicit submit before POST`, async () => {

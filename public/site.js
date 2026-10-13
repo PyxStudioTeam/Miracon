@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let switching = false;
       const failedItems = new Set();
       const desktopFallbacks = new Set();
+      let gestureRetryArmed = false;
 
       function videoUrl(item) {
         return mobileMedia.matches && item.mobileUrl && !desktopFallbacks.has(item.id)
@@ -102,14 +103,37 @@ document.addEventListener('DOMContentLoaded', () => {
         video.dataset.playlistSrc = nextUrl;
         video.load();
       }
+      function disarmGestureRetry() {
+        if (!gestureRetryArmed) return;
+        gestureRetryArmed = false;
+        document.removeEventListener('touchend', retryOnGesture, true);
+        document.removeEventListener('click', retryOnGesture, true);
+        document.removeEventListener('keydown', retryOnGesture, true);
+      }
+      function retryOnGesture() {
+        disarmGestureRetry();
+        const activeVideo = homeHeroVideoSlots[activeSlotIndex];
+        if (activeVideo.ended && findNextIndex() >= 0) advancePlaylist();
+        else resumeActiveVideo(activeVideo);
+      }
+      function armGestureRetry(error) {
+        if (error?.name !== 'NotAllowedError' || prefersStillImage || gestureRetryArmed) return;
+        gestureRetryArmed = true;
+        document.addEventListener('touchend', retryOnGesture, { capture: true, passive: true });
+        document.addEventListener('click', retryOnGesture, true);
+        document.addEventListener('keydown', retryOnGesture, true);
+      }
       function resumeActiveVideo(video) {
         const item = playlist[currentIndex];
         attemptPlay(video).catch((error) => {
           if (!video.paused) return;
-          if (!needsDesktopFallback(video, item, error)) return;
+          if (!needsDesktopFallback(video, item, error)) {
+            armGestureRetry(error);
+            return;
+          }
           desktopFallbacks.add(item.id);
           loadSlot(video, item, 'auto');
-          attemptPlay(video).catch(() => {});
+          attemptPlay(video).catch(armGestureRetry);
         });
       }
       function attemptPlay(video) {
@@ -162,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
           outgoingVideo.pause();
           incomingVideo.classList.add('is-active');
           outgoingVideo.classList.remove('is-active');
+          disarmGestureRetry();
 
           window.setTimeout(() => {
             activeSlotIndex = incomingSlotIndex;
@@ -170,14 +195,18 @@ document.addEventListener('DOMContentLoaded', () => {
             primeNextSlot();
             outgoingVideo.pause();
           }, 680);
-        }).catch(() => {
+        }).catch((error) => {
           switching = false;
+          if (error?.name === 'NotAllowedError') {
+            armGestureRetry(error);
+            return;
+          }
           failedItems.add(nextIndex);
           if (findNextIndex() >= 0 && !prefersStillImage) {
             advancePlaylist();
           } else {
             outgoingVideo.loop = true;
-            if (!prefersStillImage) attemptPlay(outgoingVideo).catch(() => {});
+            if (!prefersStillImage) attemptPlay(outgoingVideo).catch(armGestureRetry);
           }
         });
       }
@@ -205,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         video.addEventListener('playing', () => {
           if (!video.classList.contains('is-active')) return;
+          disarmGestureRetry();
           primeNextSlot();
         });
         video.addEventListener('ended', () => {
@@ -1069,8 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.status === 429) throw new Error(ui.rateLimited);
       if (!response.ok) throw new Error(ui.formUnavailable);
       const result = await response.json();
-      const expiresAt = Date.parse(result?.expiresAt);
-      if (typeof result?.challenge !== 'string' || result.challenge.length !== 43 || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      if (typeof result?.challenge !== 'string' || result.challenge.length !== 43) {
         throw new Error(ui.formUnavailable);
       }
       return result.challenge;

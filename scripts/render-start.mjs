@@ -155,47 +155,6 @@ async function main() {
         console.log(`[Render Start] Seeded ${seedProjects.length} default projects with revision baselines.`);
       }
 
-      // Ensure initial admin user exists if empty
-      const adminCount = await client.query('select count(*)::int as count from miracon.admin_users');
-      if (adminCount.rows[0].count === 0) {
-        const defaultEmail = process.env.ADMIN_INITIAL_EMAIL || 'admin@miracon.gr';
-        const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD || 'MiraconSecureAdmin2026!';
-        const { argon2id, hash } = await import('argon2');
-        const passwordHash = await hash(defaultPassword, {
-          type: argon2id,
-          memoryCost: 65_536,
-          timeCost: 3,
-          parallelism: 1,
-          hashLength: 32,
-        });
-        await client.query(`
-          insert into miracon.admin_users (id, email, password_hash, role)
-          values (1, $1, $2, 'owner')
-          on conflict (id) do nothing;
-        `, [defaultEmail.toLowerCase().trim(), passwordHash]);
-        console.log(`[Render Start] Seeded initial admin user (${defaultEmail}).`);
-      }
-
-      // Ensure initial editor user exists for review workflow testing
-      const editorCount = await client.query('select count(*)::int as count from miracon.admin_users where email = $1', ['editor@miracon.gr']);
-      if (editorCount.rows[0].count === 0) {
-        const defaultEditorPassword = process.env.EDITOR_INITIAL_PASSWORD || 'MiraconSecureEditor2026!';
-        const { argon2id, hash } = await import('argon2');
-        const editorHash = await hash(defaultEditorPassword, {
-          type: argon2id,
-          memoryCost: 65_536,
-          timeCost: 3,
-          parallelism: 1,
-          hashLength: 32,
-        });
-        await client.query(`
-          insert into miracon.admin_users (email, password_hash, role)
-          values ('editor@miracon.gr', $1, 'editor')
-          on conflict (email) do nothing;
-        `, [editorHash]);
-        console.log('[Render Start] Seeded initial editor user (editor@miracon.gr).');
-      }
-
       // Ensure privacy policy documents exist in MEDIA_ROOT and are registered in database
       await ensurePrivacyDocuments(client, process.env.MEDIA_ROOT);
     } finally {
