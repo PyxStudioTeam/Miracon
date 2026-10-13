@@ -10,9 +10,7 @@ services:
       - key: NODE_VERSION
         value: 22.22.2
       - key: DATABASE_URL
-        fromDatabase:
-          name: miracon-db
-          property: connectionString
+        sync: false
       - key: MEDIA_ROOT
         value: /tmp/miracon-media
       - key: ALLOW_PREVIEW_HOSTS
@@ -22,9 +20,3 @@ services:
       - key: CONTACT_DIGEST_SECRET
         generateValue: true
 
-databases:
-  - name: miracon-db
-    plan: free
-    region: frankfurt
-    databaseName: miracon
-    user: miracon_user
